@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注小树 - 孩子端</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+</head>
+
+<body></body>
+<!-- 任务名称输入弹窗 -->
+<div id="taskNameModal" class="modal">
+    <div class="modal-content">
+        <h2>📝 今天做什么作业？</h2>
+        <input type="text" id="taskNameInput" class="task-input" placeholder="例如：数学作业、语文练习..." maxlength="20">
+
+        <div class="time-input-section">
+            <label class="time-label">预计需要多长时间？</label>
+            <div class="time-options">
+                <button class="time-option" data-minutes="10">10分钟</button>
+                <button class="time-option" data-minutes="20">20分钟</button>
+                <button class="time-option active" data-minutes="30">30分钟</button>
+                <button class="time-option" data-minutes="45">45分钟</button>
+                <button class="time-option" data-minutes="60">60分钟</button>
+            </div>
+            <div class="custom-time">
+                <label>自定义：</label>
+                <input type="number" id="customMinutes" min="1" max="180" placeholder="分钟">
+            </div>
+        </div>
+
+        <button id="confirmTaskBtn" class="btn btn-primary">开始专注</button>
+        <button id="viewHistoryBtn" class="btn btn-secondary-small">查看历史记录</button>
+    </div>
+</div>
+
+<!-- 房间号显示弹窗 -->
+<div id="roomModal" class="modal hidden">
+    <div class="modal-content room-modal">
+        <h2>📱 家长监控连接</h2>
+        <p class="room-instruction">请在手机上打开家长端，输入以下房间号：</p>
+        <div class="room-id-display">
+            <span id="roomIdDisplay">------</span>
+        </div>
+        <p class="room-url">或访问：<span id="parentUrl">--</span></p>
+        <button id="startWithoutParent" class="btn btn-primary">开始学习</button>
+    </div>
+</div>
+
+<div class="fullscreen-container hidden" id="mainScreen">
+    <!-- 顶部信息栏 -->
+    <div class="top-bar">
+        <div class="task-info-group">
+            <div class="task-name-display">📚 <span id="currentTaskName">作业任务</span></div>
+            <div class="room-id-display">
+                房间号：<span id="roomIdDisplay" class="room-id">------</span>
+            </div>
+        </div>
+        <div class="timer-display-group">
+            <div class="countdown-display" id="countdownDisplay">
+                <span class="countdown-label">剩余时间</span>
+                <span class="countdown-time" id="countdownTime">30:00</span>
+            </div>
+            <div class="elapsed-time">
+                已用：<span id="timeDisplay">00:00</span>
+            </div>
+        </div>
+        <div class="stats-group">
+            <div class="tree-counter">
+                🌳 <span id="treeCount">0</span> 棵
+            </div>
+            <div class="distraction-display" id="distractionDisplay">
+                <span class="distraction-label">走神记录：</span>
+                <span class="distraction-clouds" id="distractionClouds"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 森林区域 -->
+    <div class="forest-area">
+        <div id="clouds" class="clouds hidden">
+            <div class="cloud-group">
+                <div class="cloud">☁️</div>
+                <div class="cloud">☁️</div>
+                <div class="cloud">☁️</div>
+            </div>
+            <div class="message">注意力跑掉啦！快回来～</div>
+        </div>
+
+        <div id="forest" class="forest"></div>
+    </div>
+
+    <!-- 底部控制栏 -->
+    <div class="bottom-bar">
+        <button id="endBtn" class="btn btn-end">🏁 结束作业</button>
+    </div>
+</div>
+
+<div id="resultModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>🎉 太棒了！</h2>
+        <div id="resultStats"></div>
+        <button id="closeModal" class="btn btn-primary">完成</button>
+    </div>
+</div>
+
+<div id="historyModal" class="modal hidden">
+    <div class="modal-content history-modal">
+        <h2>📊 学习统计</h2>
+
+        <!-- 统计汇总 -->
+        <div class="stats-summary">
+            <div class="summary-card">
+                <div class="summary-icon">📅</div>
+                <div class="summary-content">
+                    <div class="summary-label">今日成果</div>
+                    <div class="summary-value" id="todayTrees">0棵树</div>
+                    <div class="summary-detail" id="todayTasks">0个任务</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">📆</div>
+                <div class="summary-content">
+                    <div class="summary-label">本周成果</div>
+                    <div class="summary-value" id="weekTrees">0棵树</div>
+                    <div class="summary-detail" id="weekTasks">0个任务</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">🏆</div>
+                <div class="summary-content">
+                    <div class="summary-label">总成就</div>
+                    <div class="summary-value" id="totalTrees">0棵树</div>
+                    <div class="summary-detail" id="totalTasks">0个任务</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成果森林可视化 -->
+        <div class="achievement-forest">
+            <div class="forest-header">
+                <h3>🌲 成果森林</h3>
+                <div class="forest-tabs">
+                    <button class="forest-tab active" data-period="today">今日</button>
+                    <button class="forest-tab" data-period="week">本周</button>
+                    <button class="forest-tab" data-period="total">全部</button>
+                </div>
+            </div>
+            <div class="forest-display" id="achievementForest">
+                <div class="forest-empty">开始学习，种下第一棵树吧！🌱</div>
+            </div>
+        </div>
+
+        <!-- 专注度分析 -->
+        <div class="focus-analysis">
+            <h3>专注度分析</h3>
+            <div class="analysis-row">
+                <span>今日专注率：</span>
+                <span class="focus-rate" id="todayFocusRate">--</span>
+            </div>
+            <div class="analysis-row">
+                <span>本周专注率：</span>
+                <span class="focus-rate" id="weekFocusRate">--</span>
+            </div>
+        </div>
+
+        <!-- 筛选标签 -->
+        <div class="history-tabs">
+            <button class="history-tab active" data-filter="all">全部</button>
+            <button class="history-tab" data-filter="today">今天</button>
+            <button class="history-tab" data-filter="week">本周</button>
+        </div>
+
+        <!-- 历史记录列表 -->
+        <div id="historyList" class="history-list"></div>
+
+        <button id="closeHistoryBtn" class="btn btn-secondary-small">关闭</button>
+    </div>
+</div>
+
+<script src="child.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>监控端 - 家长</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+</head>
+<body>
+    <div class="container parent-view">
+        <div class="header">
+            <h1>📱 家长监控端</h1>
+        </div>
+
+        <!-- 房间号输入 -->
+        <div class="room-input-panel" id="roomInputPanel">
+            <h3>连接到孩子的学习</h3>
+            <p class="hint">请输入孩子页面显示的房间号</p>
+            <input type="text" id="roomIdInput" class="room-input" placeholder="输入6位房间号" maxlength="6">
+            <button id="connectBtn" class="btn btn-primary btn-large">连接</button>
+            <div class="firebase-status" id="parentFirebaseStatus">
+                <span class="status-indicator"></span>
+                <span class="status-text">检测连接状态...</span>
+            </div>
+        </div>
+
+        <!-- 监控面板（连接后显示） -->
+        <div class="monitor-panel hidden" id="monitorPanel">
+            <!-- 房间信息 -->
+            <div class="connected-room-info">
+                <div class="room-badge">
+                    <span class="room-icon">🔗</span>
+                    <div class="room-details">
+                        <span class="room-label">已连接房间</span>
+                        <span class="room-number" id="connectedRoomId">------</span>
+                    </div>
+                </div>
+                <button id="disconnectBtn" class="btn-disconnect">断开连接</button>
+            </div>
+        
+        <div class="status-panel">
+            <div class="status-item">
+                <span class="label">当前状态</span>
+                <span id="sessionStatus" class="status-badge">未开始</span>
+            </div>
+            <div class="status-item">
+                <span class="label">已用时间</span>
+                <span id="parentTimer" class="value">00:00</span>
+            </div>
+            <div class="status-item">
+                <span class="label">走神次数</span>
+                <span id="distractionCount" class="value">0次</span>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <h3>监控操作</h3>
+            <button id="distractBtn" class="btn btn-warning btn-large" disabled>
+                ☁️ 孩子走神了
+            </button>
+            <p class="hint">点击此按钮，孩子的页面会出现乌云提示</p>
+        </div>
+
+        <div class="settings-panel">
+            <h3>设置</h3>
+            <div class="setting-item">
+                <label for="cloudDuration">乌云持续时间（秒）</label>
+                <input type="number" id="cloudDuration" value="5" min="3" max="30">
+            </div>
+        </div>
+        
+        <button id="disconnectBtn" class="btn btn-secondary-small">断开连接</button>
+        
+        </div>
+    </div>
+
+    <script src="parent.js"></script>
+</body>
+</html>
