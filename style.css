@@ -505,6 +505,56 @@ body {
     border-color: #667eea;
 }
 
+/* 模式选择 */
+.mode-selection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.mode-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    background: #f7fafc;
+    border: 3px solid #e2e8f0;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.mode-btn:hover {
+    background: #edf2f7;
+    border-color: #667eea;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.mode-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.mode-label {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.mode-desc {
+    font-size: 14px;
+    color: #666;
+}
+
+#focusTaskSection.hidden {
+    display: none;
+}
+
 .task-name-display {
     font-size: 28px;
     font-weight: bold;

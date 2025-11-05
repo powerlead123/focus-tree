@@ -45,6 +45,18 @@ const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const roomIdDisplay = document.getElementById('roomIdDisplay');
 const firebaseStatusEl = document.getElementById('firebaseStatus');
 
+// 模式选择
+const focusModeBtn = document.getElementById('focusModeBtn');
+const focusTaskSection = document.getElementById('focusTaskSection');
+const modeSelection = document.querySelector('.mode-selection');
+
+if (focusModeBtn) {
+    focusModeBtn.addEventListener('click', () => {
+        modeSelection.style.display = 'none';
+        focusTaskSection.classList.remove('hidden');
+    });
+}
+
 // 时间选项按钮
 const timeOptions = document.querySelectorAll('.time-option');
 timeOptions.forEach(btn => {

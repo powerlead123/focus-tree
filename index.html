@@ -17,26 +17,44 @@
 <!-- 任务名称输入弹窗 -->
 <div id="taskNameModal" class="modal">
     <div class="modal-content">
-        <h2>📝 今天做什么作业？</h2>
-        <input type="text" id="taskNameInput" class="task-input" placeholder="例如：数学作业、语文练习..." maxlength="20">
+        <h2>📝 选择学习模式</h2>
 
-        <div class="time-input-section">
-            <label class="time-label">预计需要多长时间？</label>
-            <div class="time-options">
-                <button class="time-option" data-minutes="10">10分钟</button>
-                <button class="time-option" data-minutes="20">20分钟</button>
-                <button class="time-option active" data-minutes="30">30分钟</button>
-                <button class="time-option" data-minutes="45">45分钟</button>
-                <button class="time-option" data-minutes="60">60分钟</button>
-            </div>
-            <div class="custom-time">
-                <label>自定义：</label>
-                <input type="number" id="customMinutes" min="1" max="180" placeholder="分钟">
+        <div class="mode-selection">
+            <a href="race.html" class="mode-btn">
+                <span class="mode-icon">🏎️</span>
+                <span class="mode-label">口算竞速</span>
+                <span class="mode-desc">赛车比赛，快速口算</span>
+            </a>
+            <div class="mode-btn" id="focusModeBtn">
+                <span class="mode-icon">🌳</span>
+                <span class="mode-label">专注作业</span>
+                <span class="mode-desc">种小树，培养专注力</span>
             </div>
         </div>
 
-        <button id="confirmTaskBtn" class="btn btn-primary">开始专注</button>
-        <button id="viewHistoryBtn" class="btn btn-secondary-small">查看历史记录</button>
+        <div id="focusTaskSection" class="hidden">
+            <h3 style="margin-top: 20px;">今天做什么作业？</h3>
+            <input type="text" id="taskNameInput" class="task-input" placeholder="例如：数学作业、语文练习..."
+                maxlength="20"></span>""
+
+            <div class="time-input-section">
+                <label class="time-label">预计需要多长时间？</label>
+                <div class="time-options">
+                    <button class="time-option" data-minutes="10">10分钟</button>
+                    <button class="time-option" data-minutes="20">20分钟</button>
+                    <button class="time-option active" data-minutes="30">30分钟</button>
+                    <button class="time-option" data-minutes="45">45分钟</button>
+                    <button class="time-option" data-minutes="60">60分钟</button>
+                </div>
+                <div class="custom-time">
+                    <label>自定义：</label>
+                    <input type="number" id="customMinutes" min="1" max="180" placeholder="分钟">
+                </div>
+            </div>
+
+            <button id="confirmTaskBtn" class="btn btn-primary">开始专注</button>
+            <button id="viewHistoryBtn" class="btn btn-secondary-small">查看历史记录</button>
+        </div>
     </div>
 </div>
 
