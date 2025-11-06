@@ -64,13 +64,21 @@ function init() {
     loadSettings();
     setupEventListeners();
     renderSelectedOpponents();
+    
+    // 渲染背景选择器
+    renderRaceBackgroundSelector();
+    
+    // 应用已选择的背景
+    if (typeof applyBackground === 'function') {
+        applyBackground('race');
+    }
 }
 
 // 事件监听
 function setupEventListeners() {
     lotteryBtn.addEventListener('click', startLottery);
     startRaceBtn.addEventListener('click', startRace);
-    backBtn.addEventListener('click', () => window.location.href = 'index.html');
+    backBtn.addEventListener('click', () => window.location.href = 'home.html');
     manageNamesBtn.addEventListener('click', () => {
         namesModal.classList.remove('hidden');
         renderNamesManageList();
@@ -81,7 +89,7 @@ function setupEventListeners() {
     cancelNameBtn.addEventListener('click', () => editNameModal.classList.add('hidden'));
     completeBtn.addEventListener('click', userCompleteQuestion);
     playAgainBtn.addEventListener('click', resetToSetup);
-    backToHomeBtn.addEventListener('click', () => window.location.href = 'index.html');
+    backToHomeBtn.addEventListener('click', () => window.location.href = 'home.html');
     viewHistoryBtn.addEventListener('click', showHistory);
     closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
     clearHistoryBtn.addEventListener('click', clearHistory);
@@ -610,20 +618,72 @@ function startRace() {
     setupScreen.classList.add('hidden');
     raceScreen.classList.remove('hidden');
     
-    renderRaceTracks();
-    startRaceTimer();
-    startOpponentsUpdate();
-    
-    // 根据模式显示不同的控制界面
-    if (raceMode === 'auto') {
-        document.getElementById('completeBtn').classList.add('hidden');
-        document.getElementById('answerPanel').classList.remove('hidden');
-        setupNumberKeyboard();
-        showCurrentQuestion();
-    } else {
-        document.getElementById('completeBtn').classList.remove('hidden');
-        document.getElementById('answerPanel').classList.add('hidden');
+    // 应用选择的背景
+    if (typeof applyBackground === 'function') {
+        applyBackground('race');
     }
+    
+    renderRaceTracks();
+    
+    // 显示倒计时幕布
+    showCountdownCurtain();
+}
+
+// 倒计时幕布动画
+function showCountdownCurtain() {
+    const curtain = document.getElementById('countdownCurtain');
+    const countdownNumber = document.getElementById('countdownNumber');
+    
+    curtain.classList.remove('hidden');
+    
+    let count = 3;
+    countdownNumber.textContent = count;
+    
+    const countdownInterval = setInterval(() => {
+        count--;
+        
+        if (count > 0) {
+            // 重新触发动画
+            countdownNumber.style.animation = 'none';
+            setTimeout(() => {
+                countdownNumber.textContent = count;
+                countdownNumber.style.animation = 'countdownPulse 1s ease-in-out';
+            }, 50);
+        } else {
+            // 显示 GO!
+            countdownNumber.textContent = 'GO!';
+            countdownNumber.classList.add('go');
+            
+            // 打开幕布
+            setTimeout(() => {
+                curtain.classList.add('opening');
+            }, 200);
+            
+            // 开始比赛
+            setTimeout(() => {
+                curtain.classList.add('hidden');
+                curtain.classList.remove('opening');
+                countdownNumber.classList.remove('go');
+                
+                // 正式开始比赛
+                startRaceTimer();
+                startOpponentsUpdate();
+                
+                // 根据模式显示不同的控制界面
+                if (raceMode === 'auto') {
+                    document.getElementById('completeBtn').classList.add('hidden');
+                    document.getElementById('answerPanel').classList.remove('hidden');
+                    setupNumberKeyboard();
+                    showCurrentQuestion();
+                } else {
+                    document.getElementById('completeBtn').classList.remove('hidden');
+                    document.getElementById('answerPanel').classList.add('hidden');
+                }
+            }, 1000);
+            
+            clearInterval(countdownInterval);
+        }
+    }, 1000);
 }
 
 // 渲染赛道
@@ -935,13 +995,13 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// 生成三个数的混合运算题目（三年级难度）
+// 生成三个数的混合运算题目（三年级难度，所有中间结果不超过100）
 function generateQuestion() {
     let num1, num2, num3, op1, op2, answer;
     let attempts = 0;
     let isValid = false;
     
-    while (!isValid && attempts < 50) {
+    while (!isValid && attempts < 100) {
         attempts++;
         
         // 随机选择第一个运算符
@@ -955,23 +1015,25 @@ function generateQuestion() {
             op2 = OPERATORS[Math.floor(Math.random() * OPERATORS.length)];
         }
         
-        // 根据运算符生成第一个数
+        // 根据运算符生成数字，确保中间结果不超过100
         if (op1 === '×') {
-            // 乘法：两个因子都不超过10
+            // 乘法：确保结果不超过100
             num1 = Math.floor(Math.random() * 10) + 1;
-            num2 = Math.floor(Math.random() * 10) + 1;
+            num2 = Math.floor(Math.random() * Math.min(10, Math.floor(100 / num1))) + 1;
         } else if (op1 === '÷') {
-            // 除法：被除数不超过100，能整除
+            // 除法：确保能整除且商不超过100
             num2 = Math.floor(Math.random() * 9) + 2; // 除数2-10
-            const quotient = Math.floor(Math.random() * 10) + 1; // 商1-10
-            num1 = num2 * quotient; // 确保能整除且不超过100
-            if (num1 > 100) {
-                continue; // 重新生成
-            }
-        } else {
-            // 加减法：数字不超过100
-            num1 = Math.floor(Math.random() * 99) + 1;
-            num2 = Math.floor(Math.random() * 99) + 1;
+            const maxQuotient = Math.min(10, Math.floor(100 / num2));
+            const quotient = Math.floor(Math.random() * maxQuotient) + 1;
+            num1 = num2 * quotient;
+        } else if (op1 === '+') {
+            // 加法：确保和不超过100
+            num1 = Math.floor(Math.random() * 50) + 1;
+            num2 = Math.floor(Math.random() * (100 - num1)) + 1;
+        } else { // op1 === '-'
+            // 减法：确保被减数不超过100，差为正数
+            num1 = Math.floor(Math.random() * 100) + 1;
+            num2 = Math.floor(Math.random() * num1) + 1;
         }
         
         // 计算第一步结果
@@ -981,71 +1043,85 @@ function generateQuestion() {
         else if (op1 === '×') firstResult = num1 * num2;
         else if (op1 === '÷') firstResult = num1 / num2;
         
-        // 根据第二个运算符生成第三个数
-        if (op2 === '×') {
-            // 乘法：两个因子都不超过10
-            // 如果第一步结果已经超过10，重新生成
-            if (firstResult > 10) {
-                continue;
+        // 确保第一步结果不超过100且为正整数
+        if (firstResult > 100 || firstResult <= 0 || !Number.isInteger(firstResult)) {
+            continue;
+        }
+        
+        // 根据第二个运算符和运算优先级生成第三个数
+        if (op1 === '×' || op1 === '÷') {
+            // 先算op1，再算op2
+            if (op2 === '+') {
+                num3 = Math.floor(Math.random() * (100 - firstResult)) + 1;
+            } else { // op2 === '-'
+                num3 = Math.floor(Math.random() * firstResult) + 1;
             }
-            num3 = Math.floor(Math.random() * 10) + 1;
-        } else if (op2 === '÷') {
-            // 除法：被除数不超过100
-            if (firstResult > 100) {
-                continue;
-            }
-            // 确保第一步结果能被num3整除
-            const possibleDivisors = [];
-            for (let i = 2; i <= 10; i++) {
-                if (firstResult % i === 0) {
-                    possibleDivisors.push(i);
+            
+            if (op2 === '+') answer = firstResult + num3;
+            else answer = firstResult - num3;
+            
+        } else {
+            // op1是加减
+            if (op2 === '×' || op2 === '÷') {
+                // 先算op2，再算op1
+                if (op2 === '×') {
+                    // num2 × num3 不超过100
+                    num3 = Math.floor(Math.random() * Math.min(10, Math.floor(100 / num2))) + 1;
+                    const secondResult = num2 * num3;
+                    
+                    if (op1 === '+') {
+                        // num1 + secondResult 不超过100
+                        if (num1 + secondResult > 100) continue;
+                        answer = num1 + secondResult;
+                    } else { // op1 === '-'
+                        // num1 - secondResult 为正数
+                        if (num1 <= secondResult) continue;
+                        answer = num1 - secondResult;
+                    }
+                } else { // op2 === '÷'
+                    // num2 ÷ num3，确保能整除且商不超过100
+                    const possibleDivisors = [];
+                    for (let i = 2; i <= Math.min(10, num2); i++) {
+                        if (num2 % i === 0 && num2 / i <= 100) {
+                            possibleDivisors.push(i);
+                        }
+                    }
+                    if (possibleDivisors.length === 0) continue;
+                    
+                    num3 = possibleDivisors[Math.floor(Math.random() * possibleDivisors.length)];
+                    const secondResult = num2 / num3;
+                    
+                    if (op1 === '+') {
+                        if (num1 + secondResult > 100) continue;
+                        answer = num1 + secondResult;
+                    } else { // op1 === '-'
+                        if (num1 <= secondResult) continue;
+                        answer = num1 - secondResult;
+                    }
+                }
+            } else {
+                // 从左到右计算
+                if (op2 === '+') {
+                    num3 = Math.floor(Math.random() * (100 - firstResult)) + 1;
+                    answer = firstResult + num3;
+                } else { // op2 === '-'
+                    num3 = Math.floor(Math.random() * firstResult) + 1;
+                    answer = firstResult - num3;
                 }
             }
-            if (possibleDivisors.length > 0) {
-                num3 = possibleDivisors[Math.floor(Math.random() * possibleDivisors.length)];
-            } else {
-                continue; // 重新生成
-            }
-        } else {
-            // 加减法：数字不超过100
-            num3 = Math.floor(Math.random() * 99) + 1;
         }
         
-        // 计算最终答案（遵循运算优先级）
-        if (op1 === '×' || op1 === '÷') {
-            // 先算op1
-            if (op2 === '+') answer = firstResult + num3;
-            else if (op2 === '-') answer = firstResult - num3;
-            else if (op2 === '×') answer = firstResult * num3;
-            else if (op2 === '÷') answer = firstResult / num3;
-        } else {
-            // op1是加减，需要看op2优先级
-            if (op2 === '×' || op2 === '÷') {
-                // 先算op2
-                let secondResult;
-                if (op2 === '×') secondResult = num2 * num3;
-                else if (op2 === '÷') secondResult = num2 / num3;
-                
-                if (op1 === '+') answer = num1 + secondResult;
-                else if (op1 === '-') answer = num1 - secondResult;
-            } else {
-                // 从左到右
-                if (op2 === '+') answer = firstResult + num3;
-                else if (op2 === '-') answer = firstResult - num3;
-            }
-        }
-        
-        // 验证答案是否为正整数
-        if (Number.isInteger(answer) && answer > 0 && answer < 1000) {
+        // 验证答案是否为正整数且不超过100
+        if (Number.isInteger(answer) && answer > 0 && answer <= 100) {
             isValid = true;
         }
     }
     
-    // 如果生成失败，返回一个简单的题目
+    // 如果生成失败，返回一个简单的加法题目
     if (!isValid) {
-        num1 = Math.floor(Math.random() * 50) + 1;
-        num2 = Math.floor(Math.random() * 50) + 1;
-        num3 = Math.floor(Math.random() * 50) + 1;
+        num1 = Math.floor(Math.random() * 30) + 1;
+        num2 = Math.floor(Math.random() * 30) + 1;
+        num3 = Math.floor(Math.random() * (100 - num1 - num2)) + 1;
         op1 = '+';
         op2 = '+';
         answer = num1 + num2 + num3;
@@ -1156,4 +1232,99 @@ function showAnswerReview() {
         correctCount: correctCount,
         accuracy: accuracy
     };
+}
+
+
+// ==================== 背景选择功能 ====================
+
+// 渲染背景选择器
+function renderRaceBackgroundSelector() {
+    console.log('开始渲染背景选择器');
+    
+    const container = document.getElementById('raceBackgroundSelector');
+    if (!container) {
+        console.log('未找到背景选择器容器 #raceBackgroundSelector');
+        return;
+    }
+    
+    // 检查是否有common.js的函数
+    if (typeof getUnlockedBackgrounds !== 'function') {
+        console.log('getUnlockedBackgrounds函数未定义，common.js可能未加载');
+        container.innerHTML = '<p style="color: #999; font-size: 14px;">背景功能加载中...</p>';
+        return;
+    }
+    
+    const unlockedBackgrounds = getUnlockedBackgrounds();
+    console.log('已解锁的背景数量:', unlockedBackgrounds.length, unlockedBackgrounds);
+    
+    const settings = getSettings();
+    const currentBg = settings ? settings.raceBackground : null;
+    
+    if (unlockedBackgrounds.length === 0) {
+        console.log('没有已解锁的背景');
+        container.innerHTML = '<p style="color: #999; font-size: 14px;">还没有解锁的背景图，去商城解锁吧！</p>';
+        return;
+    }
+    
+    console.log('开始渲染', unlockedBackgrounds.length, '个背景选项');
+    container.innerHTML = '';
+    
+    // 添加默认选项
+    const defaultOption = document.createElement('div');
+    defaultOption.className = 'background-option-race' + (!currentBg ? ' active' : '');
+    defaultOption.innerHTML = `
+        <div class="bg-preview-race" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+        <div class="bg-name-race">默认</div>
+    `;
+    defaultOption.onclick = () => selectRaceBackground(null);
+    container.appendChild(defaultOption);
+    
+    // 添加已解锁的背景
+    unlockedBackgrounds.forEach(bg => {
+        const option = document.createElement('div');
+        option.className = 'background-option-race' + (currentBg === bg.id ? ' active' : '');
+        option.innerHTML = `
+            <div class="bg-preview-race" style="background-image: url(${bg.thumbnail}); background-size: cover; background-position: center;"></div>
+            <div class="bg-name-race">${bg.name}</div>
+        `;
+        option.onclick = () => selectRaceBackground(bg.id);
+        container.appendChild(option);
+    });
+    
+    console.log('背景选择器渲染完成');
+}
+
+// 选择背景
+function selectRaceBackground(backgroundId) {
+    console.log('选择背景:', backgroundId);
+    
+    // 直接操作localStorage，避免函数调用问题
+    const settingsKey = 'focusTree_settings';
+    let settings = JSON.parse(localStorage.getItem(settingsKey) || '{"focusBackground":null,"raceBackground":null}');
+    settings.raceBackground = backgroundId;
+    localStorage.setItem(settingsKey, JSON.stringify(settings));
+    console.log('直接保存到localStorage:', settings);
+    
+    // 更新选中状态
+    const options = document.querySelectorAll('.background-option-race');
+    options.forEach(opt => opt.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    // 立即应用背景到赛道
+    const trackContainer = document.querySelector('.race-track-container');
+    if (trackContainer && backgroundId) {
+        if (typeof getBackgroundData === 'function') {
+            const bg = getBackgroundData(backgroundId);
+            if (bg && bg.isFullyUnlocked) {
+                trackContainer.style.backgroundImage = `url(${bg.imageUrl})`;
+                trackContainer.style.backgroundSize = 'cover';
+                trackContainer.style.backgroundPosition = 'center';
+                console.log('背景已应用到赛道');
+            }
+        }
+    } else if (trackContainer && !backgroundId) {
+        trackContainer.style.backgroundImage = '';
+        trackContainer.style.background = 'linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 30%, #90EE90 30%, #7CCD7C 100%)';
+        console.log('恢复默认背景');
+    }
 }

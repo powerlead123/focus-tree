@@ -52,12 +52,24 @@
                 <div id="selectedOpponents" class="selected-opponents"></div>
             </div>
 
+            <div class="setup-section">
+                <label class="setup-label">选择背景（可选）</label>
+                <div id="raceBackgroundSelector" class="background-options-race"></div>
+            </div>
+
             <div class="button-group">
                 <button id="startRaceBtn" class="btn btn-primary btn-large">开始比赛</button>
                 <button id="viewHistoryBtn" class="btn btn-secondary">查看记录墙</button>
-                <button id="backBtn" class="btn btn-secondary">返回</button>
+                <button id="backBtn" class="btn btn-secondary" onclick="window.location.href='home.html'">返回首页</button>
             </div>
         </div>
+    </div>
+
+    <!-- 倒计时幕布 -->
+    <div id="countdownCurtain" class="countdown-curtain hidden">
+        <div class="curtain-left"></div>
+        <div class="curtain-right"></div>
+        <div class="countdown-number" id="countdownNumber">3</div>
     </div>
 
     <!-- 比赛页面 -->
@@ -249,6 +261,7 @@
         </div>
     </div>
 
+    <script src="common.js"></script>
     <script src="race.js"></script>
 </body>
 </html>

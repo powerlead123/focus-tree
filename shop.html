@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>背景商城 - 专注小树</title>
+    <link rel="stylesheet" href="shop.css">
+</head>
+<body>
+    <div class="container">
+        <header class="shop-header">
+            <button class="btn-back" onclick="goBack()">← 返回</button>
+            <h1>🛒 背景商城</h1>
+            <div class="coin-display">
+                <span class="coin-icon">🍃</span>
+                <span class="coin-count" id="coinCount">0</span>
+            </div>
+        </header>
+
+        <div class="shop-content">
+            <!-- 背景图列表 -->
+            <div id="backgroundsList" class="backgrounds-list"></div>
+        </div>
+    </div>
+
+    <!-- 解锁拼图弹窗 -->
+    <div class="modal hidden" id="unlockModal">
+        <div class="modal-content">
+            <h2>解锁拼图块</h2>
+            
+            <div class="unlock-preview" id="unlockPreview"></div>
+            
+            <div class="unlock-info">
+                <p class="unlock-cost">
+                    <span class="cost-icon">🍃</span>
+                    需要 <strong>10</strong> 个金币
+                </p>
+                <p class="unlock-current">
+                    当前金币：<span id="modalCoinCount">0</span> 个
+                </p>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" id="confirmUnlockBtn" onclick="confirmUnlock()">
+                    确认解锁
+                </button>
+                <button class="btn btn-secondary" onclick="closeUnlockModal()">
+                    取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 完成庆祝弹窗 -->
+    <div class="modal hidden" id="completionModal">
+        <div class="modal-content completion-content">
+            <div class="celebration">🎉</div>
+            <h2>恭喜完成！</h2>
+            <p class="completion-text">你已经解锁了完整的背景图</p>
+            <div class="completed-image" id="completedImage"></div>
+            <p class="completion-name" id="completionName"></p>
+            <button class="btn btn-primary" onclick="closeCompletionModal()">
+                太棒了！
+            </button>
+        </div>
+    </div>
+
+    <!-- 提示消息 -->
+    <div class="toast hidden" id="toast"></div>
+
+    <script src="common.js"></script>
+    <script src="shop.js"></script>
+</body>
+</html>

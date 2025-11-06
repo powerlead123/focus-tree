@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注小树 - 首页</title>
+    <link rel="stylesheet" href="home.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🌳 专注小树</h1>
+            <p class="subtitle">让学习变得更有趣</p>
+        </header>
+
+        <!-- 成就卡片 -->
+        <div class="stats-card">
+            <h2>📊 我的成就</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-icon">🌳</div>
+                    <div class="stat-info">
+                        <div class="stat-label">累计小树</div>
+                        <div class="stat-value" id="totalTrees">0</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🍃</div>
+                    <div class="stat-info">
+                        <div class="stat-label">金币</div>
+                        <div class="stat-value" id="totalCoins">0</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🖼️</div>
+                    <div class="stat-info">
+                        <div class="stat-label">背景图</div>
+                        <div class="stat-value" id="unlockedBgs">0/10</div>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-info">
+                        <div class="stat-label">连续天数</div>
+                        <div class="stat-value" id="studyStreak">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 可兑换提示 -->
+        <div class="exchange-hint" id="exchangeHint">
+            <span id="availableTreesText">你有 0 棵小树可以兑换金币</span>
+        </div>
+
+        <!-- 功能按钮 -->
+        <div class="function-grid">
+            <button class="function-btn" onclick="goToFocus()">
+                <div class="btn-icon">🧘</div>
+                <div class="btn-label">专注力训练</div>
+                <div class="btn-desc">培养专注力</div>
+            </button>
+            
+            <button class="function-btn" onclick="goToRace()">
+                <div class="btn-icon">🏎️</div>
+                <div class="btn-label">口算竞速</div>
+                <div class="btn-desc">快速口算</div>
+            </button>
+            
+            <button class="function-btn" onclick="goToBubble()">
+                <div class="btn-icon">🎈</div>
+                <div class="btn-label">泡泡单词</div>
+                <div class="btn-desc">趣味记单词</div>
+            </button>
+            
+            <button class="function-btn" onclick="goToShop()">
+                <div class="btn-icon">🛒</div>
+                <div class="btn-label">背景商城</div>
+                <div class="btn-desc">解锁精美背景</div>
+            </button>
+        </div>
+
+        <!-- 兑换金币按钮 -->
+        <button class="exchange-btn" id="exchangeBtn" onclick="showExchangeModal()">
+            <span class="exchange-icon">🌳 → 🍃</span>
+            <span class="exchange-text">兑换金币</span>
+        </button>
+    </div>
+
+    <!-- 兑换金币弹窗 -->
+    <div class="modal hidden" id="exchangeModal">
+        <div class="modal-content">
+            <h2>兑换金币</h2>
+            
+            <div class="exchange-visual">
+                <span class="exchange-from">🌳 × 10</span>
+                <span class="exchange-arrow">→</span>
+                <span class="exchange-to">🍃 × 1</span>
+            </div>
+            
+            <div class="exchange-info">
+                <p>当前小树：<span id="modalAvailableTrees">0</span> 棵</p>
+                <p>可兑换：<span id="maxExchangeTimes">0</span> 次</p>
+            </div>
+            
+            <div class="exchange-input">
+                <label>兑换次数：</label>
+                <input type="number" id="exchangeTimes" value="1" min="1" max="1">
+                <button class="btn-max" onclick="setMaxExchange()">最大</button>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="confirmExchange()">确认兑换</button>
+                <button class="btn btn-secondary" onclick="closeExchangeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div class="toast hidden" id="toast"></div>
+
+    <script src="common.js"></script>
+    <script src="home.js"></script>
+</body>
+</html>

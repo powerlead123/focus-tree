@@ -45,17 +45,7 @@ const closeHistoryBtn = document.getElementById('closeHistoryBtn');
 const roomIdDisplay = document.getElementById('roomIdDisplay');
 const firebaseStatusEl = document.getElementById('firebaseStatus');
 
-// 模式选择
-const focusModeBtn = document.getElementById('focusModeBtn');
-const focusTaskSection = document.getElementById('focusTaskSection');
-const modeSelection = document.querySelector('.mode-selection');
-
-if (focusModeBtn) {
-    focusModeBtn.addEventListener('click', () => {
-        modeSelection.style.display = 'none';
-        focusTaskSection.classList.remove('hidden');
-    });
-}
+// 模式选择已移除，直接显示专注作业输入
 
 // 时间选项按钮
 const timeOptions = document.querySelectorAll('.time-option');
@@ -132,6 +122,11 @@ document.getElementById('startWithoutParent').addEventListener('click', () => {
 // 开始会话
 function startSession() {
     mainScreen.classList.remove('hidden');
+    
+    // 应用选择的背景
+    if (typeof applyBackground === 'function') {
+        applyBackground('focus');
+    }
     
     // 更新主页面的房间号显示
     const roomIdElements = document.querySelectorAll('#roomIdDisplay');
@@ -404,6 +399,11 @@ function endSession() {
         distractionCount: distractionCount,
         pausedSeconds: pausedSeconds
     });
+    
+    // 保存小树到公共数据（用于商城系统）
+    if (typeof addTrees === 'function' && treeCount > 0) {
+        addTrees(treeCount);
+    }
     
     resultStats.innerHTML = `
         <p style="font-size: 24px; margin-bottom: 20px;">📚 ${currentTask}</p>
@@ -784,4 +784,75 @@ useFirebase = initFirebase();
 loadSession();
 if (!useFirebase) {
     checkParentSignal();
+}
+
+// 渲染背景选择器
+renderBackgroundSelector();
+
+// 应用已选择的背景
+if (typeof applyBackground === 'function') {
+    applyBackground('focus');
+}
+
+
+// 渲染背景选择器
+function renderBackgroundSelector() {
+    const container = document.getElementById('focusBackgroundSelector');
+    if (!container) return;
+    
+    // 检查是否有common.js的函数
+    if (typeof getUnlockedBackgrounds !== 'function') {
+        container.innerHTML = '<p style="color: #999; font-size: 14px;">背景功能需要先解锁背景图</p>';
+        return;
+    }
+    
+    const unlockedBackgrounds = getUnlockedBackgrounds();
+    const settings = getSettings();
+    const currentBg = settings.focusBackground;
+    
+    if (unlockedBackgrounds.length === 0) {
+        container.innerHTML = '<p style="color: #999; font-size: 14px;">还没有解锁的背景图，去商城解锁吧！</p>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    // 添加默认选项
+    const defaultOption = document.createElement('div');
+    defaultOption.className = 'background-option' + (!currentBg ? ' active' : '');
+    defaultOption.innerHTML = `
+        <div class="bg-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+        <div class="bg-name">默认背景</div>
+    `;
+    defaultOption.onclick = () => selectBackground(null, 'focus');
+    container.appendChild(defaultOption);
+    
+    // 添加已解锁的背景
+    unlockedBackgrounds.forEach(bg => {
+        const option = document.createElement('div');
+        option.className = 'background-option' + (currentBg === bg.id ? ' active' : '');
+        option.innerHTML = `
+            <div class="bg-preview" style="background-image: url(${bg.thumbnail}); background-size: cover; background-position: center;"></div>
+            <div class="bg-name">${bg.name}</div>
+        `;
+        option.onclick = () => selectBackground(bg.id, 'focus');
+        container.appendChild(option);
+    });
+}
+
+// 选择背景
+function selectBackground(backgroundId, module) {
+    if (typeof setModuleBackground !== 'function') return;
+    
+    setModuleBackground(module, backgroundId);
+    
+    // 更新选中状态
+    const options = document.querySelectorAll('.background-option');
+    options.forEach(opt => opt.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    
+    // 立即应用背景
+    if (typeof applyBackground === 'function') {
+        applyBackground(module);
+    }
 }
