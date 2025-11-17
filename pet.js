@@ -302,6 +302,24 @@ function dailyCheckin() {
 function confirmCheckinWithStar(hasStar) {
     closeStarModal();
     
+    // 先隐藏打卡按钮，显示喂养按钮
+    document.getElementById('checkinBtn').style.display = 'none';
+    document.getElementById('skipBtn').style.display = 'none';
+    document.getElementById('checkinHint').style.display = 'none';
+    document.getElementById('feedingSection').classList.remove('hidden');
+    
+    // 保存星评状态，等待喂养
+    window.pendingCheckin = {
+        hasStar: hasStar,
+        date: new Date().toISOString().split('T')[0]
+    };
+}
+
+// 喂养宠物
+function feedPet() {
+    if (!window.pendingCheckin) return;
+    
+    const { hasStar } = window.pendingCheckin;
     const petData = getPetData();
     const today = new Date().toISOString().split('T')[0];
     
@@ -335,8 +353,14 @@ function confirmCheckinWithStar(hasStar) {
     // 更新排行榜进度
     updatePlayerProgress(hasStar);
     
-    // 播放打卡动画
-    playCheckinAnimation();
+    // 清除待处理的打卡
+    window.pendingCheckin = null;
+    
+    // 隐藏喂养按钮
+    document.getElementById('feedingSection').classList.add('hidden');
+    
+    // 播放喂养动画（更华丽的版本）
+    playFeedingAnimation();
     
     // 宠物说话 - 根据天数说不同的话
     if (petData.totalDays === 1) {
@@ -386,7 +410,87 @@ function confirmCheckinWithStar(hasStar) {
     }
 }
 
-// 播放打卡动画
+// 播放喂养动画（华丽版）
+function playFeedingAnimation() {
+    const petCharacter = document.getElementById('petCharacter');
+    const petContainer = document.getElementById('petContainer');
+    
+    // 1. 食物飞向宠物（多个食物）
+    const foods = ['🍎', '🍌', '🍇', '🥕', '🍞'];
+    foods.forEach((food, index) => {
+        setTimeout(() => {
+            const foodElement = document.createElement('div');
+            foodElement.textContent = food;
+            foodElement.style.position = 'fixed';
+            foodElement.style.fontSize = '60px';
+            foodElement.style.left = '50%';
+            foodElement.style.bottom = '10%';
+            foodElement.style.zIndex = '1000';
+            foodElement.style.animation = 'foodFlyToPet 1.5s ease-out forwards';
+            document.body.appendChild(foodElement);
+            
+            setTimeout(() => foodElement.remove(), 1500);
+        }, index * 300);
+    });
+    
+    // 2. 宠物吃东西动画（放大缩小）
+    setTimeout(() => {
+        let eatCount = 0;
+        const eatInterval = setInterval(() => {
+            if (eatCount % 2 === 0) {
+                petCharacter.style.transform = 'scale(1.2)';
+            } else {
+                petCharacter.style.transform = 'scale(1)';
+            }
+            eatCount++;
+            
+            if (eatCount >= 6) {
+                clearInterval(eatInterval);
+                petCharacter.style.transform = 'scale(1)';
+            }
+        }, 300);
+    }, 1500);
+    
+    // 3. 宠物满足的表情和爱心
+    setTimeout(() => {
+        // 爱心特效
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                const heart = document.createElement('div');
+                heart.textContent = '❤️';
+                heart.style.position = 'absolute';
+                heart.style.fontSize = '40px';
+                heart.style.left = '50%';
+                heart.style.top = '50%';
+                heart.style.animation = 'heartFloat 2s ease-out forwards';
+                heart.style.setProperty('--angle', Math.random() * 360 + 'deg');
+                petContainer.appendChild(heart);
+                
+                setTimeout(() => heart.remove(), 2000);
+            }, i * 100);
+        }
+        
+        // 宠物跳跃庆祝
+        petCharacter.classList.add('bounce');
+        setTimeout(() => petCharacter.classList.remove('bounce'), 1000);
+    }, 3000);
+    
+    // 4. 显示鼓励文字
+    setTimeout(() => {
+        createSparkles();
+        petSay('好好吃！谢谢柏皓！我感觉更强壮了！', 3000);
+    }, 4000);
+    
+    // 5. 完成后更新显示
+    setTimeout(() => {
+        updatePetDisplay();
+        checkTodayCheckin();
+        showStreakReward(getPetData().checkinStreak);
+        renderGrowthPreview();
+    }, 5000);
+}
+
+// 播放打卡动画（保留旧版本作为备用）
 function playCheckinAnimation() {
     const animation = document.getElementById('checkinAnimation');
     animation.classList.remove('hidden');

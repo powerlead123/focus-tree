@@ -334,6 +334,70 @@ body {
     color: rgba(255, 255, 255, 0.9);
 }
 
+/* 喂养区域 */
+.feeding-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.feeding-section.hidden {
+    display: none;
+}
+
+.feeding-hint {
+    font-size: 18px;
+    color: white;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+
+.btn-feed {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border: none;
+    color: white;
+    padding: 20px 50px;
+    border-radius: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 15px;
+    animation: feedPulse 2s ease-in-out infinite;
+}
+
+@keyframes feedPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 12px 35px rgba(245, 158, 11, 0.6);
+    }
+}
+
+.btn-feed:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 15px 40px rgba(245, 158, 11, 0.6);
+}
+
+.btn-feed:active {
+    transform: translateY(0) scale(0.95);
+}
+
+.feed-icon {
+    font-size: 36px;
+    animation: foodBounce 1s ease-in-out infinite;
+}
+
+@keyframes foodBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
 /* 成长提示 */
 .growth-hint {
     background: rgba(255, 255, 255, 0.2);
@@ -1307,4 +1371,35 @@ body {
     font-size: 14px;
     color: #48bb78;
     font-weight: bold;
+}
+
+/* 喂养动画 */
+@keyframes foodFlyToPet {
+    0% {
+        transform: translate(-50%, 0) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, -40vh) scale(1.3) rotate(180deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50vh) scale(0.5) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes heartFloat {
+    0% {
+        transform: translate(-50%, -50%) scale(0) rotate(0deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(calc(-50% + cos(var(--angle)) * 100px), calc(-50% + sin(var(--angle)) * 100px)) scale(1.2) rotate(var(--angle));
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + cos(var(--angle)) * 150px), calc(-50% + sin(var(--angle)) * 150px)) scale(0.5) rotate(var(--angle));
+        opacity: 0;
+    }
 }

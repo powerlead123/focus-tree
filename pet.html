@@ -67,6 +67,15 @@
             <p class="checkin-hint" id="checkinHint">完成今天的记事本，给宠物喂食吧！</p>
         </div>
 
+        <!-- 喂养按钮（打卡后显示） -->
+        <div class="feeding-section hidden" id="feedingSection">
+            <p class="feeding-hint">太棒了！现在给宠物喂食吧！</p>
+            <button class="btn-feed" id="feedBtn" onclick="feedPet()">
+                <span class="feed-icon">🍎</span>
+                <span class="feed-text">喂食</span>
+            </button>
+        </div>
+
         <!-- 连续打卡奖励提示 -->
         <div class="streak-rewards">
             <div class="rewards-title">🎁 连续打卡奖励</div>
