@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>远眺剧场</title>
+    <link rel="stylesheet" href="theater.css">
+</head>
+<body>
+    <!-- 开始页面 -->
+    <div id="startScreen" class="screen">
+        <div class="start-container">
+            <h1 class="title">🎭 远眺剧场</h1>
+            <p class="subtitle">让眼睛休息一下吧！</p>
+            
+            <div class="instruction-box">
+                <div class="instruction-icon">👀</div>
+                <h2>使用说明</h2>
+                <ol class="instruction-list">
+                    <li>点击开始后，请站到<strong>5米外</strong>观看</li>
+                    <li>不需要操作，只需要看就好</li>
+                    <li>跟着宠物一起放松眼睛</li>
+                    <li>完成后获得金币奖励</li>
+                </ol>
+            </div>
+            
+            <div class="duration-select">
+                <h3>选择时长</h3>
+                <div class="duration-buttons">
+                    <button class="btn-duration" onclick="startTheater(3)">
+                        <span class="duration-time">3分钟</span>
+                        <span class="duration-reward">+3金币</span>
+                    </button>
+                    <button class="btn-duration" onclick="startTheater(5)">
+                        <span class="duration-time">5分钟</span>
+                        <span class="duration-reward">+5金币</span>
+                    </button>
+                </div>
+            </div>
+            
+            <button class="btn-back" onclick="window.location.href='home.html'">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 剧场页面 -->
+    <div id="theaterScreen" class="screen hidden">
+        <div class="theater-container" id="theaterContainer">
+            <!-- 动态内容将在这里显示 -->
+        </div>
+        
+        <!-- 退出按钮 -->
+        <button class="btn-exit" id="exitBtn" onclick="exitTheater()">退出</button>
+        
+        <!-- 进度指示器 -->
+        <div class="progress-indicator" id="progressIndicator"></div>
+    </div>
+
+    <!-- 完成页面 -->
+    <div id="completeScreen" class="screen hidden">
+        <div class="complete-container">
+            <div class="complete-icon">🎉</div>
+            <h1 class="complete-title">太棒了！</h1>
+            <p class="complete-text">柏皓完成了护眼训练！</p>
+            
+            <div class="reward-box">
+                <div class="reward-icon">🪙</div>
+                <div class="reward-text">获得 <span id="rewardCoins">3</span> 金币</div>
+            </div>
+            
+            <div class="stats-box">
+                <div class="stat-item">
+                    <div class="stat-label">今日完成</div>
+                    <div class="stat-value" id="todayCount">1</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">累计完成</div>
+                    <div class="stat-value" id="totalCount">1</div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="resetTheater()">再来一次</button>
+                <button class="btn-secondary" onclick="window.location.href='home.html'">返回首页</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="theater.js"></script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记事宠物</title>
+    <link rel="stylesheet" href="pet.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="btn-back" onclick="window.location.href='home.html'">← 返回</button>
+            <h1>📝 记事宠物</h1>
+        </header>
+
+        <!-- 宠物展示区 -->
+        <div class="pet-stage">
+            <div class="pet-container" id="petContainer">
+                <div class="pet-character" id="petCharacter">🥚</div>
+                <div class="pet-effects" id="petEffects"></div>
+                <div class="pet-speech-bubble" id="petSpeech"></div>
+            </div>
+            
+            <div class="pet-name" id="petName">我的宠物蛋</div>
+            <div class="pet-mood" id="petMood">😊 心情很好</div>
+        </div>
+
+        <!-- 成长预览 -->
+        <div class="growth-preview">
+            <div class="preview-title">🔮 成长预览</div>
+            <div class="preview-stages" id="previewStages"></div>
+        </div>
+
+        <!-- 宠物信息卡 -->
+        <div class="pet-info-card">
+            <div class="info-row">
+                <span class="info-label">📊 成长值</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                    <span class="progress-text" id="progressText">0/30</span>
+                </div>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🔥 连续打卡</span>
+                <span class="info-value" id="streakDays">0 天</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🎂 宠物年龄</span>
+                <span class="info-value" id="petAge">0 天</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">⭐ 当前等级</span>
+                <span class="info-value" id="petLevel">Lv.1 蛋</span>
+            </div>
+        </div>
+
+        <!-- 打卡按钮 -->
+        <div class="action-section">
+            <button class="btn-checkin" id="checkinBtn" onclick="dailyCheckin()">
+                <span class="btn-icon">✅</span>
+                <span class="btn-text">今日已写记事</span>
+            </button>
+            <button class="btn-skip" id="skipBtn" onclick="showSkipModal()">
+                <span class="btn-icon">📝</span>
+                <span class="btn-text">今日未写记事</span>
+            </button>
+            <p class="checkin-hint" id="checkinHint">完成今天的记事本，给宠物喂食吧！</p>
+        </div>
+
+        <!-- 连续打卡奖励提示 -->
+        <div class="streak-rewards">
+            <div class="rewards-title">🎁 连续打卡奖励</div>
+            <div class="rewards-list">
+                <div class="reward-item">
+                    <span class="reward-days">连续3天</span>
+                    <span class="reward-prize">+5金币 🪙</span>
+                </div>
+                <div class="reward-item">
+                    <span class="reward-days">连续5天</span>
+                    <span class="reward-prize">+10金币 🪙</span>
+                </div>
+                <div class="reward-item">
+                    <span class="reward-days">连续7天</span>
+                    <span class="reward-prize">+20金币 + 宠物发光 ✨</span>
+                </div>
+                <div class="reward-item">
+                    <span class="reward-days">连续30天</span>
+                    <span class="reward-prize">解锁新宠物 🎉</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 成长提示 -->
+        <div class="growth-hint" id="growthHint">
+            距离下一阶段还需：<span id="daysToNext">6</span> 天
+        </div>
+
+        <!-- 宠物军团预览 -->
+        <div class="pet-army">
+            <div class="army-title">🌟 宠物军团（未来可解锁）</div>
+            <div class="army-grid">
+                <div class="army-pet unlocked">
+                    <div class="army-emoji">🐣</div>
+                    <div class="army-name">小鸡</div>
+                    <div class="army-status">当前</div>
+                </div>
+                <div class="army-pet locked">
+                    <div class="army-emoji">🐉</div>
+                    <div class="army-name">小龙</div>
+                    <div class="army-status">30天解锁</div>
+                </div>
+                <div class="army-pet locked">
+                    <div class="army-emoji">🦄</div>
+                    <div class="army-name">独角兽</div>
+                    <div class="army-status">60天解锁</div>
+                </div>
+                <div class="army-pet locked">
+                    <div class="army-emoji">🐼</div>
+                    <div class="army-name">熊猫</div>
+                    <div class="army-status">90天解锁</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 宠物图鉴按钮 -->
+        <button class="btn-album" onclick="showAlbum()">📖 成长图鉴</button>
+        <button class="btn-album" onclick="showGrowthGuide()" style="margin-top: 10px;">🔮 成长指南</button>
+        <button class="btn-album" onclick="showRanking()" style="margin-top: 10px;">📊 对手排行</button>
+    </div>
+
+    <!-- 打卡成功动画 -->
+    <div class="checkin-animation hidden" id="checkinAnimation">
+        <div class="food-item">🍎</div>
+    </div>
+
+    <!-- 进化动画 -->
+    <div class="evolution-overlay hidden" id="evolutionOverlay">
+        <div class="evolution-content">
+            <div class="evolution-light"></div>
+            <div class="evolution-pet" id="evolutionPet">🥚</div>
+            <div class="evolution-text">恭喜！你的宠物进化了！</div>
+        </div>
+    </div>
+
+    <!-- 未写记事弹窗 -->
+    <div class="modal hidden" id="skipModal">
+        <div class="modal-content">
+            <h2>📝 今日未写记事</h2>
+            <p class="modal-desc">柏皓，告诉我为什么今天没写记事吧~</p>
+            
+            <div class="skip-reasons">
+                <label class="reason-option">
+                    <input type="radio" name="skipReason" value="forgot">
+                    <span>😅 忘记了</span>
+                </label>
+                <label class="reason-option">
+                    <input type="radio" name="skipReason" value="busy">
+                    <span>⏰ 太忙了</span>
+                </label>
+                <label class="reason-option">
+                    <input type="radio" name="skipReason" value="tired">
+                    <span>😴 太累了</span>
+                </label>
+                <label class="reason-option">
+                    <input type="radio" name="skipReason" value="other">
+                    <span>📌 其他原因</span>
+                </label>
+            </div>
+            
+            <div class="pet-response" id="petResponse"></div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="confirmSkip()">确定</button>
+                <button class="btn btn-secondary" onclick="closeSkipModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成长相册弹窗 -->
+    <div class="modal hidden" id="albumModal">
+        <div class="modal-content">
+            <h2>📖 成长相册</h2>
+            <div class="album-grid" id="albumGrid"></div>
+            <button class="btn btn-secondary" onclick="closeAlbum()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 成长指南弹窗 -->
+    <div class="modal hidden" id="guideModal">
+        <div class="modal-content modal-large">
+            <h2>🔮 成长指南 - 你的宠物未来会变成这样！</h2>
+            <p class="guide-intro">坚持写记事，见证宠物的华丽蜕变！每个阶段都有特殊能力哦~</p>
+            <div class="guide-stages" id="guideStages"></div>
+            <button class="btn btn-secondary" onclick="closeGuide()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 排行榜弹窗 -->
+    <div class="modal hidden" id="rankingModal">
+        <div class="modal-content modal-large">
+            <h2>📊 记事排行榜</h2>
+            <p class="ranking-intro">目标：成为优秀的人！（100米）</p>
+            
+            <div class="ranking-track" id="rankingTrack">
+                <!-- 赛道将在这里显示 -->
+            </div>
+            
+            <div class="ranking-tips">
+                <div class="tip-item">💡 每日记事：前进3米</div>
+                <div class="tip-item">⭐ 获得星评：额外前进1米</div>
+                <div class="tip-item">🔥 连续3天：额外奖励2米</div>
+            </div>
+            
+            <button class="btn btn-secondary" onclick="closeRanking()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 打卡评价弹窗 -->
+    <div class="modal hidden" id="starModal">
+        <div class="modal-content">
+            <h2>⭐ 今天的记事</h2>
+            <p class="modal-desc">柏皓，今天的记事获得老师的⭐了吗？</p>
+            
+            <div class="star-buttons">
+                <button class="btn-star yes" onclick="confirmCheckinWithStar(true)">
+                    <span class="star-icon">⭐</span>
+                    <span class="star-text">获得了⭐</span>
+                    <span class="star-reward">前进4米</span>
+                </button>
+                <button class="btn-star no" onclick="confirmCheckinWithStar(false)">
+                    <span class="star-icon">📝</span>
+                    <span class="star-text">还没有⭐</span>
+                    <span class="star-reward">前进3米</span>
+                </button>
+            </div>
+            
+            <button class="btn btn-secondary" onclick="closeStarModal()" style="margin-top: 15px;">取消</button>
+        </div>
+    </div>
+
+    <!-- 提示消息 -->
+    <div class="toast hidden" id="toast"></div>
+
+    <script src="common.js"></script>
+    <script src="pet.js"></script>
+</body>
+</html>

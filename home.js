@@ -2,9 +2,29 @@
 
 // 页面加载时初始化
 window.addEventListener('DOMContentLoaded', () => {
+    checkStudyStreak();
     updateStats();
     updateExchangeButton();
 });
+
+// 检查连续天数（如果超过1天没学习，重置为0）
+function checkStudyStreak() {
+    const userData = getUserData();
+    const today = new Date().toISOString().split('T')[0];
+    const lastDate = userData.lastStudyDate;
+    
+    if (lastDate) {
+        const lastTime = new Date(lastDate).getTime();
+        const todayTime = new Date(today).getTime();
+        const daysDiff = Math.floor((todayTime - lastTime) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff > 1) {
+            // 超过1天没学习，重置连续天数
+            userData.studyStreak = 0;
+            saveUserData(userData);
+        }
+    }
+}
 
 // 更新统计数据
 function updateStats() {
@@ -48,6 +68,14 @@ function goToFocus() {
 
 function goToRace() {
     window.location.href = 'race.html';
+}
+
+function goToPet() {
+    window.location.href = 'pet.html';
+}
+
+function goToEyecare() {
+    window.location.href = 'eyecare.html';
 }
 
 function goToBubble() {

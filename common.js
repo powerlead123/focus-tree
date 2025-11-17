@@ -177,7 +177,31 @@ function addTrees(count) {
     const userData = getUserData();
     userData.trees += count;
     userData.availableTrees += count;
-    userData.lastStudyDate = new Date().toISOString().split('T')[0];
+    
+    // 更新连续天数
+    const today = new Date().toISOString().split('T')[0];
+    const lastDate = userData.lastStudyDate;
+    
+    if (lastDate) {
+        const lastTime = new Date(lastDate).getTime();
+        const todayTime = new Date(today).getTime();
+        const daysDiff = Math.floor((todayTime - lastTime) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff === 0) {
+            // 今天已经学习过了，不增加连续天数
+        } else if (daysDiff === 1) {
+            // 连续的第二天，增加连续天数
+            userData.studyStreak += 1;
+        } else {
+            // 中断了，重新开始
+            userData.studyStreak = 1;
+        }
+    } else {
+        // 第一次学习
+        userData.studyStreak = 1;
+    }
+    
+    userData.lastStudyDate = today;
     saveUserData(userData);
     return userData;
 }
