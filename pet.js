@@ -187,13 +187,25 @@ function updatePetDisplay() {
         petCharacter.textContent = eggState.emoji;
         
         // 添加晃动效果
-        petCharacter.classList.remove('shake', 'shake-fast');
+        petCharacter.classList.remove('shake', 'shake-fast', 'blink');
         if (eggState.effect !== 'none') {
             petCharacter.classList.add(eggState.effect);
         }
     } else {
         petCharacter.textContent = currentStage.emoji;
         petCharacter.classList.remove('shake', 'shake-fast');
+        
+        // 破壳后的宠物会眨眼（有眼睛的阶段）
+        if (currentStage.level >= 2) {
+            petCharacter.classList.add('blink');
+        }
+        
+        // 幼年阶段会走路
+        if (currentStage.level >= 3) {
+            startPetWalking();
+        } else {
+            stopPetWalking();
+        }
     }
     
     // 根据连续天数添加特效
@@ -205,6 +217,9 @@ function updatePetDisplay() {
     
     // 更新宠物名字
     document.getElementById('petName').textContent = `${OWNER_NAME}的${currentStage.name}`;
+    
+    // 更新游戏按钮显示
+    updateGameButton();
     
     // 更新心情
     updateMood(petData.checkinStreak);
@@ -513,18 +528,89 @@ function playEvolutionAnimation(newStage) {
     const overlay = document.getElementById('evolutionOverlay');
     const evolutionPet = document.getElementById('evolutionPet');
     
-    evolutionPet.textContent = newStage.emoji;
+    // 特殊处理破壳动画
+    if (newStage.level === 2) {
+        playHatchingAnimation(overlay, evolutionPet, newStage);
+    } else {
+        // 普通进化动画
+        evolutionPet.textContent = newStage.emoji;
+        overlay.classList.remove('hidden');
+        
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            updatePetDisplay();
+            checkTodayCheckin();
+            showToast(`🎉 恭喜！进化成${newStage.name}了！`, 'success');
+        }, 3000);
+    }
+}
+
+// 破壳动画（特殊）
+function playHatchingAnimation(overlay, evolutionPet, newStage) {
     overlay.classList.remove('hidden');
     
-    // 播放音效（可选）
-    // playSound('evolution');
+    // 第一阶段：蛋剧烈晃动（1秒）
+    evolutionPet.textContent = '🥚';
+    evolutionPet.style.animation = 'eggShakeHard 0.3s infinite';
     
+    // 第二阶段：蛋裂开（1秒）
+    setTimeout(() => {
+        evolutionPet.style.animation = 'eggCrack 1s ease-out';
+        
+        // 裂纹特效
+        for (let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                const crack = document.createElement('div');
+                crack.textContent = '💥';
+                crack.style.position = 'absolute';
+                crack.style.fontSize = '40px';
+                crack.style.left = '50%';
+                crack.style.top = '50%';
+                crack.style.animation = 'crackBurst 1s ease-out forwards';
+                crack.style.setProperty('--angle', (i * 36) + 'deg');
+                overlay.querySelector('.evolution-content').appendChild(crack);
+                
+                setTimeout(() => crack.remove(), 1000);
+            }, i * 50);
+        }
+    }, 1000);
+    
+    // 第三阶段：破壳而出（1秒）
+    setTimeout(() => {
+        evolutionPet.textContent = '🐣';
+        evolutionPet.style.animation = 'hatchOut 1s ease-out';
+        
+        // 光芒四射
+        for (let i = 0; i < 20; i++) {
+            setTimeout(() => {
+                const light = document.createElement('div');
+                light.textContent = '✨';
+                light.style.position = 'absolute';
+                light.style.fontSize = '30px';
+                light.style.left = '50%';
+                light.style.top = '50%';
+                light.style.animation = 'lightBurst 1.5s ease-out forwards';
+                light.style.setProperty('--angle', (i * 18) + 'deg');
+                overlay.querySelector('.evolution-content').appendChild(light);
+                
+                setTimeout(() => light.remove(), 1500);
+            }, i * 30);
+        }
+    }, 2000);
+    
+    // 结束
     setTimeout(() => {
         overlay.classList.add('hidden');
+        evolutionPet.style.animation = '';
         updatePetDisplay();
         checkTodayCheckin();
-        showToast(`🎉 恭喜！进化成${newStage.name}了！`, 'success');
-    }, 3000);
+        showToast('🎉 恭喜！宠物破壳了！', 'success');
+        
+        // 宠物说第一句话
+        setTimeout(() => {
+            petSay('哇！外面的世界好亮！这是哪里？', 3000);
+        }, 500);
+    }, 3500);
 }
 
 // 显示连续打卡奖励
@@ -561,24 +647,12 @@ function petClick() {
     
     createSparkles();
     
-    // 宠物说话
+    // 宠物说话 - 使用根据阶段的对话
     const petData = getPetData();
     const currentStage = getCurrentStage(petData.totalDays);
-    const clickMessages = [
-        '嘿嘿，好痒~',
-        '你在摸我吗？',
-        '我喜欢你！',
-        '再摸摸我~',
-        '好开心呀！',
-        '咯咯咯~'
-    ];
+    const messages = getPetMessages(petData, currentStage);
     
-    if (currentStage.level === 1) {
-        clickMessages.push('我在蛋里呢~');
-        clickMessages.push('能听到我的心跳吗？');
-    }
-    
-    const randomMsg = clickMessages[Math.floor(Math.random() * clickMessages.length)];
+    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
     petSay(randomMsg, 2000);
     
     setTimeout(() => {
@@ -739,7 +813,7 @@ function startPetTalking() {
     }, 30000);
 }
 
-// 获取宠物对话内容
+// 获取宠物对话内容（根据成长阶段）
 function getPetMessages(petData, currentStage) {
     const today = new Date().toISOString().split('T')[0];
     const hasCheckedToday = petData.lastCheckinDate === today;
@@ -748,15 +822,121 @@ function getPetMessages(petData, currentStage) {
     
     const messages = [];
     
-    // 根据是否打卡
-    if (hasCheckedToday) {
-        messages.push('今天吃饱啦！谢谢你~');
-        messages.push('明天见！我会继续成长的！');
-        messages.push('你真棒！记得明天也要来哦~');
-    } else {
-        messages.push('今天的记事本写完了吗？');
-        messages.push('我好饿呀，快来喂我吧~');
-        messages.push('点击打卡按钮给我喂食吧！');
+    // 根据成长阶段说不同的话
+    switch (currentStage.level) {
+        case 1: // 蛋阶段 - 简单的话
+            if (hasCheckedToday) {
+                messages.push('咕噜咕噜~');
+                messages.push('我在蛋里很温暖~');
+            } else {
+                messages.push('咕咕...我饿了');
+                messages.push('敲敲敲...喂我~');
+            }
+            messages.push('我是一颗神秘的蛋~');
+            messages.push('你能听到我在蛋里动吗？');
+            break;
+            
+        case 2: // 破壳 - 开始说更多话
+            if (hasCheckedToday) {
+                messages.push('今天吃饱啦！谢谢你~');
+                messages.push('外面的世界真大呀！');
+                messages.push('我刚破壳，好开心~');
+            } else {
+                messages.push('我好饿呀，快来喂我吧~');
+                messages.push('今天的记事本写完了吗？');
+            }
+            messages.push('我刚破壳，好奇怪的世界~');
+            messages.push('这是什么？那是什么？');
+            messages.push('柏皓，教我说话吧！');
+            messages.push('我想快快长大！');
+            break;
+            
+        case 3: // 幼年 - 更多对话（20+句）
+            if (hasCheckedToday) {
+                messages.push('今天吃饱啦！谢谢你~');
+                messages.push('明天见！我会继续成长的！');
+                messages.push('你真棒！记得明天也要来哦~');
+                messages.push('我吃得好饱，好开心！');
+                messages.push('今天又长大了一点点！');
+            } else {
+                messages.push('今天的记事本写完了吗？');
+                messages.push('我好饿呀，快来喂我吧~');
+                messages.push('点击打卡按钮给我喂食吧！');
+                messages.push('柏皓，我在等你写记事哦~');
+                messages.push('写完记事就能喂我啦！');
+            }
+            messages.push('我是可爱的小宝宝！');
+            messages.push('我想和你一起玩！');
+            messages.push('柏皓最好了！');
+            messages.push('我每天都在长大哦~');
+            messages.push('你今天开心吗？');
+            messages.push('我学会走路啦！看我走~');
+            messages.push('这个世界好大呀！');
+            messages.push('我想去探险！');
+            messages.push('陪我玩小游戏吧！');
+            messages.push('我好喜欢你呀！');
+            messages.push('你是最好的主人！');
+            messages.push('我们是最好的朋友！');
+            messages.push('每天见到你都好开心！');
+            messages.push('我会一直陪着你的！');
+            messages.push('你累了吗？要休息一下吗？');
+            break;
+            
+        case 4: // 少年 - 活泼的话
+            if (hasCheckedToday) {
+                messages.push('耶！今天也吃饱了！');
+                messages.push('我感觉自己更强壮了！');
+                messages.push('明天继续加油哦！');
+            } else {
+                messages.push('柏皓，该写记事本啦！');
+                messages.push('我等你好久了~');
+                messages.push('快来喂我，我要长得更快！');
+            }
+            messages.push('我是活泼的少年！');
+            messages.push('我们一起努力吧！');
+            messages.push('我想变得更厉害！');
+            messages.push('你看我跳得高不高？');
+            messages.push('我有好多话想说！');
+            messages.push('柏皓，我们是最好的朋友！');
+            break;
+            
+        case 5: // 成年 - 成熟的话
+            if (hasCheckedToday) {
+                messages.push('今天辛苦了，好好休息吧！');
+                messages.push('你做得很棒，我为你骄傲！');
+                messages.push('明天也要继续努力哦！');
+            } else {
+                messages.push('柏皓，记得写记事本哦~');
+                messages.push('坚持记录是个好习惯！');
+                messages.push('我会一直陪着你的！');
+            }
+            messages.push('我已经长大了！');
+            messages.push('谢谢你一直陪伴我！');
+            messages.push('我们一起变得更优秀吧！');
+            messages.push('每一天都很重要！');
+            messages.push('你的努力我都看在眼里！');
+            messages.push('坚持就是胜利！');
+            break;
+            
+        case 6: // 完全体 - 最多的话
+            if (hasCheckedToday) {
+                messages.push('今天也完美完成！你太棒了！');
+                messages.push('我们已经坚持30天了！');
+                messages.push('你是最优秀的柏皓！');
+            } else {
+                messages.push('柏皓，今天也要写记事本哦~');
+                messages.push('坚持到现在不容易，继续加油！');
+                messages.push('我相信你能做到！');
+            }
+            messages.push('我已经完全进化啦！');
+            messages.push('谢谢你一直陪伴我成长！');
+            messages.push('我们创造了奇迹！');
+            messages.push('30天的坚持，太了不起了！');
+            messages.push('你是我见过最棒的主人！');
+            messages.push('让我们继续创造更多记录吧！');
+            messages.push('我会永远陪着你！');
+            messages.push('你的坚持让我变得如此强大！');
+            break;
     }
     
     // 根据连续天数
@@ -765,19 +945,6 @@ function getPetMessages(petData, currentStage) {
         messages.push('你太厉害了！我好开心~');
     } else if (streak >= 3) {
         messages.push(`连续${streak}天！继续加油！`);
-    }
-    
-    // 根据成长阶段
-    if (currentStage.level === 1) {
-        messages.push('我是一颗神秘的蛋~');
-        messages.push('再过几天我就要破壳啦！');
-        messages.push('你能听到我在蛋里动吗？');
-    } else if (currentStage.level === 2) {
-        messages.push('我刚破壳，好奇怪的世界~');
-        messages.push('外面的世界真大呀！');
-    } else if (currentStage.level === 6) {
-        messages.push('我已经完全进化啦！');
-        messages.push('谢谢你一直陪伴我成长！');
     }
     
     // 提示下一阶段
@@ -1174,4 +1341,271 @@ function closeRanking() {
 // 关闭星评弹窗
 function closeStarModal() {
     document.getElementById('starModal').classList.add('hidden');
+}
+
+
+// ========== 宠物走路功能（Lv.3+）==========
+let walkingInterval = null;
+
+function startPetWalking() {
+    if (walkingInterval) return;
+    
+    const petCharacter = document.getElementById('petCharacter');
+    
+    // 每3秒做一个随机动作
+    walkingInterval = setInterval(() => {
+        const actions = ['jump', 'spin', 'bounce', 'walk'];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        
+        // 移除之前的动作类
+        petCharacter.classList.remove('pet-jumping', 'pet-spinning', 'pet-bouncing', 'pet-walking');
+        
+        // 添加新动作
+        petCharacter.classList.add('pet-' + action);
+        
+        // 动作完成后移除类
+        setTimeout(() => {
+            petCharacter.classList.remove('pet-' + action);
+        }, 1000);
+        
+    }, 3000);
+}
+
+function stopPetWalking() {
+    if (walkingInterval) {
+        clearInterval(walkingInterval);
+        walkingInterval = null;
+    }
+}
+
+// ========== 小游戏功能（Lv.3+）- 接食物游戏 ==========
+let gameScore = 0;
+let gameActive = false;
+let gameInterval = null;
+let gameTimer = null;
+let gameTimeLeft = 30;
+
+// 显示小游戏（仅Lv.3+可用）
+function showMiniGame() {
+    const petData = getPetData();
+    const currentStage = getCurrentStage(petData.totalDays);
+    
+    if (currentStage.level < 3) {
+        showToast('宠物还太小，等长大一点再玩游戏吧！', 'error');
+        return;
+    }
+    
+    document.getElementById('gameModal').classList.remove('hidden');
+    document.getElementById('gameStartScreen').classList.remove('hidden');
+    document.getElementById('gamePlayScreen').classList.add('hidden');
+    document.getElementById('gameOverScreen').classList.add('hidden');
+}
+
+// 开始游戏
+function startGame() {
+    gameScore = 0;
+    gameTimeLeft = 30;
+    gameActive = true;
+    
+    document.getElementById('gameStartScreen').classList.add('hidden');
+    document.getElementById('gamePlayScreen').classList.remove('hidden');
+    document.getElementById('gameScore').textContent = gameScore;
+    document.getElementById('gameTime').textContent = gameTimeLeft;
+    
+    const petData = getPetData();
+    const currentStage = getCurrentStage(petData.totalDays);
+    document.getElementById('gamePet').textContent = currentStage.emoji;
+    
+    // 重置宠物位置
+    const gamePet = document.getElementById('gamePet');
+    gamePet.style.left = '50%';
+    
+    // 开始掉落食物
+    gameInterval = setInterval(dropFood, 1000);
+    
+    // 倒计时
+    gameTimer = setInterval(() => {
+        gameTimeLeft--;
+        document.getElementById('gameTime').textContent = gameTimeLeft;
+        
+        if (gameTimeLeft <= 0) {
+            endGame();
+        }
+    }, 1000);
+    
+    // 键盘控制
+    document.addEventListener('keydown', movePetWithKey);
+}
+
+// 移动宠物（键盘）
+function movePetWithKey(e) {
+    if (!gameActive) return;
+    
+    const gamePet = document.getElementById('gamePet');
+    const currentLeft = parseInt(gamePet.style.left) || 50;
+    
+    if (e.key === 'ArrowLeft' && currentLeft > 10) {
+        gamePet.style.left = (currentLeft - 5) + '%';
+    } else if (e.key === 'ArrowRight' && currentLeft < 90) {
+        gamePet.style.left = (currentLeft + 5) + '%';
+    }
+}
+
+// 移动宠物（点击）
+function movePetTo(direction) {
+    if (!gameActive) return;
+    
+    const gamePet = document.getElementById('gamePet');
+    const currentLeft = parseInt(gamePet.style.left) || 50;
+    
+    if (direction === 'left' && currentLeft > 10) {
+        gamePet.style.left = (currentLeft - 10) + '%';
+    } else if (direction === 'right' && currentLeft < 90) {
+        gamePet.style.left = (currentLeft + 10) + '%';
+    }
+}
+
+// 掉落食物
+function dropFood() {
+    if (!gameActive) return;
+    
+    const gameArea = document.getElementById('gameArea');
+    if (!gameArea) {
+        console.error('游戏区域未找到');
+        return;
+    }
+    
+    const foods = ['🍎', '🍌', '🍇', '🥕', '🍞', '🍪', '🍰', '💩']; // 最后一个是炸弹
+    const food = document.createElement('div');
+    const foodType = foods[Math.floor(Math.random() * foods.length)];
+    
+    food.className = 'falling-food';
+    food.textContent = foodType;
+    food.style.left = (15 + Math.random() * 70) + '%';
+    food.dataset.type = foodType === '💩' ? 'bomb' : 'food';
+    
+    gameArea.appendChild(food);
+    
+    console.log('食物已添加:', foodType, food.style.left);
+    
+    // 检测碰撞
+    const checkCollision = setInterval(() => {
+        if (!gameActive || !food.parentNode) {
+            clearInterval(checkCollision);
+            if (food.parentNode) food.remove();
+            return;
+        }
+        
+        const foodRect = food.getBoundingClientRect();
+        const petRect = document.getElementById('gamePet').getBoundingClientRect();
+        const gameAreaRect = gameArea.getBoundingClientRect();
+        
+        // 碰撞检测 - 更宽松的判定
+        const collision = (
+            foodRect.bottom >= petRect.top - 15 &&
+            foodRect.top <= petRect.bottom &&
+            foodRect.left + 15 < petRect.right &&
+            foodRect.right - 15 > petRect.left
+        );
+        
+        if (collision) {
+            if (food.dataset.type === 'bomb') {
+                gameScore = Math.max(0, gameScore - 2);
+                showGameToast('💥 -2分！', 'error');
+            } else {
+                gameScore++;
+                showGameToast('✨ +1分！', 'success');
+            }
+            
+            document.getElementById('gameScore').textContent = gameScore;
+            food.remove();
+            clearInterval(checkCollision);
+        }
+        
+        // 掉出游戏区域底部
+        if (foodRect.top > gameAreaRect.bottom + 50) {
+            food.remove();
+            clearInterval(checkCollision);
+        }
+    }, 30);
+    
+    // 4秒后自动移除（防止卡住）
+    setTimeout(() => {
+        if (food.parentNode) {
+            food.remove();
+            clearInterval(checkCollision);
+        }
+    }, 4000);
+}
+
+// 游戏内提示
+function showGameToast(msg, type) {
+    const toast = document.createElement('div');
+    toast.className = `game-toast ${type}`;
+    toast.textContent = msg;
+    document.getElementById('gameArea').appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 1000);
+}
+
+// 结束游戏
+function endGame() {
+    gameActive = false;
+    clearInterval(gameInterval);
+    clearInterval(gameTimer);
+    document.removeEventListener('keydown', movePetWithKey);
+    
+    // 清除所有掉落的食物
+    document.querySelectorAll('.falling-food').forEach(f => f.remove());
+    
+    document.getElementById('gamePlayScreen').classList.add('hidden');
+    document.getElementById('gameOverScreen').classList.remove('hidden');
+    document.getElementById('finalScore').textContent = gameScore;
+    
+    // 评价
+    let comment = '';
+    if (gameScore >= 25) {
+        comment = '🏆 太厉害了！你是接食物大师！';
+    } else if (gameScore >= 15) {
+        comment = '🎉 很棒！反应很快！';
+    } else if (gameScore >= 10) {
+        comment = '👍 不错哦！继续加油！';
+    } else {
+        comment = '💪 多练习就会更好的！';
+    }
+    document.getElementById('gameComment').textContent = comment;
+    
+    // 奖励
+    if (gameScore >= 10) {
+        const coins = Math.floor(gameScore / 5);
+        const userData = getUserData();
+        userData.coins += coins;
+        saveUserData(userData);
+        document.getElementById('gameReward').textContent = `获得 ${coins} 金币！`;
+    } else {
+        document.getElementById('gameReward').textContent = '再接再厉！';
+    }
+}
+
+// 关闭小游戏
+function closeGame() {
+    if (gameActive) {
+        endGame();
+    }
+    document.getElementById('gameModal').classList.add('hidden');
+}
+
+// 更新游戏按钮显示
+function updateGameButton() {
+    const petData = getPetData();
+    const currentStage = getCurrentStage(petData.totalDays);
+    const gameBtn = document.getElementById('gameBtn');
+    
+    if (gameBtn) {
+        if (currentStage.level >= 3) {
+            gameBtn.style.display = 'block';
+        } else {
+            gameBtn.style.display = 'none';
+        }
+    }
 }

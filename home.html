@@ -10,86 +10,118 @@
     <div class="container">
         <header class="header">
             <h1>🌳 专注小树</h1>
-            <p class="subtitle">让学习变得更有趣</p>
+            <p class="subtitle">柏皓的家</p>
         </header>
 
-        <!-- 成就卡片 -->
-        <div class="stats-card">
-            <h2>📊 我的成就</h2>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-icon">🌳</div>
-                    <div class="stat-info">
-                        <div class="stat-label">累计小树</div>
-                        <div class="stat-value" id="totalTrees">0</div>
-                    </div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-icon">🍃</div>
-                    <div class="stat-info">
-                        <div class="stat-label">金币</div>
-                        <div class="stat-value" id="totalCoins">0</div>
-                    </div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-icon">🖼️</div>
-                    <div class="stat-info">
-                        <div class="stat-label">背景图</div>
-                        <div class="stat-value" id="unlockedBgs">0/10</div>
-                    </div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-icon">🔥</div>
-                    <div class="stat-info">
-                        <div class="stat-label">连续天数</div>
-                        <div class="stat-value" id="studyStreak">0</div>
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- 上方功能卡片 -->
+            <div class="function-cards function-cards-top">
+                <button class="mini-card" onclick="goToPet()">
+                    <div class="mini-icon">🐣</div>
+                    <div class="mini-label">记事宠物</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToRace()">
+                    <div class="mini-icon">🏎️</div>
+                    <div class="mini-label">口算竞速</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToEyecare()">
+                    <div class="mini-icon">👀</div>
+                    <div class="mini-label">护眼训练</div>
+                </button>
+            </div>
+
+            <!-- 中心大卡片 - 我的房间 -->
+            <div class="room-card">
+                <div class="room-container">
+                    <!-- 房间背景 -->
+                    <div class="room-background">
+                        <!-- 墙壁装饰 -->
+                        <div class="wall-decoration">
+                            <div class="wall-item window-item">
+                                <div class="window-frame"></div>
+                                <div class="window-light"></div>
+                            </div>
+                            <div class="wall-item">🖼️</div>
+                            <div class="wall-item clock">🕐</div>
+                        </div>
+                        
+                        <!-- 左侧家具 -->
+                        <div class="furniture-left">
+                            <div class="bookshelf">📚</div>
+                            <div class="plant">🪴</div>
+                        </div>
+                        
+                        <!-- 右侧家具 -->
+                        <div class="furniture-right">
+                            <div class="lamp">💡</div>
+                            <div class="table">🪑</div>
+                        </div>
+                        
+                        <!-- 地毯区域 -->
+                        <div class="carpet-area">
+                            <!-- 地毯 -->
+                            <div class="carpet"></div>
+                            
+                            <!-- 地毯上的装饰 -->
+                            <div class="carpet-toys">
+                                <div class="toy">⚽</div>
+                                <div class="toy">🧸</div>
+                            </div>
+                            
+                            <!-- 宠物 -->
+                            <div class="pet-character" id="roomPet" onclick="interactWithPet()">
+                                <div class="interact-hint">点我互动</div>
+                                <div class="pet-emoji">🥚</div>
+                                <div class="pet-bubble hidden" id="petBubble">你好呀！</div>
+                            </div>
+                            
+                            <!-- 柏皓 -->
+                            <div class="owner-character" id="roomOwner" onclick="interactWithOwner()">
+                                <div class="interact-hint">这是我</div>
+                                <div class="owner-emoji">👦</div>
+                                <div class="owner-name">柏皓</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 资产显示 -->
+                        <div class="assets-display">
+                            <div class="asset-item">
+                                <span class="asset-icon">🌳</span>
+                                <span class="asset-value" id="roomTrees">0</span>
+                            </div>
+                            <div class="asset-item">
+                                <span class="asset-icon">🍃</span>
+                                <span class="asset-value" id="roomCoins">0</span>
+                            </div>
+                            <div class="asset-item">
+                                <span class="asset-icon">🔥</span>
+                                <span class="asset-value" id="roomStreak">0</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 可兑换提示 -->
-        <div class="exchange-hint" id="exchangeHint">
-            <span id="availableTreesText">你有 0 棵小树可以兑换金币</span>
-        </div>
-
-        <!-- 功能按钮 -->
-        <div class="function-grid">
-            <button class="function-btn" onclick="goToFocus()">
-                <div class="btn-icon">🧘</div>
-                <div class="btn-label">专注力训练</div>
-                <div class="btn-desc">培养专注力</div>
-            </button>
-            
-            <button class="function-btn" onclick="goToRace()">
-                <div class="btn-icon">🏎️</div>
-                <div class="btn-label">口算竞速</div>
-                <div class="btn-desc">快速口算</div>
-            </button>
-            
-            <button class="function-btn" onclick="goToPet()">
-                <div class="btn-icon">🐣</div>
-                <div class="btn-label">记事宠物</div>
-                <div class="btn-desc">每日记事打卡</div>
-            </button>
-            
-            <button class="function-btn" onclick="goToEyecare()">
-                <div class="btn-icon">👀</div>
-                <div class="btn-label">护眼训练</div>
-                <div class="btn-desc">找不同数字</div>
-            </button>
-            
-            <button class="function-btn" onclick="goToBubble()">
-                <div class="btn-icon">🎈</div>
-                <div class="btn-label">泡泡单词</div>
-                <div class="btn-desc">趣味记单词</div>
-            </button>
-            
-            <button class="function-btn" onclick="goToShop()">
-                <div class="btn-icon">🛒</div>
-                <div class="btn-label">背景商城</div>
-                <div class="btn-desc">解锁精美背景</div>
-            </button>
+            <!-- 下方功能卡片 -->
+            <div class="function-cards function-cards-bottom">
+                <button class="mini-card" onclick="goToBubble()">
+                    <div class="mini-icon">🎈</div>
+                    <div class="mini-label">泡泡单词</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToShop()">
+                    <div class="mini-icon">🛒</div>
+                    <div class="mini-label">背景商城</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToFocus()">
+                    <div class="mini-icon">🧘</div>
+                    <div class="mini-label">专注训练</div>
+                </button>
+            </div>
         </div>
 
         <!-- 兑换金币按钮 -->

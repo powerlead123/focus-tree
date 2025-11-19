@@ -114,8 +114,8 @@
                     <div class="army-status">当前</div>
                 </div>
                 <div class="army-pet locked">
-                    <div class="army-emoji">🐉</div>
-                    <div class="army-name">小龙</div>
+                    <div class="army-emoji">🐼</div>
+                    <div class="army-name">熊猫</div>
                     <div class="army-status">30天解锁</div>
                 </div>
                 <div class="army-pet locked">
@@ -124,8 +124,8 @@
                     <div class="army-status">60天解锁</div>
                 </div>
                 <div class="army-pet locked">
-                    <div class="army-emoji">🐼</div>
-                    <div class="army-name">熊猫</div>
+                    <div class="army-emoji">🐉</div>
+                    <div class="army-name">小龙</div>
                     <div class="army-status">90天解锁</div>
                 </div>
             </div>
@@ -135,6 +135,7 @@
         <button class="btn-album" onclick="showAlbum()">📖 成长图鉴</button>
         <button class="btn-album" onclick="showGrowthGuide()" style="margin-top: 10px;">🔮 成长指南</button>
         <button class="btn-album" onclick="showRanking()" style="margin-top: 10px;">📊 对手排行</button>
+        <button class="btn-album" id="gameBtn" onclick="showMiniGame()" style="margin-top: 10px; display: none;">🎮 小游戏</button>
     </div>
 
     <!-- 打卡成功动画 -->
@@ -244,6 +245,51 @@
             </div>
             
             <button class="btn btn-secondary" onclick="closeStarModal()" style="margin-top: 15px;">取消</button>
+        </div>
+    </div>
+
+    <!-- 小游戏弹窗 -->
+    <div class="modal hidden" id="gameModal">
+        <div class="modal-content game-modal-content">
+            <!-- 开始界面 -->
+            <div id="gameStartScreen">
+                <h2>🎮 接食物游戏</h2>
+                <div class="game-intro">
+                    <p>🍎 接住掉落的食物得分</p>
+                    <p>💩 小心炸弹会扣分</p>
+                    <p>⏱️ 30秒内尽可能多得分</p>
+                    <p>⌨️ 使用 ← → 键或点击按钮移动</p>
+                </div>
+                <button class="btn btn-primary" onclick="startGame()">开始游戏</button>
+                <button class="btn btn-secondary" onclick="closeGame()">关闭</button>
+            </div>
+            
+            <!-- 游戏界面 -->
+            <div id="gamePlayScreen" class="hidden">
+                <div class="game-header">
+                    <div class="game-stat">得分: <span id="gameScore">0</span></div>
+                    <div class="game-stat">时间: <span id="gameTime">30</span>秒</div>
+                </div>
+                <div class="game-area" id="gameArea">
+                    <div class="game-pet" id="gamePet">🐥</div>
+                </div>
+                <div class="game-controls">
+                    <button class="btn-control" onclick="movePetTo('left')">← 左移</button>
+                    <button class="btn-control" onclick="movePetTo('right')">右移 →</button>
+                </div>
+            </div>
+            
+            <!-- 结束界面 -->
+            <div id="gameOverScreen" class="hidden">
+                <h2>🎉 游戏结束</h2>
+                <div class="game-result">
+                    <div class="final-score">得分: <span id="finalScore">0</span></div>
+                    <div class="game-comment" id="gameComment"></div>
+                    <div class="game-reward" id="gameReward"></div>
+                </div>
+                <button class="btn btn-primary" onclick="startGame()">再玩一次</button>
+                <button class="btn btn-secondary" onclick="closeGame()">关闭</button>
+            </div>
         </div>
     </div>
 

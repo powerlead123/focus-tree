@@ -140,6 +140,19 @@ body {
     }
 }
 
+.pet-character.blink {
+    animation: petBlink 5s ease-in-out infinite;
+}
+
+@keyframes petBlink {
+    0%, 48%, 52%, 100% { 
+        transform: scaleY(1);
+    }
+    50% { 
+        transform: scaleY(0.1);
+    }
+}
+
 .pet-effects {
     position: absolute;
     top: 0;
@@ -1402,4 +1415,264 @@ body {
         transform: translate(calc(-50% + cos(var(--angle)) * 150px), calc(-50% + sin(var(--angle)) * 150px)) scale(0.5) rotate(var(--angle));
         opacity: 0;
     }
+}
+
+/* 破壳动画 */
+@keyframes eggShakeHard {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+}
+
+@keyframes eggCrack {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1.1); }
+}
+
+@keyframes hatchOut {
+    0% { 
+        transform: scale(0.5); 
+        opacity: 0;
+    }
+    50% { 
+        transform: scale(1.3); 
+        opacity: 1;
+    }
+    100% { 
+        transform: scale(1); 
+        opacity: 1;
+    }
+}
+
+@keyframes crackBurst {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(
+            calc(-50% + cos(var(--angle)) * 150px), 
+            calc(-50% + sin(var(--angle)) * 150px)
+        ) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes lightBurst {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(
+            calc(-50% + cos(var(--angle)) * 200px), 
+            calc(-50% + sin(var(--angle)) * 200px)
+        ) scale(1);
+        opacity: 0;
+    }
+}
+
+
+/* ========== 宠物走路动画 ========== */
+.pet-character {
+    position: absolute;
+}
+
+/* 走路动画 - 左右摇摆 */
+.pet-character.pet-walk {
+    animation: petWalk 1s ease-in-out;
+}
+
+@keyframes petWalk {
+    0% { transform: translate(-50%, -50%) translateX(0) rotate(0deg); }
+    25% { transform: translate(-50%, -50%) translateX(-30px) rotate(-10deg); }
+    50% { transform: translate(-50%, -50%) translateX(0) rotate(0deg); }
+    75% { transform: translate(-50%, -50%) translateX(30px) rotate(10deg); }
+    100% { transform: translate(-50%, -50%) translateX(0) rotate(0deg); }
+}
+
+/* 跳跃动画 */
+.pet-character.pet-jump {
+    animation: petJump 0.8s ease-out;
+}
+
+@keyframes petJump {
+    0% { transform: translate(-50%, -50%) scale(1); }
+    30% { transform: translate(-50%, -50%) translateY(-50px) scale(1.2); }
+    50% { transform: translate(-50%, -50%) translateY(-60px) scale(1.3); }
+    70% { transform: translate(-50%, -50%) translateY(-50px) scale(1.2); }
+    100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 旋转动画 */
+.pet-character.pet-spin {
+    animation: petSpin 1s ease-in-out;
+}
+
+@keyframes petSpin {
+    0% { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+    50% { transform: translate(-50%, -50%) rotate(360deg) scale(1.3); }
+    100% { transform: translate(-50%, -50%) rotate(720deg) scale(1); }
+}
+
+/* 弹跳动画 */
+.pet-character.pet-bounce {
+    animation: petBounce 0.25s ease-in-out 4;
+}
+
+@keyframes petBounce {
+    0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+    50% { transform: translate(-50%, -50%) translateY(-25px); }
+}
+
+/* ========== 小游戏样式 ========== */
+.game-modal-content {
+    max-width: 500px;
+}
+
+.game-intro {
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    text-align: left;
+}
+
+.game-intro p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f0f9ff;
+    border-radius: 10px;
+}
+
+.game-stat {
+    font-size: 18px;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.game-area {
+    position: relative;
+    height: 400px;
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.game-pet {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 60px;
+    transition: left 0.2s ease-out;
+    user-select: none;
+}
+
+.falling-food {
+    position: absolute;
+    top: -60px;
+    font-size: 40px;
+    user-select: none;
+    z-index: 10;
+    pointer-events: none;
+    animation: foodFall 3s linear forwards;
+}
+
+@keyframes foodFall {
+    0% { 
+        top: -60px;
+    }
+    100% { 
+        top: 420px;
+    }
+}
+
+.game-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.btn-control {
+    padding: 12px 24px;
+    font-size: 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-control:hover {
+    background: #5568d3;
+    transform: scale(1.05);
+}
+
+.btn-control:active {
+    transform: scale(0.95);
+}
+
+.game-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    padding: 10px 20px;
+    border-radius: 10px;
+    animation: toastFade 1s ease-out forwards;
+    pointer-events: none;
+    z-index: 100;
+}
+
+.game-toast.success {
+    background: rgba(34, 197, 94, 0.9);
+    color: white;
+}
+
+.game-toast.error {
+    background: rgba(239, 68, 68, 0.9);
+    color: white;
+}
+
+@keyframes toastFade {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+
+.game-result {
+    background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+    padding: 30px;
+    border-radius: 15px;
+    margin: 20px 0;
+}
+
+.final-score {
+    font-size: 36px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.game-comment {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.game-reward {
+    font-size: 18px;
+    color: #f59e0b;
+    font-weight: bold;
 }

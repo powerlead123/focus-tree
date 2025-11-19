@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宠物测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 15px;
+        }
+
+        .section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #333;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .date-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #48bb78;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            color: white;
+            text-decoration: none;
+            margin-top: 20px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 宠物测试工具</h1>
+
+        <!-- 当前数据 -->
+        <div class="section">
+            <h2>📊 当前数据</h2>
+            <div class="info-box">
+                <div class="info-label">总天数</div>
+                <div class="info-value" id="totalDays">0</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">连续打卡</div>
+                <div class="info-value" id="streakDays">0 天</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">最后打卡日期</div>
+                <div class="info-value" id="lastDate">未打卡</div>
+            </div>
+            <div class="info-box">
+                <div class="info-label">当前等级</div>
+                <div class="info-value" id="currentLevel">Lv.1 蛋</div>
+            </div>
+            <button class="btn btn-secondary" onclick="refreshData()">🔄 刷新数据</button>
+        </div>
+
+        <!-- 模拟打卡 -->
+        <div class="section">
+            <h2>✅ 模拟打卡</h2>
+            <input type="date" class="date-input" id="checkinDate" />
+            <button class="btn btn-success" onclick="simulateCheckin()">模拟指定日期打卡</button>
+            <button class="btn btn-primary" onclick="simulateContinuous(3)">模拟连续3天</button>
+            <button class="btn btn-primary" onclick="simulateContinuous(5)">模拟连续5天</button>
+            <button class="btn btn-primary" onclick="simulateContinuous(7)">模拟连续7天</button>
+            <button class="btn btn-primary" onclick="simulateContinuous(30)">模拟连续30天</button>
+        </div>
+
+        <!-- 数据管理 -->
+        <div class="section">
+            <h2>🔧 数据管理</h2>
+            <button class="btn btn-danger" onclick="resetData()">🗑️ 清空所有数据</button>
+            <button class="btn btn-secondary" onclick="exportData()">📤 导出数据</button>
+            <button class="btn btn-secondary" onclick="viewRawData()">👁️ 查看原始数据</button>
+        </div>
+
+        <!-- 快速测试 -->
+        <div class="section">
+            <h2>⚡ 快速测试</h2>
+            <button class="btn btn-primary" onclick="testEvolution()">测试进化动画</button>
+            <button class="btn btn-primary" onclick="testWeekend()">测试周末逻辑</button>
+            <button class="btn btn-primary" onclick="testBreakStreak()">测试中断连续</button>
+        </div>
+
+        <!-- 宠物阶段测试 -->
+        <div class="section">
+            <h2>🐣 宠物阶段测试</h2>
+            <p style="color: #666; margin-bottom: 15px;">快速跳转到不同成长阶段查看效果</p>
+            <button class="btn btn-success" onclick="setPetStage(0)">阶段1: 蛋 (0天)</button>
+            <button class="btn btn-success" onclick="setPetStage(3)">阶段2: 破壳 (3天)</button>
+            <button class="btn btn-success" onclick="setPetStage(8)">阶段3: 幼年 (8天)</button>
+            <button class="btn btn-success" onclick="setPetStage(15)">阶段4: 少年 (15天)</button>
+            <button class="btn btn-success" onclick="setPetStage(23)">阶段5: 成年 (23天)</button>
+            <button class="btn btn-success" onclick="setPetStage(30)">阶段6: 完全体 (30天)</button>
+        </div>
+
+        <!-- 连续打卡测试 -->
+        <div class="section">
+            <h2>🔥 连续打卡测试</h2>
+            <p style="color: #666; margin-bottom: 15px;">测试不同连续天数的效果</p>
+            <button class="btn btn-primary" onclick="setStreak(3)">连续3天</button>
+            <button class="btn btn-primary" onclick="setStreak(5)">连续5天</button>
+            <button class="btn btn-primary" onclick="setStreak(7)">连续7天</button>
+            <button class="btn btn-primary" onclick="setStreak(14)">连续14天</button>
+        </div>
+    </div>
+
+    <a href="pet.html" class="back-link">← 返回宠物页面</a>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="common.js"></script>
+    <script>
+        const PET_STORAGE_KEY = 'focusTree_petData';
+
+        // 获取宠物数据
+        function getPetData() {
+            const data = localStorage.getItem(PET_STORAGE_KEY);
+            return data ? JSON.parse(data) : {
+                totalDays: 0,
+                lastCheckinDate: null,
+                checkinStreak: 0,
+                currentStage: 1,
+                checkinHistory: [],
+                skipHistory: []
+            };
+        }
+
+        // 保存宠物数据
+        function savePetData(data) {
+            localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(data));
+        }
+
+        // 判断是否是周末
+        function isWeekend(dateString) {
+            const date = new Date(dateString);
+            const day = date.getDay();
+            return day === 0 || day === 6;
+        }
+
+        // 计算工作日差异
+        function getWorkdaysDiff(date1, date2) {
+            const start = new Date(date1);
+            const end = new Date(date2);
+            let count = 0;
+            let current = new Date(start);
+            current.setDate(current.getDate() + 1);
+            
+            while (current <= end) {
+                if (!isWeekend(current.toISOString().split('T')[0])) {
+                    count++;
+                }
+                current.setDate(current.getDate() + 1);
+            }
+            
+            return count;
+        }
+
+        // 刷新显示
+        function refreshData() {
+            const data = getPetData();
+            document.getElementById('totalDays').textContent = data.totalDays;
+            document.getElementById('streakDays').textContent = data.checkinStreak + ' 天';
+            document.getElementById('lastDate').textContent = data.lastCheckinDate || '未打卡';
+            
+            const stages = [
+                { level: 1, name: '蛋', daysNeeded: 0 },
+                { level: 2, name: '破壳', daysNeeded: 3 },
+                { level: 3, name: '幼年', daysNeeded: 8 },
+                { level: 4, name: '少年', daysNeeded: 15 },
+                { level: 5, name: '成年', daysNeeded: 23 },
+                { level: 6, name: '进化', daysNeeded: 30 }
+            ];
+            
+            let currentStage = stages[0];
+            for (let i = stages.length - 1; i >= 0; i--) {
+                if (data.totalDays >= stages[i].daysNeeded) {
+                    currentStage = stages[i];
+                    break;
+                }
+            }
+            
+            document.getElementById('currentLevel').textContent = `Lv.${currentStage.level} ${currentStage.name}`;
+        }
+
+        // 模拟指定日期打卡
+        function simulateCheckin() {
+            const dateInput = document.getElementById('checkinDate');
+            const date = dateInput.value;
+            
+            if (!date) {
+                showToast('请选择日期', 'error');
+                return;
+            }
+
+            if (isWeekend(date)) {
+                showToast('周末不能打卡哦', 'error');
+                return;
+            }
+            
+            const data = getPetData();
+            
+            // 检查是否已打卡
+            if (data.checkinHistory.includes(date)) {
+                showToast('这一天已经打卡过了', 'error');
+                return;
+            }
+            
+            // 更新连续天数
+            if (data.lastCheckinDate) {
+                const workdaysDiff = getWorkdaysDiff(data.lastCheckinDate, date);
+                if (workdaysDiff === 1) {
+                    data.checkinStreak += 1;
+                } else if (workdaysDiff > 1) {
+                    data.checkinStreak = 1;
+                }
+            } else {
+                data.checkinStreak = 1;
+            }
+            
+            data.totalDays += 1;
+            data.lastCheckinDate = date;
+            data.checkinHistory.push(date);
+            
+            savePetData(data);
+            refreshData();
+            showToast(`✅ ${date} 打卡成功！`);
+        }
+
+        // 模拟连续打卡
+        function simulateContinuous(days) {
+            const data = getPetData();
+            const today = new Date();
+            
+            for (let i = 0; i < days; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - days + i + 1);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                // 跳过周末
+                if (isWeekend(dateStr)) {
+                    continue;
+                }
+                
+                // 跳过已打卡的日期
+                if (data.checkinHistory.includes(dateStr)) {
+                    continue;
+                }
+                
+                // 更新连续天数
+                if (data.lastCheckinDate) {
+                    const workdaysDiff = getWorkdaysDiff(data.lastCheckinDate, dateStr);
+                    if (workdaysDiff === 1) {
+                        data.checkinStreak += 1;
+                    } else if (workdaysDiff > 1) {
+                        data.checkinStreak = 1;
+                    }
+                } else {
+                    data.checkinStreak = 1;
+                }
+                
+                data.totalDays += 1;
+                data.lastCheckinDate = dateStr;
+                data.checkinHistory.push(dateStr);
+            }
+            
+            savePetData(data);
+            refreshData();
+            showToast(`✅ 模拟连续${days}天打卡完成！`);
+        }
+
+        // 重置数据
+        function resetData() {
+            if (confirm('确定要清空所有数据吗？')) {
+                localStorage.removeItem(PET_STORAGE_KEY);
+                refreshData();
+                showToast('🗑️ 数据已清空');
+            }
+        }
+
+        // 导出数据
+        function exportData() {
+            const data = getPetData();
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pet-data.json';
+            a.click();
+            showToast('📤 数据已导出');
+        }
+
+        // 查看原始数据
+        function viewRawData() {
+            const data = getPetData();
+            alert(JSON.stringify(data, null, 2));
+        }
+
+        // 测试进化动画
+        function testEvolution() {
+            window.location.href = 'pet.html';
+            showToast('请在宠物页面查看效果');
+        }
+
+        // 测试周末逻辑
+        function testWeekend() {
+            const saturday = new Date();
+            saturday.setDate(saturday.getDate() + (6 - saturday.getDay()));
+            document.getElementById('checkinDate').value = saturday.toISOString().split('T')[0];
+            showToast('已设置为本周六，尝试打卡看看');
+        }
+
+        // 测试中断连续
+        function testBreakStreak() {
+            const data = getPetData();
+            if (data.lastCheckinDate) {
+                const breakDate = new Date(data.lastCheckinDate);
+                breakDate.setDate(breakDate.getDate() + 5); // 跳过5天
+                document.getElementById('checkinDate').value = breakDate.toISOString().split('T')[0];
+                showToast('已设置为5天后，打卡会中断连续');
+            } else {
+                showToast('请先打卡一次', 'error');
+            }
+        }
+
+        // 显示提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = type === 'error' ? '#f56565' : '#48bb78';
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 页面加载时设置今天的日期
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('checkinDate').value = today;
+            refreshData();
+        });
+    </script>
+</body>
+</html>
+
+<script>
+// 设置宠物阶段
+function setPetStage(days) {
+    const PET_STORAGE_KEY = 'focusTree_petData';
+    
+    const data = localStorage.getItem(PET_STORAGE_KEY);
+    let petData = data ? JSON.parse(data) : {
+        totalDays: 0,
+        lastCheckinDate: null,
+        checkinStreak: 0,
+        currentStage: 1,
+        checkinHistory: [],
+        skipHistory: []
+    };
+    
+    petData.totalDays = days;
+    petData.checkinStreak = Math.min(days, 7);
+    
+    // 生成打卡历史
+    petData.checkinHistory = [];
+    const today = new Date();
+    for (let i = 0; i < days; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - days + i + 1);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayOfWeek = date.getDay();
+        
+        // 跳过周末
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            petData.checkinHistory.push(dateStr);
+        }
+    }
+    
+    if (days > 0 && petData.checkinHistory.length > 0) {
+        petData.lastCheckinDate = petData.checkinHistory[petData.checkinHistory.length - 1];
+    }
+    
+    localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(petData));
+    
+    const stages = ['蛋', '破壳', '幼年', '少年', '成年', '完全体'];
+    let stageName = '蛋';
+    if (days >= 30) stageName = '完全体';
+    else if (days >= 23) stageName = '成年';
+    else if (days >= 15) stageName = '少年';
+    else if (days >= 8) stageName = '幼年';
+    else if (days >= 3) stageName = '破壳';
+    
+    alert(`✅ 已设置为${stageName}阶段 (${days}天)\n\n现在可以去宠物页面查看效果！`);
+    location.reload();
+}
+
+// 设置连续天数
+function setStreak(streak) {
+    const PET_STORAGE_KEY = 'focusTree_petData';
+    
+    const data = localStorage.getItem(PET_STORAGE_KEY);
+    let petData = data ? JSON.parse(data) : {
+        totalDays: 0,
+        lastCheckinDate: null,
+        checkinStreak: 0,
+        currentStage: 1,
+        checkinHistory: [],
+        skipHistory: []
+    };
+    
+    petData.checkinStreak = streak;
+    petData.totalDays = Math.max(petData.totalDays, streak);
+    
+    // 生成连续打卡历史
+    petData.checkinHistory = [];
+    const today = new Date();
+    let addedDays = 0;
+    let i = 0;
+    
+    while (addedDays < streak) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayOfWeek = date.getDay();
+        
+        // 只添加工作日
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            petData.checkinHistory.unshift(dateStr);
+            addedDays++;
+        }
+        i++;
+    }
+    
+    if (petData.checkinHistory.length > 0) {
+        petData.lastCheckinDate = petData.checkinHistory[petData.checkinHistory.length - 1];
+    }
+    
+    localStorage.setItem(PET_STORAGE_KEY, JSON.stringify(petData));
+    
+    alert(`✅ 已设置连续${streak}天打卡\n\n现在可以去宠物页面查看效果！`);
+    location.reload();
+}
+</script>

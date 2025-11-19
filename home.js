@@ -3,7 +3,7 @@
 // 页面加载时初始化
 window.addEventListener('DOMContentLoaded', () => {
     checkStudyStreak();
-    updateStats();
+    updateRoomDisplay();
     updateExchangeButton();
 });
 
@@ -26,30 +26,49 @@ function checkStudyStreak() {
     }
 }
 
-// 更新统计数据
-function updateStats() {
+// 更新房间显示
+function updateRoomDisplay() {
     const userData = getUserData();
-    const backgrounds = getAllBackgrounds();
-    const unlockedCount = backgrounds.filter(bg => bg.isFullyUnlocked).length;
     
-    document.getElementById('totalTrees').textContent = userData.trees;
-    document.getElementById('totalCoins').textContent = userData.coins;
-    document.getElementById('unlockedBgs').textContent = `${unlockedCount}/10`;
-    document.getElementById('studyStreak').textContent = userData.studyStreak;
+    // 更新资产显示
+    document.getElementById('roomTrees').textContent = userData.trees;
+    document.getElementById('roomCoins').textContent = userData.coins;
+    document.getElementById('roomStreak').textContent = userData.studyStreak;
     
-    // 更新可兑换提示
-    const availableTrees = userData.availableTrees;
-    const canExchange = Math.floor(availableTrees / 10);
-    
-    if (canExchange > 0) {
-        document.getElementById('availableTreesText').textContent = 
-            `你有 ${availableTrees} 棵小树，可以兑换 ${canExchange} 个金币！`;
-        document.getElementById('exchangeHint').style.background = 'rgba(72, 187, 120, 0.2)';
-    } else {
-        document.getElementById('availableTreesText').textContent = 
-            `你有 ${availableTrees} 棵小树，还需要 ${10 - availableTrees} 棵才能兑换金币`;
-        document.getElementById('exchangeHint').style.background = 'rgba(255, 255, 255, 0.95)';
+    // 更新宠物显示
+    updateRoomPet();
+}
+
+// 更新房间里的宠物
+function updateRoomPet() {
+    // 获取宠物数据
+    const petData = localStorage.getItem('focusTree_petData');
+    if (!petData) {
+        return;
     }
+    
+    const pet = JSON.parse(petData);
+    const petEmoji = document.querySelector('.pet-emoji');
+    
+    // 根据宠物成长阶段显示不同emoji
+    const stages = [
+        { level: 1, emoji: '🥚', daysNeeded: 0 },
+        { level: 2, emoji: '🐣', daysNeeded: 3 },
+        { level: 3, emoji: '🐥', daysNeeded: 8 },
+        { level: 4, emoji: '🐤', daysNeeded: 15 },
+        { level: 5, emoji: '🐓', daysNeeded: 23 },
+        { level: 6, emoji: '🦚', daysNeeded: 30 }
+    ];
+    
+    let currentStage = stages[0];
+    for (let i = stages.length - 1; i >= 0; i--) {
+        if (pet.totalDays >= stages[i].daysNeeded) {
+            currentStage = stages[i];
+            break;
+        }
+    }
+    
+    petEmoji.textContent = currentStage.emoji;
 }
 
 // 更新兑换按钮状态
@@ -176,3 +195,29 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+
+// 与宠物互动
+function interactWithPet() {
+    const bubble = document.getElementById('petBubble');
+    const messages = [
+        '你好呀！',
+        '我好开心！',
+        '陪我玩吧~',
+        '我爱你！',
+        '今天也要加油哦！'
+    ];
+    
+    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+    bubble.textContent = randomMsg;
+    bubble.classList.remove('hidden');
+    
+    setTimeout(() => {
+        bubble.classList.add('hidden');
+    }, 2000);
+}
+
+// 与柏皓互动
+function interactWithOwner() {
+    showToast('这就是我，柏皓！', 'success');
+}
