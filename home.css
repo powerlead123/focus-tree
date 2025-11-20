@@ -331,11 +331,7 @@ body {
     right: 30%;
     cursor: pointer;
     text-align: center;
-    transition: all 0.3s;
-}
-
-.owner-character:hover {
-    transform: scale(1.15);
+    transition: left 2s ease-in-out, right 2s ease-in-out;
 }
 
 .owner-character:hover .interact-hint {
@@ -343,21 +339,124 @@ body {
     transform: translateX(-50%) translateY(-10px);
 }
 
-.owner-emoji {
-    font-size: 80px;
-    animation: ownerIdle 4s ease-in-out infinite;
-}
-
-@keyframes ownerIdle {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
-}
-
 .owner-name {
     font-size: 14px;
     font-weight: bold;
     color: #333;
     margin-top: 5px;
+}
+
+/* 火柴人样式 */
+.stickman {
+    position: relative;
+    width: 60px;
+    height: 100px;
+    margin: 0 auto;
+}
+
+.stickman-head {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #333;
+    border-radius: 50%;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffd4a3;
+}
+
+.stickman-body {
+    position: absolute;
+    width: 3px;
+    height: 35px;
+    background: #333;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.stickman-arm {
+    position: absolute;
+    width: 3px;
+    height: 25px;
+    background: #333;
+    top: 28px;
+    transform-origin: top center;
+}
+
+.stickman-arm-left {
+    left: calc(50% - 15px);
+    transform: rotate(-30deg);
+}
+
+.stickman-arm-right {
+    left: calc(50% + 12px);
+    transform: rotate(30deg);
+}
+
+.stickman-leg {
+    position: absolute;
+    width: 3px;
+    height: 35px;
+    background: #333;
+    top: 59px;
+    transform-origin: top center;
+}
+
+.stickman-leg-left {
+    left: calc(50% - 8px);
+}
+
+.stickman-leg-right {
+    left: calc(50% + 5px);
+}
+
+/* 火柴人走路动画 */
+.stickman.walking .stickman-arm-left {
+    animation: armSwingLeft 0.6s ease-in-out infinite;
+}
+
+.stickman.walking .stickman-arm-right {
+    animation: armSwingRight 0.6s ease-in-out infinite;
+}
+
+.stickman.walking .stickman-leg-left {
+    animation: legSwingLeft 0.6s ease-in-out infinite;
+}
+
+.stickman.walking .stickman-leg-right {
+    animation: legSwingRight 0.6s ease-in-out infinite;
+}
+
+@keyframes armSwingLeft {
+    0%, 100% { transform: rotate(-30deg); }
+    50% { transform: rotate(20deg); }
+}
+
+@keyframes armSwingRight {
+    0%, 100% { transform: rotate(30deg); }
+    50% { transform: rotate(-20deg); }
+}
+
+@keyframes legSwingLeft {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(30deg); }
+}
+
+@keyframes legSwingRight {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(-30deg); }
+}
+
+/* 火柴人站立时的呼吸动画 */
+.stickman:not(.walking) {
+    animation: stickmanIdle 3s ease-in-out infinite;
+}
+
+@keyframes stickmanIdle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
 }
 
 /* 资产显示 */

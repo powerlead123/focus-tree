@@ -5,6 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
     checkStudyStreak();
     updateRoomDisplay();
     updateExchangeButton();
+    startOwnerWalking(); // 启动柏皓走路
 });
 
 // 检查连续天数（如果超过1天没学习，重置为0）
@@ -220,4 +221,54 @@ function interactWithPet() {
 // 与柏皓互动
 function interactWithOwner() {
     showToast('这就是我，柏皓！', 'success');
+}
+
+
+// ========== 柏皓走路功能 ==========
+let ownerWalkingInterval = null;
+
+function startOwnerWalking() {
+    const owner = document.getElementById('roomOwner');
+    const stickman = owner.querySelector('.stickman');
+    
+    // 每5-8秒随机走动一次
+    function scheduleNextWalk() {
+        const delay = 5000 + Math.random() * 3000; // 5-8秒
+        ownerWalkingInterval = setTimeout(() => {
+            walkOwner();
+            scheduleNextWalk();
+        }, delay);
+    }
+    
+    function walkOwner() {
+        // 随机选择目标位置（左右移动）
+        const positions = ['20%', '30%', '40%', '50%', '60%', '70%'];
+        const currentRight = owner.style.right || '30%';
+        
+        // 选择一个不同的位置
+        let newPosition;
+        do {
+            newPosition = positions[Math.floor(Math.random() * positions.length)];
+        } while (newPosition === currentRight);
+        
+        // 开始走路动画
+        stickman.classList.add('walking');
+        
+        // 移动到新位置
+        owner.style.right = newPosition;
+        
+        // 走路持续2秒后停止动画
+        setTimeout(() => {
+            stickman.classList.remove('walking');
+        }, 2000);
+    }
+    
+    scheduleNextWalk();
+}
+
+function stopOwnerWalking() {
+    if (ownerWalkingInterval) {
+        clearTimeout(ownerWalkingInterval);
+        ownerWalkingInterval = null;
+    }
 }

@@ -666,8 +666,10 @@ function showCountdownCurtain() {
                 countdownNumber.classList.remove('go');
                 
                 // 正式开始比赛
+                initCheeringPet(); // 初始化加油宠物
                 startRaceTimer();
                 startOpponentsUpdate();
+                startPetCheering(); // 开始宠物加油
                 
                 // 根据模式显示不同的控制界面
                 if (raceMode === 'auto') {
@@ -777,6 +779,11 @@ function userCompleteQuestion() {
         
         updateTrackUI(user);
         
+        // 宠物鼓励（每完成5题或特殊进度）
+        if (user.completed % 5 === 0 || user.progress === 50 || user.progress >= 80) {
+            cheerForCorrectAnswer();
+        }
+        
         if (user.completed >= raceState.totalQuestions) {
             user.isFinished = true;
             endRace();
@@ -818,6 +825,9 @@ function endRace() {
     const rankings = calculateRanking();
     const userRank = rankings.findIndex(r => r.id === 'user') + 1;
     const beatCount = rankings.length - userRank;
+    
+    // 宠物最终祝贺
+    cheerForFinish(userRank);
     
     // 保存记录
     saveRaceRecord(duration, userRank);
@@ -1326,5 +1336,205 @@ function selectRaceBackground(backgroundId) {
         trackContainer.style.backgroundImage = '';
         trackContainer.style.background = 'linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 30%, #90EE90 30%, #7CCD7C 100%)';
         console.log('恢复默认背景');
+    }
+}
+
+
+// ========== 宠物加油功能 ==========
+let cheeringInterval = null;
+let petCheerCount = 0;
+
+// 初始化加油宠物
+function initCheeringPet() {
+    const petData = localStorage.getItem('focusTree_petData');
+    const cheeringPet = document.getElementById('cheeringPet');
+    
+    if (petData) {
+        const pet = JSON.parse(petData);
+        const stages = [
+            { level: 1, emoji: '🥚', daysNeeded: 0 },
+            { level: 2, emoji: '🐣', daysNeeded: 3 },
+            { level: 3, emoji: '🐥', daysNeeded: 8 },
+            { level: 4, emoji: '🐤', daysNeeded: 15 },
+            { level: 5, emoji: '🐓', daysNeeded: 23 },
+            { level: 6, emoji: '🦚', daysNeeded: 30 }
+        ];
+        
+        let currentStage = stages[0];
+        for (let i = stages.length - 1; i >= 0; i--) {
+            if (pet.totalDays >= stages[i].daysNeeded) {
+                currentStage = stages[i];
+                break;
+            }
+        }
+        
+        cheeringPet.textContent = currentStage.emoji;
+    }
+}
+
+// 开始宠物加油
+function startPetCheering() {
+    petCheerCount = 0;
+    
+    // 初始加油
+    setTimeout(() => {
+        showCheerMessage('加油！柏皓！');
+    }, 1000);
+    
+    // 定期加油（每15-25秒）
+    function scheduleNextCheer() {
+        const delay = 15000 + Math.random() * 10000; // 15-25秒
+        cheeringInterval = setTimeout(() => {
+            if (raceState && raceState.isRunning) {
+                petCheerCount++;
+                cheerForProgress();
+                scheduleNextCheer();
+            }
+        }, delay);
+    }
+    
+    scheduleNextCheer();
+}
+
+// 根据进度加油
+function cheerForProgress() {
+    const user = raceState.participants.find(p => p.type === 'user');
+    const progress = (user.completed / raceState.totalQuestions) * 100;
+    
+    let messages = [];
+    
+    if (progress < 20) {
+        messages = [
+            '加油！刚开始！',
+            '你可以的！',
+            '慢慢来，不着急！',
+            '我相信你！'
+        ];
+    } else if (progress < 40) {
+        messages = [
+            '做得不错！',
+            '继续保持！',
+            '你很棒！',
+            '加油加油！'
+        ];
+    } else if (progress < 60) {
+        messages = [
+            '已经一半了！',
+            '太厉害了！',
+            '继续努力！',
+            '你是最棒的！'
+        ];
+    } else if (progress < 80) {
+        messages = [
+            '快要完成了！',
+            '冲刺冲刺！',
+            '胜利在望！',
+            '坚持住！'
+        ];
+    } else {
+        messages = [
+            '最后几题了！',
+            '马上就要赢了！',
+            '冲啊！',
+            '你太快了！'
+        ];
+    }
+    
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    showCheerMessage(message);
+    
+    // 随机做特殊动作
+    if (Math.random() > 0.5) {
+        const actions = ['jumping', 'spinning'];
+        const action = actions[Math.floor(Math.random() * actions.length)];
+        const cheeringPet = document.getElementById('cheeringPet');
+        cheeringPet.classList.add(action);
+        setTimeout(() => {
+            cheeringPet.classList.remove(action);
+        }, 800);
+    }
+}
+
+// 显示加油消息
+function showCheerMessage(message) {
+    const bubble = document.getElementById('cheeringBubble');
+    bubble.textContent = message;
+    bubble.classList.remove('show');
+    
+    // 强制重绘
+    void bubble.offsetWidth;
+    
+    bubble.classList.add('show');
+    
+    // 3秒后隐藏
+    setTimeout(() => {
+        bubble.classList.remove('show');
+    }, 3000);
+}
+
+// 答对题目时的鼓励
+function cheerForCorrectAnswer() {
+    const messages = [
+        '答对了！👍',
+        '太棒了！✨',
+        '真聪明！🌟',
+        '继续加油！💪',
+        '你真厉害！🎉'
+    ];
+    
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    showCheerMessage(message);
+    
+    // 跳跃庆祝
+    const cheeringPet = document.getElementById('cheeringPet');
+    cheeringPet.classList.add('jumping');
+    setTimeout(() => {
+        cheeringPet.classList.remove('jumping');
+    }, 600);
+}
+
+// 答错题目时的安慰
+function cheerForWrongAnswer() {
+    const messages = [
+        '没关系！',
+        '下次会更好！',
+        '继续努力！',
+        '不要气馁！'
+    ];
+    
+    const message = messages[Math.floor(Math.random() * messages.length)];
+    showCheerMessage(message);
+}
+
+// 完成比赛时的祝贺
+function cheerForFinish(rank) {
+    stopPetCheering();
+    
+    let message = '';
+    if (rank === 1) {
+        message = '🏆 第一名！太棒了！';
+    } else if (rank === 2) {
+        message = '🥈 第二名！很厉害！';
+    } else if (rank === 3) {
+        message = '🥉 第三名！不错哦！';
+    } else {
+        message = '完成了！你很棒！';
+    }
+    
+    showCheerMessage(message);
+    
+    // 旋转庆祝
+    const cheeringPet = document.getElementById('cheeringPet');
+    cheeringPet.classList.add('spinning');
+    setTimeout(() => {
+        cheeringPet.classList.remove('spinning');
+    }, 800);
+}
+
+// 停止宠物加油
+function stopPetCheering() {
+    if (cheeringInterval) {
+        clearTimeout(cheeringInterval);
+        cheeringInterval = null;
     }
 }
