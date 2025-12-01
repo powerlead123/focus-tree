@@ -140,6 +140,7 @@ function startSession() {
     distractionCount = 0;
     treeCount = 0;
     pausedSeconds = 0;
+    lastPenaltyTime = 0; // 重置超时惩罚计数
     
     saveSession();
     startTimer();
@@ -232,8 +233,12 @@ function startTimer() {
         focusSeconds++;
         updateDisplay();
         
-        // 只有不在暂停状态时才长树
-        if (!isPaused && focusSeconds % TREE_GROW_INTERVAL === 0) {
+        // 检查是否超时
+        const expectedSeconds = expectedMinutes * 60;
+        const isOvertime = focusSeconds > expectedSeconds;
+        
+        // 只有不在暂停状态且未超时时才长树
+        if (!isPaused && !isOvertime && focusSeconds % TREE_GROW_INTERVAL === 0) {
             growNewTree();
         }
         
@@ -254,15 +259,21 @@ function updateDisplay() {
     if (remainingSeconds > 0) {
         const remMin = Math.floor(remainingSeconds / 60);
         const remSec = remainingSeconds % 60;
-        countdownTime.textContent = `${pad(remMin)}:${pad(remSec)}`;
+        
+        // 更新骰子显示
+        updateDiceDisplay(remMin, remSec);
+        
+        // 更新进度条
+        const percentage = ((expectedSeconds - remainingSeconds) / expectedSeconds) * 100;
+        updateProgressBar(percentage, false);
         
         // 根据剩余时间改变颜色
-        const percentage = (remainingSeconds / expectedSeconds) * 100;
+        const remainingPercentage = (remainingSeconds / expectedSeconds) * 100;
         countdownDisplay.classList.remove('time-warning', 'time-danger', 'time-overtime');
         
-        if (percentage > 50) {
+        if (remainingPercentage > 50) {
             countdownDisplay.classList.add('time-good');
-        } else if (percentage > 20) {
+        } else if (remainingPercentage > 20) {
             countdownDisplay.classList.remove('time-good');
             countdownDisplay.classList.add('time-warning');
         } else {
@@ -274,9 +285,136 @@ function updateDisplay() {
         const overtimeSeconds = Math.abs(remainingSeconds);
         const overMin = Math.floor(overtimeSeconds / 60);
         const overSec = overtimeSeconds % 60;
-        countdownTime.textContent = `+${pad(overMin)}:${pad(overSec)}`;
+        
+        // 更新骰子显示（超时）
+        updateDiceDisplay(overMin, overSec, true);
+        
+        // 更新进度条（超时状态）
+        const overtimePercentage = Math.min((overtimeSeconds / expectedSeconds) * 100, 100);
+        updateProgressBar(100 + overtimePercentage, true);
+        
         countdownDisplay.classList.remove('time-good', 'time-warning', 'time-danger');
         countdownDisplay.classList.add('time-overtime');
+        
+        // 超时惩罚：每30秒炸掉一棵树
+        handleOvertimePenalty(overtimeSeconds);
+    }
+}
+
+// 更新骰子显示
+function updateDiceDisplay(minutes, seconds, isOvertime = false) {
+    const min1 = Math.floor(minutes / 10);
+    const min2 = minutes % 10;
+    const sec1 = Math.floor(seconds / 10);
+    const sec2 = seconds % 10;
+    
+    document.getElementById('diceMin1').textContent = isOvertime ? '+' : min1;
+    document.getElementById('diceMin2').textContent = min2;
+    document.getElementById('diceSec1').textContent = sec1;
+    document.getElementById('diceSec2').textContent = sec2;
+}
+
+// 更新进度条
+function updateProgressBar(percentage, isOvertime) {
+    const progressFill = document.getElementById('progressBarFill');
+    const progressText = document.getElementById('progressBarText');
+    
+    if (isOvertime) {
+        progressFill.style.width = '100%';
+        progressFill.classList.remove('warning', 'danger');
+        progressFill.classList.add('overtime');
+        progressText.textContent = '超时！';
+    } else {
+        const displayPercentage = Math.min(percentage, 100);
+        progressFill.style.width = displayPercentage + '%';
+        progressText.textContent = Math.round(displayPercentage) + '%';
+        
+        progressFill.classList.remove('overtime');
+        if (percentage > 80) {
+            progressFill.classList.remove('warning');
+            progressFill.classList.add('danger');
+        } else if (percentage > 50) {
+            progressFill.classList.remove('danger');
+            progressFill.classList.add('warning');
+        } else {
+            progressFill.classList.remove('warning', 'danger');
+        }
+    }
+}
+
+// 超时惩罚
+let lastPenaltyTime = 0;
+function handleOvertimePenalty(overtimeSeconds) {
+    // 每10秒炸掉一棵树（改为更频繁）
+    const penaltyInterval = 10;
+    const currentPenalty = Math.floor(overtimeSeconds / penaltyInterval);
+    
+    console.log('超时惩罚检查:', {
+        overtimeSeconds,
+        currentPenalty,
+        lastPenaltyTime,
+        treeCount,
+        shouldExplode: currentPenalty > lastPenaltyTime && treeCount > 0
+    });
+    
+    if (currentPenalty > lastPenaltyTime && treeCount > 0) {
+        lastPenaltyTime = currentPenalty;
+        console.log('💥 炸掉一棵树！当前剩余:', treeCount - 1);
+        explodeTree();
+    }
+}
+
+// 炸掉一棵树
+function explodeTree() {
+    const trees = forest.querySelectorAll('.tree');
+    if (trees.length === 0) return;
+    
+    // 随机选择一棵树
+    const randomIndex = Math.floor(Math.random() * trees.length);
+    const treeToExplode = trees[randomIndex];
+    
+    // 添加爆炸动画
+    treeToExplode.classList.add('tree-exploding');
+    
+    // 创建爆炸粒子
+    createExplosionParticles(treeToExplode);
+    
+    // 动画结束后移除
+    setTimeout(() => {
+        treeToExplode.remove();
+        treeCount = Math.max(0, treeCount - 1);
+        treeCountDisplay.textContent = `${treeCount}`;
+    }, 800);
+}
+
+// 创建爆炸粒子效果
+function createExplosionParticles(tree) {
+    const rect = tree.getBoundingClientRect();
+    const particles = ['💥', '🔥', '✨', '💨'];
+    
+    for (let i = 0; i < 8; i++) {
+        const particle = document.createElement('div');
+        particle.textContent = particles[Math.floor(Math.random() * particles.length)];
+        particle.style.position = 'fixed';
+        particle.style.left = rect.left + rect.width / 2 + 'px';
+        particle.style.top = rect.top + rect.height / 2 + 'px';
+        particle.style.fontSize = '30px';
+        particle.style.pointerEvents = 'none';
+        particle.style.zIndex = '10000';
+        particle.style.animation = `particle-burst-${i} 1s ease-out forwards`;
+        
+        // 动态创建动画
+        const angle = (i * 45) * Math.PI / 180;
+        const distance = 100;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        
+        particle.style.setProperty('--tx', tx + 'px');
+        particle.style.setProperty('--ty', ty + 'px');
+        
+        document.body.appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 1000);
     }
 }
 

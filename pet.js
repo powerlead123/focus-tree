@@ -218,8 +218,22 @@ function updatePetDisplay() {
     // 更新宠物名字
     document.getElementById('petName').textContent = `${OWNER_NAME}的${currentStage.name}`;
     
-    // 更新游戏按钮显示
-    updateGameButton();
+    // 应用装扮（Lv.4+）
+    if (currentStage.level >= 4) {
+        const costumeData = getCostumeData();
+        const costume = COSTUMES.find(c => c.id === costumeData.currentCostume);
+        if (costume && costume.id !== 'default') {
+            petCharacter.textContent = costume.emoji;
+        }
+    }
+    
+    // 更新功能按钮显示
+    updateFeatureButtons();
+    
+    // 检查成就（Lv.4+）
+    if (currentStage.level >= 4) {
+        checkAchievements();
+    }
     
     // 更新心情
     updateMood(petData.checkinStreak);
@@ -429,6 +443,8 @@ function feedPet() {
 function playFeedingAnimation() {
     const petCharacter = document.getElementById('petCharacter');
     const petContainer = document.getElementById('petContainer');
+    const petData = getPetData();
+    const currentStage = getCurrentStage(petData.totalDays);
     
     // 1. 食物飞向宠物（多个食物）
     const foods = ['🍎', '🍌', '🍇', '🥕', '🍞'];
@@ -462,6 +478,13 @@ function playFeedingAnimation() {
             if (eatCount >= 6) {
                 clearInterval(eatInterval);
                 petCharacter.style.transform = 'scale(1)';
+                
+                // ⚡ 少年阶段：能量爆发 - 跳得更高
+                if (currentStage.level >= 4) {
+                    setTimeout(() => {
+                        playEnergyBurst(petCharacter);
+                    }, 200);
+                }
             }
         }, 300);
     }, 1500);
@@ -503,6 +526,56 @@ function playFeedingAnimation() {
         showStreakReward(getPetData().checkinStreak);
         renderGrowthPreview();
     }, 5000);
+}
+
+// ⚡ 能量爆发效果（少年阶段Lv.4+）
+function playEnergyBurst(petCharacter) {
+    // 能量光环
+    const energyRing = document.createElement('div');
+    energyRing.className = 'energy-ring';
+    energyRing.style.position = 'absolute';
+    energyRing.style.left = '50%';
+    energyRing.style.top = '50%';
+    energyRing.style.transform = 'translate(-50%, -50%)';
+    energyRing.style.width = '100px';
+    energyRing.style.height = '100px';
+    energyRing.style.border = '4px solid #ffd700';
+    energyRing.style.borderRadius = '50%';
+    energyRing.style.animation = 'energyRingExpand 1s ease-out forwards';
+    energyRing.style.pointerEvents = 'none';
+    document.getElementById('petContainer').appendChild(energyRing);
+    
+    // 能量粒子
+    for (let i = 0; i < 12; i++) {
+        setTimeout(() => {
+            const particle = document.createElement('div');
+            particle.textContent = '⚡';
+            particle.style.position = 'absolute';
+            particle.style.fontSize = '30px';
+            particle.style.left = '50%';
+            particle.style.top = '50%';
+            particle.style.animation = 'energyParticle 1s ease-out forwards';
+            particle.style.setProperty('--angle', (i * 30) + 'deg');
+            particle.style.pointerEvents = 'none';
+            document.getElementById('petContainer').appendChild(particle);
+            
+            setTimeout(() => particle.remove(), 1000);
+        }, i * 50);
+    }
+    
+    // 超级跳跃
+    petCharacter.classList.add('super-jump');
+    setTimeout(() => {
+        petCharacter.classList.remove('super-jump');
+    }, 1200);
+    
+    // 清理光环
+    setTimeout(() => energyRing.remove(), 1000);
+    
+    // 显示能量爆发提示
+    setTimeout(() => {
+        petSay('⚡ 能量爆发！我感觉充满力量！', 3000);
+    }, 1200);
 }
 
 // 播放打卡动画（保留旧版本作为备用）
@@ -1465,6 +1538,20 @@ function movePetTo(direction) {
     }
 }
 
+// 食物配置（不同食物不同效果）
+const FOOD_TYPES = [
+    { emoji: '🍎', name: '苹果', score: 1, effect: 'normal', rarity: 'common' },
+    { emoji: '🍌', name: '香蕉', score: 1, effect: 'normal', rarity: 'common' },
+    { emoji: '🍇', name: '葡萄', score: 2, effect: 'happy', rarity: 'uncommon' },
+    { emoji: '🥕', name: '胡萝卜', score: 1, effect: 'normal', rarity: 'common' },
+    { emoji: '🍞', name: '面包', score: 1, effect: 'normal', rarity: 'common' },
+    { emoji: '🍪', name: '饼干', score: 2, effect: 'happy', rarity: 'uncommon' },
+    { emoji: '🍰', name: '蛋糕', score: 3, effect: 'super', rarity: 'rare' },
+    { emoji: '🍩', name: '甜甜圈', score: 3, effect: 'super', rarity: 'rare' },
+    { emoji: '🍭', name: '棒棒糖', score: 2, effect: 'happy', rarity: 'uncommon' },
+    { emoji: '💩', name: '炸弹', score: -3, effect: 'bomb', rarity: 'common' }
+];
+
 // 掉落食物
 function dropFood() {
     if (!gameActive) return;
@@ -1475,18 +1562,38 @@ function dropFood() {
         return;
     }
     
-    const foods = ['🍎', '🍌', '🍇', '🥕', '🍞', '🍪', '🍰', '💩']; // 最后一个是炸弹
-    const food = document.createElement('div');
-    const foodType = foods[Math.floor(Math.random() * foods.length)];
+    // 根据稀有度随机选择食物
+    const rand = Math.random();
+    let selectedFood;
     
+    if (rand < 0.5) {
+        // 50% 普通食物
+        const commonFoods = FOOD_TYPES.filter(f => f.rarity === 'common');
+        selectedFood = commonFoods[Math.floor(Math.random() * commonFoods.length)];
+    } else if (rand < 0.85) {
+        // 35% 不常见食物
+        const uncommonFoods = FOOD_TYPES.filter(f => f.rarity === 'uncommon');
+        selectedFood = uncommonFoods[Math.floor(Math.random() * uncommonFoods.length)];
+    } else {
+        // 15% 稀有食物
+        const rareFoods = FOOD_TYPES.filter(f => f.rarity === 'rare');
+        selectedFood = rareFoods[Math.floor(Math.random() * rareFoods.length)];
+    }
+    
+    const food = document.createElement('div');
     food.className = 'falling-food';
-    food.textContent = foodType;
+    food.textContent = selectedFood.emoji;
     food.style.left = (15 + Math.random() * 70) + '%';
-    food.dataset.type = foodType === '💩' ? 'bomb' : 'food';
+    food.dataset.foodData = JSON.stringify(selectedFood);
+    
+    // 稀有食物发光
+    if (selectedFood.rarity === 'rare') {
+        food.classList.add('rare-food');
+    } else if (selectedFood.rarity === 'uncommon') {
+        food.classList.add('uncommon-food');
+    }
     
     gameArea.appendChild(food);
-    
-    console.log('食物已添加:', foodType, food.style.left);
     
     // 检测碰撞
     const checkCollision = setInterval(() => {
@@ -1500,7 +1607,7 @@ function dropFood() {
         const petRect = document.getElementById('gamePet').getBoundingClientRect();
         const gameAreaRect = gameArea.getBoundingClientRect();
         
-        // 碰撞检测 - 更宽松的判定
+        // 碰撞检测
         const collision = (
             foodRect.bottom >= petRect.top - 15 &&
             foodRect.top <= petRect.bottom &&
@@ -1509,15 +1616,8 @@ function dropFood() {
         );
         
         if (collision) {
-            if (food.dataset.type === 'bomb') {
-                gameScore = Math.max(0, gameScore - 2);
-                showGameToast('💥 -2分！', 'error');
-            } else {
-                gameScore++;
-                showGameToast('✨ +1分！', 'success');
-            }
-            
-            document.getElementById('gameScore').textContent = gameScore;
+            const foodData = JSON.parse(food.dataset.foodData);
+            handleFoodCatch(foodData);
             food.remove();
             clearInterval(checkCollision);
         }
@@ -1529,13 +1629,110 @@ function dropFood() {
         }
     }, 30);
     
-    // 4秒后自动移除（防止卡住）
+    // 4秒后自动移除
     setTimeout(() => {
         if (food.parentNode) {
             food.remove();
             clearInterval(checkCollision);
         }
     }, 4000);
+}
+
+// 处理接到食物
+function handleFoodCatch(foodData) {
+    const gamePet = document.getElementById('gamePet');
+    
+    gameScore += foodData.score;
+    gameScore = Math.max(0, gameScore); // 不能低于0
+    document.getElementById('gameScore').textContent = gameScore;
+    
+    // 根据效果显示不同反馈
+    switch (foodData.effect) {
+        case 'normal':
+            showGameToast(`+${foodData.score}分`, 'success');
+            gamePet.classList.add('pet-eat');
+            setTimeout(() => gamePet.classList.remove('pet-eat'), 300);
+            break;
+            
+        case 'happy':
+            showGameToast(`😋 ${foodData.name} +${foodData.score}分！`, 'success');
+            gamePet.classList.add('pet-happy');
+            createFoodParticles(foodData.emoji);
+            setTimeout(() => gamePet.classList.remove('pet-happy'), 600);
+            break;
+            
+        case 'super':
+            showGameToast(`🌟 ${foodData.name} +${foodData.score}分！太棒了！`, 'success');
+            gamePet.classList.add('pet-super-happy');
+            createFoodParticles(foodData.emoji);
+            createStarBurst();
+            setTimeout(() => gamePet.classList.remove('pet-super-happy'), 800);
+            break;
+            
+        case 'bomb':
+            showGameToast(`💥 ${foodData.name} ${foodData.score}分！`, 'error');
+            gamePet.classList.add('pet-hurt');
+            createBombEffect();
+            setTimeout(() => gamePet.classList.remove('pet-hurt'), 500);
+            break;
+    }
+}
+
+// 创建食物粒子效果
+function createFoodParticles(emoji) {
+    const gameArea = document.getElementById('gameArea');
+    const gamePet = document.getElementById('gamePet');
+    const petRect = gamePet.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    for (let i = 0; i < 6; i++) {
+        const particle = document.createElement('div');
+        particle.textContent = emoji;
+        particle.className = 'food-particle';
+        particle.style.left = (petRect.left - areaRect.left + petRect.width / 2) + 'px';
+        particle.style.top = (petRect.top - areaRect.top + petRect.height / 2) + 'px';
+        particle.style.setProperty('--angle', (i * 60) + 'deg');
+        gameArea.appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 800);
+    }
+}
+
+// 创建星星爆发效果
+function createStarBurst() {
+    const gameArea = document.getElementById('gameArea');
+    const gamePet = document.getElementById('gamePet');
+    const petRect = gamePet.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    for (let i = 0; i < 8; i++) {
+        const star = document.createElement('div');
+        star.textContent = '⭐';
+        star.className = 'star-particle';
+        star.style.left = (petRect.left - areaRect.left + petRect.width / 2) + 'px';
+        star.style.top = (petRect.top - areaRect.top + petRect.height / 2) + 'px';
+        star.style.setProperty('--angle', (i * 45) + 'deg');
+        gameArea.appendChild(star);
+        
+        setTimeout(() => star.remove(), 1000);
+    }
+}
+
+// 创建炸弹效果
+function createBombEffect() {
+    const gameArea = document.getElementById('gameArea');
+    const gamePet = document.getElementById('gamePet');
+    const petRect = gamePet.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    const explosion = document.createElement('div');
+    explosion.textContent = '💥';
+    explosion.className = 'explosion-effect';
+    explosion.style.left = (petRect.left - areaRect.left + petRect.width / 2) + 'px';
+    explosion.style.top = (petRect.top - areaRect.top + petRect.height / 2) + 'px';
+    gameArea.appendChild(explosion);
+    
+    setTimeout(() => explosion.remove(), 600);
 }
 
 // 游戏内提示
@@ -1595,17 +1792,257 @@ function closeGame() {
     document.getElementById('gameModal').classList.add('hidden');
 }
 
-// 更新游戏按钮显示
-function updateGameButton() {
+
+
+
+// ========== 换装系统（少年Lv.4+）==========
+const COSTUMES = [
+    { id: 'default', name: '默认造型', emoji: '🐤', price: 0, unlocked: true },
+    { id: 'cool', name: '酷炫墨镜', emoji: '😎', price: 10, unlocked: false },
+    { id: 'party', name: '派对帽子', emoji: '🥳', price: 15, unlocked: false },
+    { id: 'crown', name: '皇冠', emoji: '👑', price: 20, unlocked: false },
+    { id: 'ninja', name: '忍者装', emoji: '🥷', price: 25, unlocked: false },
+    { id: 'wizard', name: '魔法师', emoji: '🧙', price: 30, unlocked: false }
+];
+
+// 获取换装数据
+function getCostumeData() {
+    const data = localStorage.getItem('focusTree_costumeData');
+    if (data) {
+        return JSON.parse(data);
+    }
+    return {
+        currentCostume: 'default',
+        unlockedCostumes: ['default']
+    };
+}
+
+// 保存换装数据
+function saveCostumeData(data) {
+    localStorage.setItem('focusTree_costumeData', JSON.stringify(data));
+}
+
+// 显示换装商店
+function showCostumeShop() {
     const petData = getPetData();
     const currentStage = getCurrentStage(petData.totalDays);
-    const gameBtn = document.getElementById('gameBtn');
     
-    if (gameBtn) {
-        if (currentStage.level >= 3) {
-            gameBtn.style.display = 'block';
-        } else {
-            gameBtn.style.display = 'none';
-        }
+    if (currentStage.level < 4) {
+        showToast('少年阶段（15天）才能解锁换装功能！', 'error');
+        return;
     }
+    
+    const costumeData = getCostumeData();
+    const previewPet = document.getElementById('previewPet');
+    const currentCostume = COSTUMES.find(c => c.id === costumeData.currentCostume);
+    
+    // 显示当前装扮
+    previewPet.textContent = currentCostume.emoji;
+    document.getElementById('currentCostumeName').textContent = currentCostume.name;
+    
+    // 渲染装扮列表
+    const grid = document.getElementById('costumeGrid');
+    grid.innerHTML = '';
+    
+    COSTUMES.forEach(costume => {
+        const isUnlocked = costumeData.unlockedCostumes.includes(costume.id);
+        const isSelected = costumeData.currentCostume === costume.id;
+        
+        const item = document.createElement('div');
+        item.className = 'costume-item';
+        if (isSelected) item.classList.add('selected');
+        if (!isUnlocked) item.classList.add('locked');
+        
+        item.innerHTML = `
+            <div class="costume-emoji">${costume.emoji}</div>
+            <div class="costume-name">${costume.name}</div>
+            ${isUnlocked ? 
+                '<div class="costume-unlocked">✓ 已拥有</div>' :
+                `<div class="costume-price">🍃 ${costume.price}金币</div>`
+            }
+        `;
+        
+        item.onclick = () => selectCostume(costume.id, isUnlocked);
+        grid.appendChild(item);
+    });
+    
+    document.getElementById('costumeModal').classList.remove('hidden');
+}
+
+// 选择装扮
+function selectCostume(costumeId, isUnlocked) {
+    const costumeData = getCostumeData();
+    const costume = COSTUMES.find(c => c.id === costumeId);
+    
+    if (!isUnlocked) {
+        // 购买装扮
+        const userData = getUserData();
+        if (userData.coins >= costume.price) {
+            if (confirm(`确定花费${costume.price}金币购买"${costume.name}"吗？`)) {
+                userData.coins -= costume.price;
+                saveUserData(userData);
+                
+                costumeData.unlockedCostumes.push(costumeId);
+                costumeData.currentCostume = costumeId;
+                saveCostumeData(costumeData);
+                
+                showToast(`成功购买"${costume.name}"！`, 'success');
+                showCostumeShop(); // 刷新界面
+                updatePetDisplay(); // 更新宠物显示
+            }
+        } else {
+            showToast(`金币不足！还需要${costume.price - userData.coins}金币`, 'error');
+        }
+    } else {
+        // 切换装扮
+        costumeData.currentCostume = costumeId;
+        saveCostumeData(costumeData);
+        showToast(`已切换到"${costume.name}"`, 'success');
+        showCostumeShop(); // 刷新界面
+        updatePetDisplay(); // 更新宠物显示
+    }
+}
+
+// 关闭换装商店
+function closeCostumeShop() {
+    document.getElementById('costumeModal').classList.add('hidden');
+}
+
+// 更新按钮显示（包括换装按钮）
+function updateFeatureButtons() {
+    const petData = getPetData();
+    const currentStage = getCurrentStage(petData.totalDays);
+    
+    // 小游戏按钮（Lv.3+）
+    const gameBtn = document.getElementById('gameBtn');
+    if (gameBtn) {
+        gameBtn.style.display = currentStage.level >= 3 ? 'block' : 'none';
+    }
+    
+    // 换装按钮（Lv.4+）
+    const costumeBtn = document.getElementById('costumeBtn');
+    if (costumeBtn) {
+        costumeBtn.style.display = currentStage.level >= 4 ? 'block' : 'none';
+    }
+    
+    // 成就按钮（Lv.4+）
+    const achievementBtn = document.getElementById('achievementBtn');
+    if (achievementBtn) {
+        achievementBtn.style.display = currentStage.level >= 4 ? 'block' : 'none';
+    }
+}
+
+// ========== 成就系统（少年Lv.4+）==========
+const ACHIEVEMENTS = [
+    { id: 'first_checkin', name: '初次打卡', desc: '完成第一次打卡', icon: '🎯', reward: 5, condition: (data) => data.totalDays >= 1 },
+    { id: 'week_streak', name: '坚持一周', desc: '连续打卡7天', icon: '🔥', reward: 10, condition: (data) => data.checkinStreak >= 7 },
+    { id: 'hatch', name: '破壳而出', desc: '宠物破壳', icon: '🐣', reward: 10, condition: (data) => data.totalDays >= 3 },
+    { id: 'teenager', name: '茁壮成长', desc: '宠物进入幼年', icon: '🐥', reward: 15, condition: (data) => data.totalDays >= 8 },
+    { id: 'youth', name: '活力少年', desc: '宠物进入少年', icon: '🐤', reward: 20, condition: (data) => data.totalDays >= 15 },
+    { id: 'adult', name: '成年礼', desc: '宠物成年', icon: '🐓', reward: 30, condition: (data) => data.totalDays >= 23 },
+    { id: 'perfect', name: '完美形态', desc: '宠物完全体', icon: '🦚', reward: 50, condition: (data) => data.totalDays >= 30 },
+    { id: 'rich', name: '小富翁', desc: '拥有100金币', icon: '💰', reward: 10, condition: () => getUserData().coins >= 100 },
+    { id: 'game_master', name: '游戏高手', desc: '小游戏得分≥20', icon: '🎮', reward: 15, condition: () => false }, // 需要在游戏中检查
+    { id: 'fashionista', name: '时尚达人', desc: '解锁3个装扮', icon: '👗', reward: 20, condition: () => getCostumeData().unlockedCostumes.length >= 3 }
+];
+
+// 获取成就数据
+function getAchievementData() {
+    const data = localStorage.getItem('focusTree_achievementData');
+    if (data) {
+        return JSON.parse(data);
+    }
+    return {
+        unlockedAchievements: []
+    };
+}
+
+// 保存成就数据
+function saveAchievementData(data) {
+    localStorage.setItem('focusTree_achievementData', JSON.stringify(data));
+}
+
+// 检查并解锁成就
+function checkAchievements() {
+    const petData = getPetData();
+    const achievementData = getAchievementData();
+    let newUnlocks = [];
+    
+    ACHIEVEMENTS.forEach(achievement => {
+        if (!achievementData.unlockedAchievements.includes(achievement.id)) {
+            if (achievement.condition(petData)) {
+                achievementData.unlockedAchievements.push(achievement.id);
+                newUnlocks.push(achievement);
+                
+                // 奖励金币
+                const userData = getUserData();
+                userData.coins += achievement.reward;
+                saveUserData(userData);
+            }
+        }
+    });
+    
+    if (newUnlocks.length > 0) {
+        saveAchievementData(achievementData);
+        
+        // 显示成就解锁提示
+        newUnlocks.forEach((achievement, index) => {
+            setTimeout(() => {
+                showToast(`🏆 解锁成就：${achievement.name}！+${achievement.reward}金币`, 'success');
+            }, index * 1500);
+        });
+    }
+}
+
+// 显示成就列表
+function showAchievements() {
+    const petData = getPetData();
+    const currentStage = getCurrentStage(petData.totalDays);
+    
+    if (currentStage.level < 4) {
+        showToast('少年阶段（15天）才能解锁成就系统！', 'error');
+        return;
+    }
+    
+    const achievementData = getAchievementData();
+    const unlockedCount = achievementData.unlockedAchievements.length;
+    const totalCount = ACHIEVEMENTS.length;
+    const progress = Math.round((unlockedCount / totalCount) * 100);
+    
+    document.getElementById('unlockedCount').textContent = unlockedCount;
+    document.getElementById('totalCount').textContent = totalCount;
+    document.getElementById('achievementProgress').textContent = progress + '%';
+    
+    // 渲染成就列表
+    const list = document.getElementById('achievementList');
+    list.innerHTML = '';
+    
+    ACHIEVEMENTS.forEach(achievement => {
+        const isUnlocked = achievementData.unlockedAchievements.includes(achievement.id);
+        
+        const item = document.createElement('div');
+        item.className = 'achievement-item';
+        if (isUnlocked) item.classList.add('unlocked');
+        
+        item.innerHTML = `
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-info">
+                <div class="achievement-title">${achievement.name}</div>
+                <div class="achievement-desc">${achievement.desc}</div>
+                <div class="achievement-reward">奖励：${achievement.reward}金币</div>
+            </div>
+            <div class="achievement-status ${isUnlocked ? 'unlocked' : 'locked'}">
+                ${isUnlocked ? '✓ 已解锁' : '🔒 未解锁'}
+            </div>
+        `;
+        
+        list.appendChild(item);
+    });
+    
+    document.getElementById('achievementModal').classList.remove('hidden');
+}
+
+// 关闭成就列表
+function closeAchievements() {
+    document.getElementById('achievementModal').classList.add('hidden');
 }

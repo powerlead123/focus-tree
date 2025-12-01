@@ -136,6 +136,8 @@
         <button class="btn-album" onclick="showGrowthGuide()" style="margin-top: 10px;">🔮 成长指南</button>
         <button class="btn-album" onclick="showRanking()" style="margin-top: 10px;">📊 对手排行</button>
         <button class="btn-album" id="gameBtn" onclick="showMiniGame()" style="margin-top: 10px; display: none;">🎮 小游戏</button>
+        <button class="btn-album" id="costumeBtn" onclick="showCostumeShop()" style="margin-top: 10px; display: none;">🎨 换装</button>
+        <button class="btn-album" id="achievementBtn" onclick="showAchievements()" style="margin-top: 10px; display: none;">🏆 成就</button>
     </div>
 
     <!-- 打卡成功动画 -->
@@ -255,10 +257,13 @@
             <div id="gameStartScreen">
                 <h2>🎮 接食物游戏</h2>
                 <div class="game-intro">
-                    <p>🍎 接住掉落的食物得分</p>
-                    <p>💩 小心炸弹会扣分</p>
+                    <p>🍎 普通食物 +1分</p>
+                    <p>🍪 好吃食物 +2分（发金光）</p>
+                    <p>🍰 超级美味 +3分（发红光）</p>
+                    <p>💩 炸弹 -3分（小心！）</p>
                     <p>⏱️ 30秒内尽可能多得分</p>
-                    <p>⌨️ 使用 ← → 键或点击按钮移动</p>
+                    <p>⌨️ 使用键盘 ← → 方向键移动</p>
+                    <p>🖱️ 或点击下方按钮移动</p>
                 </div>
                 <button class="btn btn-primary" onclick="startGame()">开始游戏</button>
                 <button class="btn btn-secondary" onclick="closeGame()">关闭</button>
@@ -290,6 +295,38 @@
                 <button class="btn btn-primary" onclick="startGame()">再玩一次</button>
                 <button class="btn btn-secondary" onclick="closeGame()">关闭</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 换装商店弹窗 -->
+    <div class="modal hidden" id="costumeModal">
+        <div class="modal-content">
+            <h2>🎨 宠物换装</h2>
+            <div class="costume-preview">
+                <div class="preview-pet" id="previewPet">🐤</div>
+                <div class="current-costume-name" id="currentCostumeName">默认造型</div>
+            </div>
+            <div class="costume-grid" id="costumeGrid"></div>
+            <button class="btn btn-secondary" onclick="closeCostumeShop()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 成就系统弹窗 -->
+    <div class="modal hidden" id="achievementModal">
+        <div class="modal-content">
+            <h2>🏆 成就收集</h2>
+            <div class="achievement-stats">
+                <div class="stat-item">
+                    <span class="stat-label">已解锁</span>
+                    <span class="stat-value"><span id="unlockedCount">0</span>/<span id="totalCount">0</span></span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">完成度</span>
+                    <span class="stat-value" id="achievementProgress">0%</span>
+                </div>
+            </div>
+            <div class="achievement-list" id="achievementList"></div>
+            <button class="btn btn-secondary" onclick="closeAchievements()">关闭</button>
         </div>
     </div>
 

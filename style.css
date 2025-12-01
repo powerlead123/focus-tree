@@ -1183,3 +1183,190 @@ body:has(.parent-view) {
 .background-option.active .bg-name {
     color: #667eea;
 }
+
+
+/* ========== 骰子样式倒计时 ========== */
+.dice-timer {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.dice-digit {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border: 3px solid #333;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s;
+}
+
+.dice-separator {
+    font-size: 36px;
+    font-weight: bold;
+    color: #333;
+    margin: 0 5px;
+}
+
+/* 时间进度条 */
+.time-progress-bar {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    height: 25px;
+    background: rgba(200, 200, 200, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 10px 0 5px 0;
+    border: 2px solid rgba(150, 150, 150, 0.5);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+    transition: width 1s linear, background 0.5s;
+    border-radius: 10px;
+}
+
+.progress-bar-fill.warning {
+    background: linear-gradient(90deg, #ed8936 0%, #dd6b20 100%);
+}
+
+.progress-bar-fill.danger {
+    background: linear-gradient(90deg, #f56565 0%, #e53e3e 100%);
+    animation: pulse-progress 1s ease-in-out infinite;
+}
+
+.progress-bar-fill.overtime {
+    background: repeating-linear-gradient(
+        45deg,
+        #9f7aea,
+        #9f7aea 10px,
+        #805ad5 10px,
+        #805ad5 20px
+    );
+    background-size: 200% 100%;
+    animation: overtime-stripe 2s linear infinite;
+}
+
+@keyframes pulse-progress {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes overtime-stripe {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+
+.progress-bar-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* 不同状态的骰子颜色 */
+.countdown-display.time-good .dice-digit {
+    background: #48bb78;
+    color: white;
+    border-color: #38a169;
+}
+
+.countdown-display.time-warning .dice-digit {
+    background: #ed8936;
+    color: white;
+    border-color: #dd6b20;
+}
+
+.countdown-display.time-danger .dice-digit {
+    background: #f56565;
+    color: white;
+    border-color: #e53e3e;
+    animation: dice-shake 0.5s ease-in-out infinite;
+}
+
+.countdown-display.time-overtime .dice-digit {
+    background: #9f7aea;
+    color: white;
+    border-color: #805ad5;
+}
+
+@keyframes dice-shake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+}
+
+/* 小树爆炸效果 */
+.tree-exploding {
+    animation: tree-explode 0.8s ease-out forwards;
+}
+
+@keyframes tree-explode {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5) rotate(180deg);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(0) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+
+/* 爆炸粒子动画 */
+@keyframes particle-burst-0 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-1 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-2 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-3 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-4 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-5 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-6 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+@keyframes particle-burst-7 {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}

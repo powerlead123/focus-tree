@@ -77,7 +77,17 @@
         <div class="timer-display-group">
             <div class="countdown-display" id="countdownDisplay">
                 <span class="countdown-label">剩余时间</span>
-                <span class="countdown-time" id="countdownTime">30:00</span>
+                <div class="dice-timer" id="diceTimer">
+                    <div class="dice-digit" id="diceMin1">0</div>
+                    <div class="dice-digit" id="diceMin2">0</div>
+                    <div class="dice-separator">:</div>
+                    <div class="dice-digit" id="diceSec1">0</div>
+                    <div class="dice-digit" id="diceSec2">0</div>
+                </div>
+            </div>
+            <div class="time-progress-bar">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+                <div class="progress-bar-text" id="progressBarText">0%</div>
             </div>
             <div class="elapsed-time">
                 已用：<span id="timeDisplay">00:00</span>
