@@ -107,6 +107,10 @@ function goToShop() {
     window.location.href = 'shop.html';
 }
 
+function goToBirthday() {
+    window.location.href = 'birthday.html';
+}
+
 // 显示兑换弹窗
 function showExchangeModal() {
     const userData = getUserData();

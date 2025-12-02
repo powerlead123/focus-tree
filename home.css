@@ -718,3 +718,30 @@ body {
         opacity: 1;
     }
 }
+
+
+/* 生日卡片特殊样式 */
+.birthday-card {
+    background: linear-gradient(135deg, #ff6b9d 0%, #feca57 50%, #48dbfb 100%);
+    animation: birthdayGlow 2s ease-in-out infinite;
+}
+
+@keyframes birthdayGlow {
+    0%, 100% {
+        box-shadow: 0 4px 15px rgba(255, 107, 157, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 8px 30px rgba(255, 107, 157, 0.8);
+        transform: scale(1.05);
+    }
+}
+
+.birthday-card .mini-icon {
+    animation: birthdayBounce 1s ease-in-out infinite;
+}
+
+@keyframes birthdayBounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(10deg); }
+}

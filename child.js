@@ -141,6 +141,10 @@ function startSession() {
     treeCount = 0;
     pausedSeconds = 0;
     lastPenaltyTime = 0; // 重置超时惩罚计数
+    lastDiceValues = { min1: -1, min2: -1, sec1: -1, sec2: -1 }; // 重置骰子值
+    
+    // 骰子初始摇动效果
+    shakeDiceOnStart();
     
     saveSession();
     startTimer();
@@ -302,16 +306,64 @@ function updateDisplay() {
 }
 
 // 更新骰子显示
+let lastDiceValues = { min1: -1, min2: -1, sec1: -1, sec2: -1 };
+
 function updateDiceDisplay(minutes, seconds, isOvertime = false) {
     const min1 = Math.floor(minutes / 10);
     const min2 = minutes % 10;
     const sec1 = Math.floor(seconds / 10);
     const sec2 = seconds % 10;
     
-    document.getElementById('diceMin1').textContent = isOvertime ? '+' : min1;
-    document.getElementById('diceMin2').textContent = min2;
-    document.getElementById('diceSec1').textContent = sec1;
-    document.getElementById('diceSec2').textContent = sec2;
+    const newValues = {
+        min1: isOvertime ? '+' : min1,
+        min2: min2,
+        sec1: sec1,
+        sec2: sec2
+    };
+    
+    // 检查每个骰子是否需要更新并添加翻转动画
+    updateDiceWithFlip('diceMin1', newValues.min1, lastDiceValues.min1);
+    updateDiceWithFlip('diceMin2', newValues.min2, lastDiceValues.min2);
+    updateDiceWithFlip('diceSec1', newValues.sec1, lastDiceValues.sec1);
+    updateDiceWithFlip('diceSec2', newValues.sec2, lastDiceValues.sec2);
+    
+    lastDiceValues = newValues;
+}
+
+// 带翻转动画的骰子更新
+function updateDiceWithFlip(elementId, newValue, oldValue) {
+    const element = document.getElementById(elementId);
+    
+    if (newValue !== oldValue) {
+        // 添加翻转动画
+        element.classList.add('dice-flip');
+        
+        // 在动画中途更新数字
+        setTimeout(() => {
+            element.textContent = newValue;
+        }, 150);
+        
+        // 动画结束后移除类
+        setTimeout(() => {
+            element.classList.remove('dice-flip');
+        }, 300);
+    }
+}
+
+// 开始时骰子摇动效果
+function shakeDiceOnStart() {
+    const diceElements = ['diceMin1', 'diceMin2', 'diceSec1', 'diceSec2'];
+    
+    diceElements.forEach((id, index) => {
+        setTimeout(() => {
+            const element = document.getElementById(id);
+            element.classList.add('dice-shake-start');
+            
+            setTimeout(() => {
+                element.classList.remove('dice-shake-start');
+            }, 600);
+        }, index * 100);
+    });
 }
 
 // 更新进度条

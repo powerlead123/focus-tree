@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎂 柏皓生日快乐！</title>
+    <link rel="stylesheet" href="birthday.css">
+</head>
+<body>
+    <div class="birthday-container">
+        <!-- 背景装饰 -->
+        <div class="balloons" id="balloons"></div>
+        <div class="confetti" id="confetti"></div>
+        
+        <!-- 标题 -->
+        <div class="birthday-title">
+            <h1 class="title-text">🎉 生日快乐 🎉</h1>
+            <h2 class="name-text">柏皓</h2>
+        </div>
+        
+        <!-- 舞台区域 -->
+        <div class="stage">
+            <!-- 蛋糕 -->
+            <div class="cake-container">
+                <div class="cake">
+                    <div class="cake-layer cake-layer-3"></div>
+                    <div class="cake-layer cake-layer-2"></div>
+                    <div class="cake-layer cake-layer-1"></div>
+                    <div class="candles">
+                        <div class="candle"><div class="flame"></div></div>
+                        <div class="candle"><div class="flame"></div></div>
+                        <div class="candle"><div class="flame"></div></div>
+                        <div class="candle"><div class="flame"></div></div>
+                        <div class="candle"><div class="flame"></div></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 柏皓（火柴人） -->
+            <div class="birthday-boy" id="birthdayBoy">
+                <div class="stickman">
+                    <div class="stickman-head"></div>
+                    <div class="stickman-body"></div>
+                    <div class="stickman-arm stickman-arm-left"></div>
+                    <div class="stickman-arm stickman-arm-right"></div>
+                    <div class="stickman-leg stickman-leg-left"></div>
+                    <div class="stickman-leg stickman-leg-right"></div>
+                </div>
+                <div class="party-hat">🎩</div>
+            </div>
+            
+            <!-- 宠物们 -->
+            <div class="pet pet-chicken" id="petChicken">
+                <div class="pet-emoji">🐣</div>
+                <div class="pet-bubble">生日快乐！</div>
+            </div>
+            
+            <div class="pet pet-panda" id="petPanda">
+                <div class="pet-emoji">🐼</div>
+                <div class="pet-bubble">柏皓最棒！</div>
+            </div>
+            
+            <div class="pet pet-unicorn" id="petUnicorn">
+                <div class="pet-emoji">🦄</div>
+                <div class="pet-bubble">愿望成真！</div>
+            </div>
+            
+            <div class="pet pet-dragon" id="petDragon">
+                <div class="pet-emoji">🐉</div>
+                <div class="pet-bubble">越来越棒！</div>
+            </div>
+        </div>
+        
+        <!-- 祝福语 -->
+        <div class="wishes-container">
+            <div class="wish-card" id="wishCard">
+                <p class="wish-text">🎂 亲爱的柏皓，生日快乐！</p>
+                <p class="wish-text">🌟 愿你健康快乐，学习进步！</p>
+                <p class="wish-text">💪 继续保持专注，成为更好的自己！</p>
+                <p class="wish-text">🎁 所有的宠物都来为你庆祝啦！</p>
+            </div>
+        </div>
+        
+        <!-- 互动按钮 -->
+        <div class="action-buttons">
+            <button class="btn-blow" id="blowBtn" onclick="blowCandles()">🎂 吹蜡烛</button>
+            <button class="btn-firework" id="fireworkBtn" onclick="launchFireworks()">🎆 放烟花</button>
+            <button class="btn-dance" id="danceBtn" onclick="startDance()">💃 一起跳舞</button>
+        </div>
+        
+        <!-- 返回按钮 -->
+        <a href="home.html" class="btn-home">← 返回首页</a>
+    </div>
+    
+    <script src="birthday.js"></script>
+</body>
+</html>

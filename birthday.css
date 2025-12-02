@@ -1,0 +1,454 @@
+/* 生日庆祝页面样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    height: 100vh;
+}
+
+.birthday-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 标题 */
+.birthday-title {
+    text-align: center;
+    padding: 30px;
+    position: relative;
+    z-index: 10;
+}
+
+.title-text {
+    font-size: 60px;
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+    animation: titlePulse 2s ease-in-out infinite;
+}
+
+.name-text {
+    font-size: 80px;
+    color: #ffd700;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 1);
+    animation: nameBounce 1s ease-in-out infinite;
+    margin-top: 10px;
+}
+
+@keyframes titlePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes nameBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* 舞台 */
+.stage {
+    position: relative;
+    width: 100%;
+    height: 60vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
+/* 蛋糕 */
+.cake-container {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: cakeAppear 2s ease-out;
+}
+
+@keyframes cakeAppear {
+    0% { transform: translateX(-50%) translateY(200px) scale(0); }
+    60% { transform: translateX(-50%) translateY(-20px) scale(1.1); }
+    100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.cake {
+    position: relative;
+    width: 200px;
+}
+
+.cake-layer {
+    width: 100%;
+    border-radius: 10px;
+    position: relative;
+    margin: 0 auto;
+}
+
+.cake-layer-1 {
+    height: 60px;
+    background: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%);
+    width: 180px;
+    border: 3px solid #8b4789;
+}
+
+.cake-layer-2 {
+    height: 50px;
+    background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+    width: 150px;
+    border: 3px solid #ee5a6f;
+    margin-top: -5px;
+}
+
+.cake-layer-3 {
+    height: 40px;
+    background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+    width: 120px;
+    border: 3px solid #00a8ff;
+    margin-top: -5px;
+}
+
+/* 蜡烛 */
+.candles {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+}
+
+.candle {
+    width: 8px;
+    height: 30px;
+    background: linear-gradient(180deg, #fff 0%, #f0f0f0 100%);
+    border-radius: 4px;
+    position: relative;
+}
+
+.flame {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 18px;
+    background: radial-gradient(circle, #ffeb3b 0%, #ff9800 50%, #f44336 100%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    animation: flameFlicker 0.3s ease-in-out infinite;
+}
+
+@keyframes flameFlicker {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.1, 0.9); }
+}
+
+
+/* 火柴人柏皓 */
+.birthday-boy {
+    position: absolute;
+    bottom: 200px;
+    left: 50%;
+    transform: translateX(-50%);
+    animation: boyAppear 1.5s ease-out 0.5s both;
+}
+
+@keyframes boyAppear {
+    0% { transform: translateX(-50%) scale(0) rotate(0deg); }
+    60% { transform: translateX(-50%) scale(1.2) rotate(360deg); }
+    100% { transform: translateX(-50%) scale(1) rotate(360deg); }
+}
+
+.birthday-boy .stickman {
+    position: relative;
+    width: 60px;
+    height: 100px;
+    animation: boyJump 2s ease-in-out infinite;
+}
+
+@keyframes boyJump {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.party-hat {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 40px;
+    animation: hatSpin 3s linear infinite;
+}
+
+@keyframes hatSpin {
+    0% { transform: translateX(-50%) rotate(0deg); }
+    100% { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* 宠物 */
+.pet {
+    position: absolute;
+    opacity: 0;
+}
+
+.pet-emoji {
+    font-size: 80px;
+    animation: petBounce 1s ease-in-out infinite;
+}
+
+@keyframes petBounce {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-15px) rotate(5deg); }
+}
+
+.pet-bubble {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #667eea;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    opacity: 0;
+    animation: bubblePop 0.5s ease-out 0.5s both;
+}
+
+@keyframes bubblePop {
+    0% { transform: translateX(-50%) scale(0); opacity: 0; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+.pet-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid white;
+}
+
+
+/* 宠物入场动画 */
+.pet-chicken {
+    bottom: 200px;
+    left: 20%;
+    animation: petEnterLeft 1s ease-out 1s both;
+}
+
+.pet-panda {
+    bottom: 200px;
+    right: 20%;
+    animation: petEnterRight 1s ease-out 1.3s both;
+}
+
+.pet-unicorn {
+    bottom: 250px;
+    left: 35%;
+    animation: petEnterLeft 1s ease-out 1.6s both;
+}
+
+.pet-dragon {
+    bottom: 250px;
+    right: 35%;
+    animation: petEnterRight 1s ease-out 1.9s both;
+}
+
+@keyframes petEnterLeft {
+    0% { transform: translateX(-200px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes petEnterRight {
+    0% { transform: translateX(200px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+}
+
+/* 气球 */
+.balloons {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 彩纸 */
+.confetti {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* 祝福卡片 */
+.wishes-container {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.wish-card {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: cardSlideUp 1s ease-out 2.5s both;
+}
+
+@keyframes cardSlideUp {
+    0% { transform: translateY(100px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+.wish-text {
+    font-size: 18px;
+    color: #667eea;
+    margin: 8px 0;
+    text-align: center;
+}
+
+
+/* 按钮 */
+.action-buttons {
+    position: absolute;
+    top: 150px;
+    right: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 20;
+}
+
+.action-buttons button {
+    padding: 15px 25px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-blow {
+    background: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%);
+    color: white;
+}
+
+.btn-firework {
+    background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+    color: white;
+}
+
+.btn-dance {
+    background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+    color: white;
+}
+
+.action-buttons button:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.action-buttons button:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.btn-home {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #667eea;
+    text-decoration: none;
+    border-radius: 10px;
+    font-weight: bold;
+    transition: all 0.3s;
+    z-index: 20;
+}
+
+.btn-home:hover {
+    background: white;
+    transform: translateX(-5px);
+}
+
+/* 火柴人样式（复用home.css的样式） */
+.stickman-head {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #333;
+    border-radius: 50%;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffd4a3;
+}
+
+.stickman-body {
+    position: absolute;
+    width: 3px;
+    height: 35px;
+    background: #333;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.stickman-arm {
+    position: absolute;
+    width: 3px;
+    height: 25px;
+    background: #333;
+    top: 28px;
+    transform-origin: top center;
+}
+
+.stickman-arm-left {
+    left: calc(50% - 15px);
+    animation: armWave 1s ease-in-out infinite;
+}
+
+.stickman-arm-right {
+    left: calc(50% + 12px);
+    animation: armWave 1s ease-in-out infinite 0.5s;
+}
+
+@keyframes armWave {
+    0%, 100% { transform: rotate(-30deg); }
+    50% { transform: rotate(30deg); }
+}
+
+.stickman-leg {
+    position: absolute;
+    width: 3px;
+    height: 35px;
+    background: #333;
+    top: 59px;
+}
+
+.stickman-leg-left {
+    left: calc(50% - 8px);
+}
+
+.stickman-leg-right {
+    left: calc(50% + 5px);
+}
