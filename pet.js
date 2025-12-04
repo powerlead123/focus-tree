@@ -2046,3 +2046,82 @@ function showAchievements() {
 function closeAchievements() {
     document.getElementById('achievementModal').classList.add('hidden');
 }
+
+
+// ========== 传送门效果 ==========
+function showPortal() {
+    const overlay = document.getElementById('portalOverlay');
+    const menu = document.getElementById('portalMenu');
+    const vortex = document.getElementById('portalVortex');
+    
+    // 显示传送门并激活动画
+    overlay.classList.remove('hidden');
+    
+    // 稍微延迟添加active类，确保动画触发
+    setTimeout(() => {
+        overlay.classList.add('active');
+    }, 50);
+    
+    // 3秒后：漩涡消失，大门关闭
+    setTimeout(() => {
+        vortex.style.animation = 'vortexDisappear 0.5s ease-out forwards';
+        overlay.classList.add('closing');
+    }, 3000);
+    
+    // 4秒后：显示菜单
+    setTimeout(() => {
+        menu.classList.remove('hidden');
+    }, 4000);
+}
+
+function closePortal() {
+    const overlay = document.getElementById('portalOverlay');
+    const menu = document.getElementById('portalMenu');
+    
+    // 添加关闭动画
+    menu.style.animation = 'menuSlideOut 0.5s ease-out forwards';
+    
+    setTimeout(() => {
+        overlay.classList.add('hidden');
+        overlay.classList.remove('active');
+        menu.classList.add('hidden');
+        menu.style.animation = '';
+    }, 500);
+}
+
+function navigateTo(url) {
+    // 添加传送效果
+    const overlay = document.getElementById('portalOverlay');
+    overlay.style.animation = 'portalSuck 1s ease-in forwards';
+    
+    setTimeout(() => {
+        window.location.href = url;
+    }, 1000);
+}
+
+// 添加关闭和传送动画CSS
+const portalStyle = document.createElement('style');
+portalStyle.textContent = `
+    @keyframes menuSlideOut {
+        0% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0) rotate(-180deg);
+            opacity: 0;
+        }
+    }
+    
+    @keyframes portalSuck {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(portalStyle);

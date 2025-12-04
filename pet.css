@@ -2020,3 +2020,327 @@ body {
 .achievement-status.unlocked {
     color: #27ae60;
 }
+
+
+/* ========== 传送门效果 ========== */
+.portal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.portal-overlay.hidden {
+    display: none;
+}
+
+/* 大门 */
+.portal-doors {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 1;
+}
+
+.door {
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+}
+
+.door::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.1) 0px,
+        rgba(255,255,255,0.1) 2px,
+        transparent 2px,
+        transparent 20px
+    );
+}
+
+.door-left {
+    transform-origin: left center;
+    border-right: 5px solid #1a252f;
+}
+
+.door-right {
+    transform-origin: right center;
+    border-left: 5px solid #1a252f;
+}
+
+/* 激活时的动画 */
+.portal-overlay.active .door-left {
+    animation: doorOpenLeft 1.5s ease-out forwards;
+}
+
+.portal-overlay.active .door-right {
+    animation: doorOpenRight 1.5s ease-out forwards;
+}
+
+@keyframes doorOpenLeft {
+    0% { transform: perspective(1000px) rotateY(0deg); }
+    100% { transform: perspective(1000px) rotateY(-120deg); }
+}
+
+@keyframes doorOpenRight {
+    0% { transform: perspective(1000px) rotateY(0deg); }
+    100% { transform: perspective(1000px) rotateY(120deg); }
+}
+
+/* 大门关闭动画 */
+.portal-overlay.closing .door-left {
+    animation: doorCloseLeft 1s ease-out forwards;
+}
+
+.portal-overlay.closing .door-right {
+    animation: doorCloseRight 1s ease-out forwards;
+}
+
+@keyframes doorCloseLeft {
+    0% { transform: perspective(1000px) rotateY(-120deg); }
+    100% { transform: perspective(1000px) rotateY(0deg); }
+}
+
+@keyframes doorCloseRight {
+    0% { transform: perspective(1000px) rotateY(120deg); }
+    100% { transform: perspective(1000px) rotateY(0deg); }
+}
+
+/* 漩涡 */
+.portal-vortex {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    z-index: 2;
+    background: radial-gradient(
+        circle,
+        rgba(102, 126, 234, 0.1) 0%,
+        rgba(118, 75, 162, 0.2) 30%,
+        rgba(0, 0, 0, 0.5) 100%
+    );
+}
+
+/* 激活时的动画 */
+.portal-overlay.active .portal-vortex {
+    animation: vortexAppear 0.5s ease-out 1s forwards;
+}
+
+@keyframes vortexAppear {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+@keyframes vortexDisappear {
+    0% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    100% { 
+        opacity: 0; 
+        transform: scale(0.3);
+    }
+}
+
+.vortex-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 8px solid transparent;
+    border-top-color: currentColor;
+    border-right-color: currentColor;
+    opacity: 0.8;
+}
+
+.vortex-ring-1 {
+    width: 80px;
+    height: 80px;
+    color: #667eea;
+    border-width: 10px;
+}
+
+.vortex-ring-2 {
+    width: 160px;
+    height: 160px;
+    color: #764ba2;
+    border-width: 12px;
+}
+
+.vortex-ring-3 {
+    width: 240px;
+    height: 240px;
+    color: #f093fb;
+    border-width: 14px;
+}
+
+.vortex-ring-4 {
+    width: 320px;
+    height: 320px;
+    color: #4facfe;
+    border-width: 16px;
+}
+
+.vortex-ring-5 {
+    width: 400px;
+    height: 400px;
+    color: #00f2fe;
+    border-width: 18px;
+}
+
+/* 激活时才运行漩涡动画 - 不同速度创造螺旋效果 */
+.portal-overlay.active .vortex-ring-1 {
+    animation: vortexSpinFast 1s linear infinite, vortexPulse1 2s ease-in-out infinite;
+}
+
+.portal-overlay.active .vortex-ring-2 {
+    animation: vortexSpinFast 1.2s linear infinite reverse, vortexPulse2 2s ease-in-out infinite 0.2s;
+}
+
+.portal-overlay.active .vortex-ring-3 {
+    animation: vortexSpinMedium 1.5s linear infinite, vortexPulse3 2s ease-in-out infinite 0.4s;
+}
+
+.portal-overlay.active .vortex-ring-4 {
+    animation: vortexSpinMedium 1.8s linear infinite reverse, vortexPulse4 2s ease-in-out infinite 0.6s;
+}
+
+.portal-overlay.active .vortex-ring-5 {
+    animation: vortexSpinSlow 2s linear infinite, vortexPulse5 2s ease-in-out infinite 0.8s;
+}
+
+/* 不同速度的旋转动画 */
+@keyframes vortexSpinFast {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes vortexSpinMedium {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes vortexSpinSlow {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 脉动效果 - 创造吸入感 */
+@keyframes vortexPulse1 {
+    0%, 100% { width: 100px; height: 100px; opacity: 0.9; }
+    50% { width: 120px; height: 120px; opacity: 0.6; }
+}
+
+@keyframes vortexPulse2 {
+    0%, 100% { width: 200px; height: 200px; opacity: 0.8; }
+    50% { width: 220px; height: 220px; opacity: 0.5; }
+}
+
+@keyframes vortexPulse3 {
+    0%, 100% { width: 300px; height: 300px; opacity: 0.7; }
+    50% { width: 320px; height: 320px; opacity: 0.4; }
+}
+
+@keyframes vortexPulse4 {
+    0%, 100% { width: 400px; height: 400px; opacity: 0.6; }
+    50% { width: 420px; height: 420px; opacity: 0.3; }
+}
+
+@keyframes vortexPulse5 {
+    0%, 100% { width: 500px; height: 500px; opacity: 0.5; }
+    50% { width: 520px; height: 520px; opacity: 0.2; }
+}
+
+/* 导航菜单 */
+.portal-menu {
+    position: absolute;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.98);
+    padding: 40px;
+    border-radius: 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+}
+
+.portal-menu.hidden {
+    display: none;
+}
+
+/* 激活时的动画 */
+.portal-overlay.active .portal-menu:not(.hidden) {
+    animation: menuSlideIn 0.5s ease-out forwards;
+}
+
+@keyframes menuSlideIn {
+    0% {
+        transform: scale(0) rotate(180deg);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.portal-title {
+    text-align: center;
+    font-size: 32px;
+    color: #667eea;
+    margin-bottom: 30px;
+    text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+.portal-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.portal-nav-btn {
+    padding: 30px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.portal-nav-btn:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+}
+
+.portal-nav-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.nav-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+}
+
+.nav-label {
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+}
+
+/* 取消按钮特殊样式 */
+.portal-nav-btn:last-child {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+}
