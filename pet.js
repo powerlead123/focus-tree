@@ -2053,8 +2053,9 @@ function showPortal() {
     const overlay = document.getElementById('portalOverlay');
     const menu = document.getElementById('portalMenu');
     const vortex = document.getElementById('portalVortex');
+    const door = document.getElementById('portalDoor');
     
-    // 显示传送门并激活动画
+    // 显示传送门（白色背景+漩涡）
     overlay.classList.remove('hidden');
     
     // 稍微延迟添加active类，确保动画触发
@@ -2062,21 +2063,22 @@ function showPortal() {
         overlay.classList.add('active');
     }, 50);
     
-    // 3秒后：漩涡消失，大门关闭
+    // 2秒后：漩涡消失，大门出现
     setTimeout(() => {
         vortex.style.animation = 'vortexDisappear 0.5s ease-out forwards';
-        overlay.classList.add('closing');
-    }, 3000);
+        door.classList.add('show');
+    }, 2000);
     
-    // 4秒后：显示菜单
+    // 2.5秒后：显示菜单
     setTimeout(() => {
         menu.classList.remove('hidden');
-    }, 4000);
+    }, 2500);
 }
 
 function closePortal() {
     const overlay = document.getElementById('portalOverlay');
     const menu = document.getElementById('portalMenu');
+    const door = document.getElementById('portalDoor');
     
     // 添加关闭动画
     menu.style.animation = 'menuSlideOut 0.5s ease-out forwards';
@@ -2086,6 +2088,7 @@ function closePortal() {
         overlay.classList.remove('active');
         menu.classList.add('hidden');
         menu.style.animation = '';
+        door.classList.remove('show');
     }, 500);
 }
 
