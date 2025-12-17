@@ -1748,6 +1748,233 @@ body {
 
 .btn-control:hover {
     background: #5568d3;
+    transform: translateY(-2px);
+}
+
+/* 连击显示 */
+.combo-display {
+    font-size: 18px;
+    font-weight: bold;
+    color: #ff6b6b;
+    text-align: center;
+    margin-top: 5px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.combo-display.combo-high {
+    color: #ffd700;
+    animation: comboGlow 0.5s ease-in-out infinite;
+}
+
+@keyframes comboGlow {
+    0%, 100% { text-shadow: 0 2px 4px rgba(255,215,0,0.5); }
+    50% { text-shadow: 0 4px 8px rgba(255,215,0,0.8); }
+}
+
+/* 道具状态栏 */
+.powerup-status {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 10px;
+    min-height: 30px;
+}
+
+.powerup-status-item {
+    background: rgba(102, 126, 234, 0.9);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: bold;
+    animation: statusItemAppear 0.3s ease-out;
+}
+
+@keyframes statusItemAppear {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 掉落道具样式 */
+.falling-powerup {
+    position: absolute;
+    top: -60px;
+    font-size: 45px;
+    user-select: none;
+    z-index: 15;
+    pointer-events: none;
+    animation: foodFall 3s linear forwards;
+}
+
+.falling-powerup.powerup-glow {
+    filter: drop-shadow(0 0 20px #00ff88);
+    animation: foodFall 3s linear forwards, powerupGlow 0.6s ease-in-out infinite;
+}
+
+@keyframes powerupGlow {
+    0%, 100% { 
+        filter: drop-shadow(0 0 20px #00ff88);
+        transform: scale(1);
+    }
+    50% { 
+        filter: drop-shadow(0 0 30px #00ff88);
+        transform: scale(1.1);
+    }
+}
+
+/* 宠物特殊状态 */
+.game-pet.giant {
+    font-size: 120px !important;
+    transition: font-size 0.5s ease-out;
+}
+
+.game-pet.flying {
+    transition: bottom 0.3s ease-out;
+}
+
+/* 道具粒子效果 */
+.powerup-particle {
+    position: absolute;
+    font-size: 25px;
+    animation: powerupParticleBurst 1.2s ease-out forwards;
+    pointer-events: none;
+    z-index: 100;
+}
+
+@keyframes powerupParticleBurst {
+    0% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(120px) scale(0.3) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* 护盾效果 */
+.shield-effect {
+    position: absolute;
+    font-size: 100px;
+    animation: shieldAnim 0.8s ease-out forwards;
+    pointer-events: none;
+    z-index: 100;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes shieldAnim {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* 连击效果 */
+.combo-effect {
+    position: absolute;
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffd700;
+    animation: comboTextAnim 1.5s ease-out forwards;
+    pointer-events: none;
+    z-index: 100;
+    transform: translateX(-50%);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+@keyframes comboTextAnim {
+    0% {
+        transform: translateX(-50%) translateY(0) scale(0.5);
+        opacity: 1;
+    }
+    50% {
+        transform: translateX(-50%) translateY(-30px) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(-50%) translateY(-60px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* 游戏提示 */
+.game-tips {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.game-tips .tip {
+    font-size: 12px;
+    color: #666;
+    background: rgba(102, 126, 234, 0.1);
+    padding: 5px 10px;
+    border-radius: 10px;
+}
+
+/* 游戏内提示样式 */
+.game-toast {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 16px;
+    z-index: 200;
+    animation: toastAnim 1s ease-out forwards;
+    pointer-events: none;
+}
+
+.game-toast.success {
+    background: #48bb78;
+    color: white;
+}
+
+.game-toast.error {
+    background: #f56565;
+    color: white;
+}
+
+.game-toast.powerup {
+    background: #00ff88;
+    color: #000;
+    font-size: 18px;
+}
+
+.game-toast.info {
+    background: #667eea;
+    color: white;
+}
+
+@keyframes toastAnim {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+    }
+    20% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    80% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+}
     transform: scale(1.05);
 }
 
@@ -2033,59 +2260,104 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: white; /* 白色背景 */
+    background: white; /* 初始白色背景（眼前一片光亮） */
+    transition: background 1s ease-out;
 }
 
 .portal-overlay.hidden {
     display: none;
 }
 
-/* 大门（漩涡消失后出现） */
-.portal-door {
+/* 激活时：保持白色背景，3秒后变黑 */
+.portal-overlay.active {
+    background: white;
+    animation: backgroundToBlack 3s ease-in forwards;
+}
+
+@keyframes backgroundToBlack {
+    0%, 90% {
+        background: white;
+    }
+    100% {
+        background: #000;
+    }
+}
+
+/* 左右两扇大门 */
+.portal-doors {
     position: absolute;
     width: 100%;
     height: 100%;
     z-index: 1;
     opacity: 0;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     display: flex;
-    justify-content: center;
-    align-items: center;
     transition: opacity 0.5s ease-out;
 }
 
-.portal-door.show {
+.portal-doors.show {
     opacity: 1;
 }
 
-/* 大门纹理 */
-.portal-door::before {
+.door {
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
+    transition: transform 1.5s ease-out;
+}
+
+.door::before {
     content: '';
     position: absolute;
     width: 100%;
     height: 100%;
     background: repeating-linear-gradient(
         0deg,
-        rgba(255,255,255,0.05) 0px,
-        rgba(255,255,255,0.05) 2px,
+        rgba(255,255,255,0.1) 0px,
+        rgba(255,255,255,0.1) 2px,
         transparent 2px,
         transparent 20px
     );
-    pointer-events: none;
 }
 
-/* 大门边框装饰 */
-.portal-door::after {
-    content: '';
+.door-left {
+    border-right: 3px solid #2a3f5f;
+}
+
+.door-right {
+    border-left: 3px solid #2a3f5f;
+}
+
+/* 大门打开动画 */
+.portal-doors.opening .door-left {
+    transform: translateX(-100%);
+}
+
+.portal-doors.opening .door-right {
+    transform: translateX(100%);
+}
+
+/* 白色光晕（门打开后显示） */
+.portal-light {
     position: absolute;
-    width: 90%;
-    height: 90%;
-    border: 5px solid rgba(102, 126, 234, 0.3);
-    border-radius: 20px;
-    box-shadow: 
-        inset 0 0 50px rgba(102, 126, 234, 0.2),
-        0 0 50px rgba(102, 126, 234, 0.3);
-    pointer-events: none;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 1) 0%,
+        rgba(255, 255, 255, 0.8) 30%,
+        rgba(255, 255, 255, 0.5) 60%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+.portal-light.show {
+    opacity: 1;
 }
 
 /* 漩涡 - 时空隧道 */
@@ -2100,10 +2372,27 @@ body {
     z-index: 2;
 }
 
-/* 激活时的动画 - 立即出现 */
+/* 激活时的动画 - 出现并在3秒后消失 */
 .portal-overlay.active .portal-vortex {
-    animation: vortexAppear 0.3s ease-out forwards;
+    animation: vortexAppearAndDisappear 3s ease-out forwards;
 }
+
+@keyframes vortexAppearAndDisappear {
+    0% { 
+        opacity: 0; 
+    }
+    5% { 
+        opacity: 1; 
+    }
+    95% { 
+        opacity: 1; 
+    }
+    100% { 
+        opacity: 0; 
+    }
+}
+
+/* 移除额外的吸收阶段动画，漩涡从开始就一直缩小到消失 */
 
 @keyframes vortexAppear {
     0% { opacity: 0; }
@@ -2165,25 +2454,101 @@ body {
     border-width: 18px;
 }
 
-/* 激活时才运行漩涡动画 - 不同速度创造螺旋效果 */
+/* 激活时：漩涡旋转并缩小，3秒后完全消失 */
 .portal-overlay.active .vortex-ring-1 {
-    animation: vortexSpinFast 1s linear infinite, vortexPulse1 2s ease-in-out infinite;
+    animation: ringRotateAndShrink1 3s ease-in forwards;
 }
 
 .portal-overlay.active .vortex-ring-2 {
-    animation: vortexSpinFast 1.2s linear infinite reverse, vortexPulse2 2s ease-in-out infinite 0.2s;
+    animation: ringRotateAndShrink2 3s ease-in forwards;
 }
 
 .portal-overlay.active .vortex-ring-3 {
-    animation: vortexSpinMedium 1.5s linear infinite, vortexPulse3 2s ease-in-out infinite 0.4s;
+    animation: ringRotateAndShrink3 3s ease-in forwards;
 }
 
 .portal-overlay.active .vortex-ring-4 {
-    animation: vortexSpinMedium 1.8s linear infinite reverse, vortexPulse4 2s ease-in-out infinite 0.6s;
+    animation: ringRotateAndShrink4 3s ease-in forwards;
 }
 
 .portal-overlay.active .vortex-ring-5 {
-    animation: vortexSpinSlow 2s linear infinite, vortexPulse5 2s ease-in-out infinite 0.8s;
+    animation: ringRotateAndShrink5 3s ease-in forwards;
+}
+
+/* 漩涡旋转+缩小+消失动画 */
+@keyframes ringRotateAndShrink1 {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.9;
+    }
+    90% {
+        transform: scale(0.1) rotate(360deg);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(0.05) rotate(400deg);
+        opacity: 0;
+    }
+}
+
+@keyframes ringRotateAndShrink2 {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.8;
+    }
+    90% {
+        transform: scale(0.1) rotate(-300deg);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(0.05) rotate(-340deg);
+        opacity: 0;
+    }
+}
+
+@keyframes ringRotateAndShrink3 {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.7;
+    }
+    90% {
+        transform: scale(0.1) rotate(240deg);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(0.05) rotate(280deg);
+        opacity: 0;
+    }
+}
+
+@keyframes ringRotateAndShrink4 {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.6;
+    }
+    90% {
+        transform: scale(0.1) rotate(-180deg);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(0.05) rotate(-220deg);
+        opacity: 0;
+    }
+}
+
+@keyframes ringRotateAndShrink5 {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.5;
+    }
+    90% {
+        transform: scale(0.1) rotate(120deg);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(0.05) rotate(160deg);
+        opacity: 0;
+    }
 }
 
 /* 不同速度的旋转动画 */
@@ -2202,50 +2567,31 @@ body {
     100% { transform: rotate(360deg); }
 }
 
-/* 脉动效果 - 创造吸入感 */
-@keyframes vortexPulse1 {
-    0%, 100% { width: 100px; height: 100px; opacity: 0.9; }
-    50% { width: 120px; height: 120px; opacity: 0.6; }
-}
+/* 移除旧的脉动效果，现在使用从一开始就缩小的动画 */
 
-@keyframes vortexPulse2 {
-    0%, 100% { width: 200px; height: 200px; opacity: 0.8; }
-    50% { width: 220px; height: 220px; opacity: 0.5; }
-}
-
-@keyframes vortexPulse3 {
-    0%, 100% { width: 300px; height: 300px; opacity: 0.7; }
-    50% { width: 320px; height: 320px; opacity: 0.4; }
-}
-
-@keyframes vortexPulse4 {
-    0%, 100% { width: 400px; height: 400px; opacity: 0.6; }
-    50% { width: 420px; height: 420px; opacity: 0.3; }
-}
-
-@keyframes vortexPulse5 {
-    0%, 100% { width: 500px; height: 500px; opacity: 0.5; }
-    50% { width: 520px; height: 520px; opacity: 0.2; }
-}
-
-/* 导航菜单 */
+/* 导航菜单（完全贴在右门中心） */
 .portal-menu {
     position: absolute;
-    z-index: 100;
-    background: rgba(255, 255, 255, 0.98);
-    padding: 40px;
-    border-radius: 30px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    left: 75%; /* 右门中心位置（屏幕75%处） */
+    top: 50%;
+    transform: translateX(-50%) translateY(-50%);
+    z-index: 101;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.6);
     backdrop-filter: blur(10px);
+    transition: all 1.5s ease-out;
 }
 
 .portal-menu.hidden {
     display: none;
 }
 
-/* 激活时的动画 */
-.portal-overlay.active .portal-menu:not(.hidden) {
-    animation: menuSlideIn 0.5s ease-out forwards;
+/* 大门打开时，菜单完全跟着右门移动 */
+.portal-doors.opening ~ .portal-menu {
+    left: 175%; /* 跟着右门完全移出屏幕 */
+    transform: translateX(-50%) translateY(-50%);
 }
 
 @keyframes menuSlideIn {
@@ -2261,31 +2607,31 @@ body {
 
 .portal-title {
     text-align: center;
-    font-size: 32px;
+    font-size: 24px;
     color: #667eea;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     text-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
 }
 
 .portal-nav-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
 }
 
 .portal-nav-btn {
-    padding: 30px 20px;
+    padding: 20px 15px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: none;
-    border-radius: 20px;
+    border-radius: 15px;
     cursor: pointer;
     transition: all 0.3s;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .portal-nav-btn:hover {
-    transform: translateY(-5px) scale(1.05);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
 .portal-nav-btn:active {
@@ -2293,12 +2639,12 @@ body {
 }
 
 .nav-icon {
-    font-size: 48px;
-    margin-bottom: 10px;
+    font-size: 36px;
+    margin-bottom: 8px;
 }
 
 .nav-label {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: bold;
     color: white;
 }

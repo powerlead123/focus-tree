@@ -1457,6 +1457,9 @@ let gameActive = false;
 let gameInterval = null;
 let gameTimer = null;
 let gameTimeLeft = 30;
+let gameCombo = 0; // 连击数
+let lastCatchTime = 0; // 上次接到食物的时间
+let activePowerUps = {}; // 当前激活的道具效果
 
 // 显示小游戏（仅Lv.3+可用）
 function showMiniGame() {
@@ -1479,6 +1482,9 @@ function startGame() {
     gameScore = 0;
     gameTimeLeft = 30;
     gameActive = true;
+    gameCombo = 0;
+    lastCatchTime = 0;
+    activePowerUps = {};
     
     document.getElementById('gameStartScreen').classList.add('hidden');
     document.getElementById('gamePlayScreen').classList.remove('hidden');
@@ -1487,11 +1493,16 @@ function startGame() {
     
     const petData = getPetData();
     const currentStage = getCurrentStage(petData.totalDays);
-    document.getElementById('gamePet').textContent = currentStage.emoji;
-    
-    // 重置宠物位置
     const gamePet = document.getElementById('gamePet');
+    gamePet.textContent = currentStage.emoji;
+    
+    // 重置宠物位置和状态
     gamePet.style.left = '50%';
+    gamePet.style.bottom = '10px';
+    gamePet.classList.remove('giant', 'flying');
+    
+    // 显示连击计数器
+    updateComboDisplay();
     
     // 开始掉落食物
     gameInterval = setInterval(dropFood, 1000);
@@ -1500,6 +1511,11 @@ function startGame() {
     gameTimer = setInterval(() => {
         gameTimeLeft--;
         document.getElementById('gameTime').textContent = gameTimeLeft;
+        
+        // 检查连击超时
+        if (Date.now() - lastCatchTime > 3000 && gameCombo > 0) {
+            resetCombo();
+        }
         
         if (gameTimeLeft <= 0) {
             endGame();
@@ -1516,11 +1532,25 @@ function movePetWithKey(e) {
     
     const gamePet = document.getElementById('gamePet');
     const currentLeft = parseInt(gamePet.style.left) || 50;
+    const currentBottom = parseInt(gamePet.style.bottom) || 10;
     
+    // 移动速度（闪电移动时翻倍）
+    const moveSpeed = activePowerUps.speed ? 10 : 5;
+    
+    // 左右移动
     if (e.key === 'ArrowLeft' && currentLeft > 10) {
-        gamePet.style.left = (currentLeft - 5) + '%';
+        gamePet.style.left = (currentLeft - moveSpeed) + '%';
     } else if (e.key === 'ArrowRight' && currentLeft < 90) {
-        gamePet.style.left = (currentLeft + 5) + '%';
+        gamePet.style.left = (currentLeft + moveSpeed) + '%';
+    }
+    
+    // 上下移动（仅飞行模式）
+    if (activePowerUps.fly) {
+        if (e.key === 'ArrowUp' && currentBottom < 80) {
+            gamePet.style.bottom = (currentBottom + moveSpeed * 2) + 'px';
+        } else if (e.key === 'ArrowDown' && currentBottom > 10) {
+            gamePet.style.bottom = (currentBottom - moveSpeed * 2) + 'px';
+        }
     }
 }
 
@@ -1530,11 +1560,12 @@ function movePetTo(direction) {
     
     const gamePet = document.getElementById('gamePet');
     const currentLeft = parseInt(gamePet.style.left) || 50;
+    const moveSpeed = activePowerUps.speed ? 20 : 10;
     
     if (direction === 'left' && currentLeft > 10) {
-        gamePet.style.left = (currentLeft - 10) + '%';
+        gamePet.style.left = (currentLeft - moveSpeed) + '%';
     } else if (direction === 'right' && currentLeft < 90) {
-        gamePet.style.left = (currentLeft + 10) + '%';
+        gamePet.style.left = (currentLeft + moveSpeed) + '%';
     }
 }
 
@@ -1552,6 +1583,58 @@ const FOOD_TYPES = [
     { emoji: '💩', name: '炸弹', score: -3, effect: 'bomb', rarity: 'common' }
 ];
 
+// 特殊道具配置（连击奖励）
+const POWER_UPS = [
+    { 
+        emoji: '🔥', 
+        name: '巨大化', 
+        effect: 'giant', 
+        duration: 5000, 
+        description: '体积变大2倍，更容易接到食物！',
+        comboRequired: 3
+    },
+    { 
+        emoji: '⚡', 
+        name: '闪电移动', 
+        effect: 'speed', 
+        duration: 6000, 
+        description: '移动速度翻倍！',
+        comboRequired: 4
+    },
+    { 
+        emoji: '🚁', 
+        name: '飞行模式', 
+        effect: 'fly', 
+        duration: 8000, 
+        description: '可以上下移动，自由飞翔！',
+        comboRequired: 5
+    },
+    { 
+        emoji: '🛡️', 
+        name: '无敌护盾', 
+        effect: 'shield', 
+        duration: 7000, 
+        description: '免疫炸弹伤害！',
+        comboRequired: 6
+    },
+    { 
+        emoji: '🌟', 
+        name: '得分翻倍', 
+        effect: 'double', 
+        duration: 5000, 
+        description: '所有食物得分翻倍！',
+        comboRequired: 7
+    },
+    { 
+        emoji: '🧲', 
+        name: '磁力吸引', 
+        effect: 'magnet', 
+        duration: 6000, 
+        description: '自动吸引附近的食物！',
+        comboRequired: 8
+    }
+];
+
 // 掉落食物
 function dropFood() {
     if (!gameActive) return;
@@ -1559,6 +1642,12 @@ function dropFood() {
     const gameArea = document.getElementById('gameArea');
     if (!gameArea) {
         console.error('游戏区域未找到');
+        return;
+    }
+    
+    // 检查是否应该掉落特殊道具
+    if (gameCombo >= 3 && Math.random() < 0.3) {
+        dropPowerUp();
         return;
     }
     
@@ -1580,59 +1669,94 @@ function dropFood() {
         selectedFood = rareFoods[Math.floor(Math.random() * rareFoods.length)];
     }
     
-    const food = document.createElement('div');
-    food.className = 'falling-food';
-    food.textContent = selectedFood.emoji;
-    food.style.left = (15 + Math.random() * 70) + '%';
-    food.dataset.foodData = JSON.stringify(selectedFood);
+    createFallingItem(selectedFood, 'food');
+}
+
+// 掉落特殊道具
+function dropPowerUp() {
+    const availablePowerUps = POWER_UPS.filter(p => gameCombo >= p.comboRequired);
+    if (availablePowerUps.length === 0) return;
     
-    // 稀有食物发光
-    if (selectedFood.rarity === 'rare') {
-        food.classList.add('rare-food');
-    } else if (selectedFood.rarity === 'uncommon') {
-        food.classList.add('uncommon-food');
+    const selectedPowerUp = availablePowerUps[Math.floor(Math.random() * availablePowerUps.length)];
+    createFallingItem(selectedPowerUp, 'powerup');
+}
+
+// 创建掉落物品（统一函数）
+function createFallingItem(itemData, itemType) {
+    const gameArea = document.getElementById('gameArea');
+    const item = document.createElement('div');
+    
+    item.className = itemType === 'powerup' ? 'falling-powerup' : 'falling-food';
+    item.textContent = itemData.emoji;
+    item.style.left = (15 + Math.random() * 70) + '%';
+    item.dataset.itemData = JSON.stringify(itemData);
+    item.dataset.itemType = itemType;
+    
+    // 特殊效果
+    if (itemType === 'powerup') {
+        item.classList.add('powerup-glow');
+    } else if (itemData.rarity === 'rare') {
+        item.classList.add('rare-food');
+    } else if (itemData.rarity === 'uncommon') {
+        item.classList.add('uncommon-food');
     }
     
-    gameArea.appendChild(food);
+    gameArea.appendChild(item);
     
     // 检测碰撞
     const checkCollision = setInterval(() => {
-        if (!gameActive || !food.parentNode) {
+        if (!gameActive || !item.parentNode) {
             clearInterval(checkCollision);
-            if (food.parentNode) food.remove();
+            if (item.parentNode) item.remove();
             return;
         }
         
-        const foodRect = food.getBoundingClientRect();
+        const itemRect = item.getBoundingClientRect();
         const petRect = document.getElementById('gamePet').getBoundingClientRect();
         const gameAreaRect = gameArea.getBoundingClientRect();
         
-        // 碰撞检测
+        // 磁力吸引效果
+        if (activePowerUps.magnet && itemType === 'food') {
+            const distance = Math.abs(itemRect.left + itemRect.width/2 - petRect.left - petRect.width/2);
+            if (distance < 100) {
+                const targetX = petRect.left + petRect.width/2 - itemRect.width/2;
+                const currentX = itemRect.left;
+                const newX = currentX + (targetX - currentX) * 0.1;
+                item.style.left = (newX - gameAreaRect.left) + 'px';
+            }
+        }
+        
+        // 碰撞检测（巨大化时碰撞范围更大）
+        const collisionMargin = activePowerUps.giant ? 30 : 15;
         const collision = (
-            foodRect.bottom >= petRect.top - 15 &&
-            foodRect.top <= petRect.bottom &&
-            foodRect.left + 15 < petRect.right &&
-            foodRect.right - 15 > petRect.left
+            itemRect.bottom >= petRect.top - collisionMargin &&
+            itemRect.top <= petRect.bottom &&
+            itemRect.left + collisionMargin < petRect.right &&
+            itemRect.right - collisionMargin > petRect.left
         );
         
         if (collision) {
-            const foodData = JSON.parse(food.dataset.foodData);
-            handleFoodCatch(foodData);
-            food.remove();
+            const data = JSON.parse(item.dataset.itemData);
+            if (itemType === 'powerup') {
+                handlePowerUpCatch(data);
+            } else {
+                handleFoodCatch(data);
+            }
+            item.remove();
             clearInterval(checkCollision);
         }
         
         // 掉出游戏区域底部
-        if (foodRect.top > gameAreaRect.bottom + 50) {
-            food.remove();
+        if (itemRect.top > gameAreaRect.bottom + 50) {
+            item.remove();
             clearInterval(checkCollision);
         }
     }, 30);
     
     // 4秒后自动移除
     setTimeout(() => {
-        if (food.parentNode) {
-            food.remove();
+        if (item.parentNode) {
+            item.remove();
             clearInterval(checkCollision);
         }
     }, 4000);
@@ -1642,39 +1766,142 @@ function dropFood() {
 function handleFoodCatch(foodData) {
     const gamePet = document.getElementById('gamePet');
     
-    gameScore += foodData.score;
-    gameScore = Math.max(0, gameScore); // 不能低于0
+    // 处理炸弹（护盾可以免疫）
+    if (foodData.effect === 'bomb') {
+        if (activePowerUps.shield) {
+            showGameToast(`🛡️ 护盾保护！`, 'success');
+            createShieldEffect();
+            return;
+        } else {
+            gameScore += foodData.score;
+            gameScore = Math.max(0, gameScore);
+            resetCombo();
+            showGameToast(`💥 ${foodData.name} ${foodData.score}分！`, 'error');
+            gamePet.classList.add('pet-hurt');
+            createBombEffect();
+            setTimeout(() => gamePet.classList.remove('pet-hurt'), 500);
+            document.getElementById('gameScore').textContent = gameScore;
+            return;
+        }
+    }
+    
+    // 正常食物处理
+    let score = foodData.score;
+    if (activePowerUps.double) {
+        score *= 2;
+    }
+    
+    gameScore += score;
+    gameScore = Math.max(0, gameScore);
     document.getElementById('gameScore').textContent = gameScore;
+    
+    // 更新连击
+    updateCombo();
     
     // 根据效果显示不同反馈
     switch (foodData.effect) {
         case 'normal':
-            showGameToast(`+${foodData.score}分`, 'success');
+            showGameToast(`+${score}分 ${gameCombo > 1 ? `(${gameCombo}连击!)` : ''}`, 'success');
             gamePet.classList.add('pet-eat');
             setTimeout(() => gamePet.classList.remove('pet-eat'), 300);
             break;
             
         case 'happy':
-            showGameToast(`😋 ${foodData.name} +${foodData.score}分！`, 'success');
+            showGameToast(`😋 ${foodData.name} +${score}分！${gameCombo > 1 ? `(${gameCombo}连击!)` : ''}`, 'success');
             gamePet.classList.add('pet-happy');
             createFoodParticles(foodData.emoji);
             setTimeout(() => gamePet.classList.remove('pet-happy'), 600);
             break;
             
         case 'super':
-            showGameToast(`🌟 ${foodData.name} +${foodData.score}分！太棒了！`, 'success');
+            showGameToast(`🌟 ${foodData.name} +${score}分！${gameCombo > 1 ? `(${gameCombo}连击!)` : ''}`, 'success');
             gamePet.classList.add('pet-super-happy');
             createFoodParticles(foodData.emoji);
             createStarBurst();
             setTimeout(() => gamePet.classList.remove('pet-super-happy'), 800);
             break;
-            
-        case 'bomb':
-            showGameToast(`💥 ${foodData.name} ${foodData.score}分！`, 'error');
-            gamePet.classList.add('pet-hurt');
-            createBombEffect();
-            setTimeout(() => gamePet.classList.remove('pet-hurt'), 500);
+    }
+}
+
+// 处理接到道具
+function handlePowerUpCatch(powerUpData) {
+    showGameToast(`🎉 获得 ${powerUpData.name}！`, 'powerup');
+    activatePowerUp(powerUpData);
+    createPowerUpEffect(powerUpData.emoji);
+}
+
+// 激活道具效果
+function activatePowerUp(powerUpData) {
+    const gamePet = document.getElementById('gamePet');
+    
+    // 清除同类型的旧效果
+    if (activePowerUps[powerUpData.effect]) {
+        clearTimeout(activePowerUps[powerUpData.effect].timeout);
+    }
+    
+    // 应用效果
+    switch (powerUpData.effect) {
+        case 'giant':
+            gamePet.classList.add('giant');
             break;
+        case 'fly':
+            gamePet.classList.add('flying');
+            break;
+    }
+    
+    // 设置效果和超时
+    activePowerUps[powerUpData.effect] = {
+        timeout: setTimeout(() => {
+            deactivatePowerUp(powerUpData.effect);
+        }, powerUpData.duration)
+    };
+    
+    // 显示道具状态
+    showPowerUpStatus(powerUpData);
+}
+
+// 取消道具效果
+function deactivatePowerUp(effect) {
+    const gamePet = document.getElementById('gamePet');
+    
+    switch (effect) {
+        case 'giant':
+            gamePet.classList.remove('giant');
+            break;
+        case 'fly':
+            gamePet.classList.remove('flying');
+            gamePet.style.bottom = '10px'; // 重置位置
+            break;
+    }
+    
+    delete activePowerUps[effect];
+    showGameToast(`${effect} 效果结束`, 'info');
+}
+
+// 更新连击
+function updateCombo() {
+    gameCombo++;
+    lastCatchTime = Date.now();
+    updateComboDisplay();
+    
+    // 连击特效
+    if (gameCombo >= 5) {
+        createComboEffect();
+    }
+}
+
+// 重置连击
+function resetCombo() {
+    gameCombo = 0;
+    updateComboDisplay();
+}
+
+// 更新连击显示
+function updateComboDisplay() {
+    const comboElement = document.getElementById('gameCombo');
+    if (comboElement) {
+        comboElement.textContent = gameCombo > 1 ? `${gameCombo}连击!` : '';
+        comboElement.className = gameCombo >= 5 ? 'combo-display combo-high' : 'combo-display';
     }
 }
 
@@ -1733,6 +1960,73 @@ function createBombEffect() {
     gameArea.appendChild(explosion);
     
     setTimeout(() => explosion.remove(), 600);
+}
+
+// 创建护盾效果
+function createShieldEffect() {
+    const gameArea = document.getElementById('gameArea');
+    const gamePet = document.getElementById('gamePet');
+    const petRect = gamePet.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    const shield = document.createElement('div');
+    shield.textContent = '🛡️';
+    shield.className = 'shield-effect';
+    shield.style.left = (petRect.left - areaRect.left + petRect.width / 2) + 'px';
+    shield.style.top = (petRect.top - areaRect.top + petRect.height / 2) + 'px';
+    gameArea.appendChild(shield);
+    
+    setTimeout(() => shield.remove(), 800);
+}
+
+// 创建道具效果
+function createPowerUpEffect(emoji) {
+    const gameArea = document.getElementById('gameArea');
+    const gamePet = document.getElementById('gamePet');
+    const petRect = gamePet.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    for (let i = 0; i < 12; i++) {
+        const particle = document.createElement('div');
+        particle.textContent = emoji;
+        particle.className = 'powerup-particle';
+        particle.style.left = (petRect.left - areaRect.left + petRect.width / 2) + 'px';
+        particle.style.top = (petRect.top - areaRect.top + petRect.height / 2) + 'px';
+        particle.style.setProperty('--angle', (i * 30) + 'deg');
+        gameArea.appendChild(particle);
+        
+        setTimeout(() => particle.remove(), 1200);
+    }
+}
+
+// 创建连击效果
+function createComboEffect() {
+    const gameArea = document.getElementById('gameArea');
+    const gamePet = document.getElementById('gamePet');
+    const petRect = gamePet.getBoundingClientRect();
+    const areaRect = gameArea.getBoundingClientRect();
+    
+    const comboText = document.createElement('div');
+    comboText.textContent = `${gameCombo}连击!`;
+    comboText.className = 'combo-effect';
+    comboText.style.left = (petRect.left - areaRect.left + petRect.width / 2) + 'px';
+    comboText.style.top = (petRect.top - areaRect.top - 50) + 'px';
+    gameArea.appendChild(comboText);
+    
+    setTimeout(() => comboText.remove(), 1500);
+}
+
+// 显示道具状态
+function showPowerUpStatus(powerUpData) {
+    const statusBar = document.getElementById('powerUpStatus');
+    if (!statusBar) return;
+    
+    const statusItem = document.createElement('div');
+    statusItem.className = 'powerup-status-item';
+    statusItem.innerHTML = `${powerUpData.emoji} ${powerUpData.name}`;
+    statusBar.appendChild(statusItem);
+    
+    setTimeout(() => statusItem.remove(), powerUpData.duration);
 }
 
 // 游戏内提示
@@ -2052,10 +2346,9 @@ function closeAchievements() {
 function showPortal() {
     const overlay = document.getElementById('portalOverlay');
     const menu = document.getElementById('portalMenu');
-    const vortex = document.getElementById('portalVortex');
-    const door = document.getElementById('portalDoor');
+    const doors = document.getElementById('portalDoors');
     
-    // 显示传送门（白色背景+漩涡）
+    // 显示传送门（白色背景+漩涡+黑色聚拢）
     overlay.classList.remove('hidden');
     
     // 稍微延迟添加active类，确保动画触发
@@ -2063,22 +2356,18 @@ function showPortal() {
         overlay.classList.add('active');
     }, 50);
     
-    // 2秒后：漩涡消失，大门出现
+    // 3秒后：显示大门和菜单
     setTimeout(() => {
-        vortex.style.animation = 'vortexDisappear 0.5s ease-out forwards';
-        door.classList.add('show');
-    }, 2000);
-    
-    // 2.5秒后：显示菜单
-    setTimeout(() => {
+        doors.classList.add('show');
         menu.classList.remove('hidden');
-    }, 2500);
+    }, 3000);
 }
 
 function closePortal() {
     const overlay = document.getElementById('portalOverlay');
     const menu = document.getElementById('portalMenu');
-    const door = document.getElementById('portalDoor');
+    const doors = document.getElementById('portalDoors');
+    const light = document.getElementById('portalLight');
     
     // 添加关闭动画
     menu.style.animation = 'menuSlideOut 0.5s ease-out forwards';
@@ -2088,18 +2377,23 @@ function closePortal() {
         overlay.classList.remove('active');
         menu.classList.add('hidden');
         menu.style.animation = '';
-        door.classList.remove('show');
+        doors.classList.remove('show', 'opening');
+        light.classList.remove('show');
     }, 500);
 }
 
 function navigateTo(url) {
-    // 添加传送效果
     const overlay = document.getElementById('portalOverlay');
-    overlay.style.animation = 'portalSuck 1s ease-in forwards';
+    const doors = document.getElementById('portalDoors');
+    const light = document.getElementById('portalLight');
+    
+    // 大门打开动画
+    doors.classList.add('opening');
+    light.classList.add('show');
     
     setTimeout(() => {
         window.location.href = url;
-    }, 1000);
+    }, 1500);
 }
 
 // 添加关闭和传送动画CSS
