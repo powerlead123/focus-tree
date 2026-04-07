@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试工具 - 专注小树</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .warning {
+            background: #fff5f5;
+            border: 2px solid #f56565;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            color: #c53030;
+            text-align: center;
+        }
+        
+        .current-stats {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .stat-label {
+            color: #666;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .tool-section {
+            margin-bottom: 25px;
+        }
+        
+        .tool-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #38a169;
+        }
+        
+        .btn-secondary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+        
+        .btn-block {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #48bb78;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+        }
+        
+        .toast.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+        
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .link-section {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .link-section a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .link-section a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ 测试工具</h1>
+        
+        <div class="warning">
+            ⚠️ 仅用于测试！请勿在正式使用时操作
+        </div>
+        
+        <div class="current-stats">
+            <h3 style="margin-bottom: 15px;">📊 当前数据</h3>
+            <div class="stat-row">
+                <span class="stat-label">🌳 累计小树：</span>
+                <span class="stat-value" id="totalTrees">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">🌳 可用小树：</span>
+                <span class="stat-value" id="availableTrees">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">🍃 金币：</span>
+                <span class="stat-value" id="coins">0</span>
+            </div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>🌳 添加小树</h3>
+            <div class="input-group">
+                <input type="number" id="treeInput" value="100" min="1" placeholder="输入数量">
+                <button class="btn btn-primary" onclick="addTestTrees()">添加</button>
+            </div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>🍃 添加金币</h3>
+            <div class="input-group">
+                <input type="number" id="coinInput" value="50" min="1" placeholder="输入数量">
+                <button class="btn btn-secondary" onclick="addTestCoins()">添加</button>
+            </div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>⚡ 快速操作</h3>
+            <div class="quick-actions">
+                <button class="btn btn-primary" onclick="quickAdd(200, 0)">+200小树</button>
+                <button class="btn btn-secondary" onclick="quickAdd(0, 100)">+100金币</button>
+                <button class="btn btn-primary" onclick="quickAdd(500, 0)">+500小树</button>
+                <button class="btn btn-secondary" onclick="quickAdd(0, 200)">+200金币</button>
+            </div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>🔓 解锁所有拼图</h3>
+            <button class="btn btn-secondary btn-block" onclick="unlockAllPuzzles()">
+                解锁所有背景图的所有拼图
+            </button>
+        </div>
+        
+        <div class="tool-section">
+            <h3>🎨 测试背景应用</h3>
+            <button class="btn btn-secondary btn-block" onclick="testBackground()">
+                测试背景功能
+            </button>
+            <div id="testResult" style="margin-top: 10px; padding: 10px; background: #f7fafc; border-radius: 8px; font-size: 14px; display: none;"></div>
+        </div>
+        
+        <div class="tool-section">
+            <h3>🗑️ 清空数据</h3>
+            <button class="btn btn-danger btn-block" onclick="clearAllData()">
+                清空所有数据（谨慎操作）
+            </button>
+        </div>
+        
+        <div class="link-section">
+            <a href="home.html">← 返回首页</a>
+        </div>
+    </div>
+    
+    <div class="toast" id="toast"></div>
+    
+    <script src="common.js"></script>
+    <script>
+        // 更新显示
+        function updateDisplay() {
+            const userData = getUserData();
+            document.getElementById('totalTrees').textContent = userData.trees;
+            document.getElementById('availableTrees').textContent = userData.availableTrees;
+            document.getElementById('coins').textContent = userData.coins;
+        }
+        
+        // 添加小树
+        function addTestTrees() {
+            const count = parseInt(document.getElementById('treeInput').value);
+            if (count > 0) {
+                addTrees(count);
+                showToast(`成功添加 ${count} 棵小树！`);
+                updateDisplay();
+            }
+        }
+        
+        // 添加金币
+        function addTestCoins() {
+            const count = parseInt(document.getElementById('coinInput').value);
+            if (count > 0) {
+                const userData = getUserData();
+                userData.coins += count;
+                saveUserData(userData);
+                showToast(`成功添加 ${count} 个金币！`);
+                updateDisplay();
+            }
+        }
+        
+        // 快速添加
+        function quickAdd(trees, coins) {
+            const userData = getUserData();
+            if (trees > 0) {
+                userData.trees += trees;
+                userData.availableTrees += trees;
+            }
+            if (coins > 0) {
+                userData.coins += coins;
+            }
+            saveUserData(userData);
+            
+            let message = '';
+            if (trees > 0 && coins > 0) {
+                message = `添加 ${trees} 棵小树和 ${coins} 个金币！`;
+            } else if (trees > 0) {
+                message = `添加 ${trees} 棵小树！`;
+            } else if (coins > 0) {
+                message = `添加 ${coins} 个金币！`;
+            }
+            
+            showToast(message);
+            updateDisplay();
+        }
+        
+        // 解锁所有拼图
+        function unlockAllPuzzles() {
+            if (!confirm('确定要解锁所有背景图的所有拼图吗？')) {
+                return;
+            }
+            
+            const backgrounds = getAllBackgrounds();
+            backgrounds.forEach(bg => {
+                bg.unlockedPieces = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+                bg.isFullyUnlocked = true;
+                bg.unlockedAt = Date.now();
+                saveBackgroundData(bg);
+            });
+            
+            showToast('已解锁所有背景图！');
+        }
+        
+        // 清空所有数据
+        function clearAllData() {
+            if (!confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+                return;
+            }
+            
+            if (!confirm('再次确认：真的要清空所有数据吗？')) {
+                return;
+            }
+            
+            localStorage.removeItem('focusTree_userData');
+            localStorage.removeItem('focusTree_backgrounds');
+            localStorage.removeItem('focusTree_settings');
+            
+            // 重新初始化
+            initializeData();
+            
+            showToast('已清空所有数据！');
+            updateDisplay();
+        }
+        
+        // 显示提示
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 测试背景功能
+        function testBackground() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.style.display = 'block';
+            
+            let html = '<strong>背景功能测试结果：</strong><br><br>';
+            
+            // 检查已解锁背景
+            const unlockedBgs = getUnlockedBackgrounds();
+            html += `✓ 已解锁背景数量: ${unlockedBgs.length}<br>`;
+            
+            if (unlockedBgs.length > 0) {
+                html += `✓ 第一个背景: ${unlockedBgs[0].name} (${unlockedBgs[0].id})<br>`;
+                
+                // 设置为专注力背景
+                setModuleBackground('focus', unlockedBgs[0].id);
+                html += `✓ 已设置为专注力背景<br>`;
+                
+                // 检查设置
+                const settings = getSettings();
+                html += `✓ 当前专注力背景ID: ${settings.focusBackground}<br>`;
+                html += `✓ 当前口算背景ID: ${settings.raceBackground || '未设置'}<br><br>`;
+                
+                html += '<strong>请按以下步骤测试：</strong><br>';
+                html += '1. 打开专注力训练页面<br>';
+                html += '2. 在背景选择器中应该能看到已解锁的背景<br>';
+                html += '3. 点击背景图，应该立即预览<br>';
+                html += '4. 开始任务后，应该显示选择的背景<br>';
+            } else {
+                html += '❌ 没有已解锁的背景，请先解锁！<br>';
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+        
+        // 页面加载时更新显示
+        window.addEventListener('DOMContentLoaded', () => {
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Tile 查看器</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1a1a2e; color: #fff; font-family: sans-serif; padding: 16px; }
+h2 { margin-bottom: 12px; color: #fbbf24; }
+.controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.controls button {
+    padding: 6px 14px; border: 1px solid #444; background: #2d3748;
+    color: #fff; border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.controls button.active { background: #6366f1; border-color: #6366f1; }
+.section-label {
+    width: 100%; font-size: 12px; color: #94a3b8;
+    padding: 8px 0 4px; border-top: 1px solid #2d3748; margin-top: 8px;
+}
+.grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.tile {
+    text-align: center; cursor: pointer;
+    border: 2px solid transparent; border-radius: 6px;
+    padding: 2px; transition: border-color 0.15s;
+}
+.tile:hover { border-color: #6366f1; }
+.tile.selected { border-color: #fbbf24; background: rgba(251,191,36,0.15); }
+.tile img { display: block; background: #2d3748; }
+.tile span { font-size: 10px; color: #94a3b8; display: block; margin-top: 2px; }
+#preview {
+    position: fixed; right: 16px; top: 16px;
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 12px; padding: 16px; width: 180px;
+    text-align: center;
+}
+#preview img { width: 128px; height: 128px; background: #2d3748; border-radius: 8px; }
+#preview .num { font-size: 24px; font-weight: bold; color: #fbbf24; margin: 8px 0 4px; }
+#preview .hint { font-size: 12px; color: #94a3b8; line-height: 1.5; }
+.size-btns { display: flex; gap: 4px; }
+</style>
+</head>
+<body>
+<h2>🗺️ Kenney Tower Defense Tile 查看器</h2>
+
+<div class="controls">
+    <span style="color:#94a3b8;font-size:13px;align-self:center">大小：</span>
+    <div class="size-btns">
+        <button onclick="setSize(48)" id="s48">小</button>
+        <button onclick="setSize(80)" id="s80" class="active">中</button>
+        <button onclick="setSize(128)" id="s128">大</button>
+    </div>
+    <span style="color:#94a3b8;font-size:13px;align-self:center;margin-left:8px">范围：</span>
+    <button onclick="showRange(1,75)" id="r1" class="active">001-075 地形</button>
+    <button onclick="showRange(76,150)" id="r2">076-150</button>
+    <button onclick="showRange(151,225)" id="r3">151-225 塔/对象</button>
+    <button onclick="showRange(226,299)" id="r4">226-299 敌人/特效</button>
+    <button onclick="showRange(1,299)" id="rall">全部</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div id="preview">
+    <img id="previewImg" src="" alt="">
+    <div class="num" id="previewNum">-</div>
+    <div class="hint">点击任意tile<br>查看大图和编号</div>
+</div>
+
+<script>
+let currentSize = 80;
+let currentStart = 1;
+let currentEnd = 75;
+let selected = null;
+
+function setSize(s) {
+    currentSize = s;
+    document.querySelectorAll('.size-btns button').forEach(b => b.classList.remove('active'));
+    document.getElementById('s' + s).classList.add('active');
+    render();
+}
+
+function showRange(s, e) {
+    currentStart = s; currentEnd = e;
+    ['r1','r2','r3','r4','rall'].forEach(id => document.getElementById(id).classList.remove('active'));
+    const map = {1:'r1', 76:'r2', 151:'r3', 226:'r4'};
+    if (s === 1 && e === 299) document.getElementById('rall').classList.add('active');
+    else if (map[s]) document.getElementById(map[s]).classList.add('active');
+    render();
+}
+
+function render() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    // 每15个一行加分组标签
+    for (let i = currentStart; i <= currentEnd; i++) {
+        if ((i - 1) % 15 === 0) {
+            const label = document.createElement('div');
+            label.className = 'section-label';
+            label.textContent = `第 ${Math.ceil(i/15)} 行 (${i} - ${Math.min(i+14, 299)})`;
+            grid.appendChild(label);
+        }
+        const num = String(i).padStart(3, '0');
+        const div = document.createElement('div');
+        div.className = 'tile' + (selected === num ? ' selected' : '');
+        div.id = 'tile_' + num;
+        div.innerHTML = `<img src="tower-assets/towerDefense_tile${num}.png" 
+                              width="${currentSize}" height="${currentSize}">
+                         <span>${num}</span>`;
+        div.onclick = () => selectTile(num);
+        grid.appendChild(div);
+    }
+}
+
+function selectTile(num) {
+    if (selected) {
+        const prev = document.getElementById('tile_' + selected);
+        if (prev) prev.classList.remove('selected');
+    }
+    selected = num;
+    const el = document.getElementById('tile_' + num);
+    if (el) el.classList.add('selected');
+    document.getElementById('previewImg').src = `tower-assets/towerDefense_tile${num}.png`;
+    document.getElementById('previewNum').textContent = num;
+    document.querySelector('#preview .hint').textContent = `tile${num}`;
+}
+
+render();
+</script>
+</body>
+</html>

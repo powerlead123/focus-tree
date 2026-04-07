@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习塔防 - 战场</title>
+    <link rel="stylesheet" href="tower-game.css">
+</head>
+<body>
+    <div class="game-wrap">
+        <!-- 顶部状态栏 -->
+        <div class="hud">
+            <button class="btn-back" onclick="location.href='home.html'">← 首页</button>
+            <div class="hud-info">
+                <span id="hudLevel">第1关</span>
+                <span id="hudLives">🛡️ 守住出口</span>
+                <span id="hudWave">波次 0/0</span>
+            </div>
+            <div id="hudPts" class="hud-pts">积分: 0</div>
+        </div>
+
+        <!-- Canvas 战场 -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- 底部控制栏 -->
+        <div class="ctrl-bar">
+            <button class="btn-ctrl btn-start" id="btnStart" onclick="startBattle()">⚔️ 开始战斗</button>
+            <button class="btn-ctrl btn-gift" id="btnGift" onclick="openGift()">🎁 每日礼包</button>
+            <button class="btn-ctrl btn-manage" onclick="location.href='tower-parent.html?source=tower'">🔧 表现录入</button>
+            <button class="btn-ctrl btn-manage" onclick="location.href='top-game.html'" style="background: linear-gradient(to bottom, #8b5cf6, #6d28d9); box-shadow: 0 4px 0 #4c1d95;">⚙️ 陀螺竞技场</button>
+        </div>
+    </div>
+
+    <!-- 密码锁弹窗（页面加载时显示） -->
+    <div class="lock-overlay" id="lockOverlay">
+        <div class="lock-box">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-title">学习塔防</div>
+            <div class="lock-sub">请输入今日密码</div>
+            
+            <input type="password" id="realLockInput" class="lock-real-input" placeholder="输入密码..." onkeydown="if(event.key==='Enter') lockVerify()">
+            
+            <div class="lock-error" id="lockError"></div>
+            
+            <button class="lock-verify" onclick="lockVerify()" style="margin-top:10px; width:100%; padding:10px; border-radius:8px; border:none; background:#3b82f6; color:white; font-weight:bold; cursor:pointer;">确认密码</button>
+            <button class="lock-back" onclick="location.href='home.html'">← 返回首页</button>
+        </div>
+    </div>
+
+    <!-- 关卡预览弹窗 -->
+    <div class="result-overlay" id="levelPreviewOverlay">
+        <div class="result-box level-preview-box">
+            <div class="result-icon" id="previewLevelIcon">⚔️</div>
+            <div class="result-title" id="previewLevelTitle"></div>
+            <div class="level-preview-stats" id="previewStats"></div>
+            <button class="btn-result" onclick="confirmStartBattle()">出发！</button>
+            <button class="btn-preview-cancel" onclick="cancelPreview()">再想想</button>
+        </div>
+    </div>
+
+    <!-- 选塔浮层 -->
+    <div class="slot-popup" id="slotPopup">
+        <div class="slot-popup-title">选择炮台</div>
+        <div class="slot-popup-list" id="slotPopupList"></div>
+        <button class="slot-popup-cancel" onclick="closeSlotPopup()">取消</button>
+    </div>
+    <div class="slot-popup-mask" id="slotPopupMask" onclick="closeSlotPopup()"></div>
+
+    <!-- 结果弹窗 -->
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-box">
+            <div class="result-icon" id="resultIcon"></div>
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-desc" id="resultDesc"></div>
+            <button class="btn-result" onclick="closeResult()">确定</button>
+        </div>
+    </div>
+
+    <!-- 礼包弹窗 -->
+    <div class="result-overlay" id="giftOverlay">
+        <div class="result-box gift-box">
+            <div class="result-icon">🎁</div>
+            <div class="result-title">每日礼包</div>
+            <div class="gift-options" id="giftOptions">
+                <button class="gift-option-btn" id="giftBtnHw" onclick="triggerGiftOption('hw')">
+                    <span class="gift-opt-icon">📚</span>
+                    <span class="gift-opt-label">今日作业已良好完成</span>
+                    <span class="gift-opt-status" id="giftStatusHw"></span>
+                </button>
+                <button class="gift-option-btn" id="giftBtnEssay" onclick="triggerGiftOption('essay')">
+                    <span class="gift-opt-icon">📝</span>
+                    <span class="gift-opt-label">今天完成一篇作文</span>
+                    <span class="gift-opt-status" id="giftStatusEssay"></span>
+                </button>
+            </div>
+            <!-- 摇奖区域 -->
+            <div class="lottery-area" id="lotteryArea" style="display:none">
+                <div class="lottery-drum" id="lotteryDrum">888</div>
+                <div class="lottery-result" id="lotteryResult"></div>
+            </div>
+            <button class="btn-result" id="giftCloseBtn" onclick="closeGift()" style="display:none">收下！</button>
+            <button class="btn-preview-cancel" onclick="closeGift()">关闭</button>
+        </div>
+    </div>
+
+    <script src="tower-data.js"></script>
+    <script src="tower-game.js"></script>
+</body>
+</html>

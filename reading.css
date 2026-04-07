@@ -1,0 +1,862 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    width: 100%;
+    height: 100vh;
+    position: relative;
+}
+
+.screen {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+/* ========== 地图界面 ========== */
+#mapScreen {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.btn-back {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.header h1 {
+    color: white;
+    font-size: 24px;
+    flex: 1;
+}
+
+.map-info {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.info-card {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 15px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.info-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.chapters {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    margin-bottom: 80px;
+}
+
+.chapter {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 20px;
+}
+
+.chapter-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.chapter-icon {
+    font-size: 32px;
+}
+
+.chapter-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.chapter-progress {
+    margin-left: auto;
+    font-size: 14px;
+    color: #666;
+}
+
+.levels-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+
+.level-item {
+    aspect-ratio: 1;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.level-item.locked {
+    background: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+}
+
+.level-item.unlocked {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.level-item.unlocked:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+}
+
+.level-item.completed {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+}
+
+.level-number {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.level-stars {
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.btn-parent {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(245, 158, 11, 0.4);
+    transition: all 0.3s;
+}
+
+.btn-parent:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.6);
+}
+
+/* ========== 家长录入界面 ========== */
+#parentScreen {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+#parentScreen.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.parent-panel {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.parent-panel h2 {
+    color: #1e3c72;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.radio-group {
+    display: flex;
+    gap: 20px;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.star-rating {
+    display: flex;
+    gap: 10px;
+    font-size: 32px;
+}
+
+.star-rating .star {
+    cursor: pointer;
+    opacity: 0.3;
+    transition: all 0.3s;
+}
+
+.star-rating .star.active {
+    opacity: 1;
+    transform: scale(1.2);
+}
+
+.weapon-preview {
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.weapon-preview h3 {
+    color: #1e3c72;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.weapon-card {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+}
+
+.weapon-icon {
+    font-size: 64px;
+    margin-bottom: 10px;
+}
+
+.weapon-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #1e3c72;
+    margin-bottom: 15px;
+}
+
+.weapon-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.weapon-stats .stat {
+    font-size: 14px;
+    color: #666;
+    text-align: left;
+}
+
+.weapon-level {
+    font-size: 14px;
+    color: #667eea;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.weapon-desc {
+    font-size: 13px;
+    color: #999;
+    margin-top: 10px;
+    font-style: italic;
+}
+
+.weapon-score {
+    font-size: 12px;
+    color: #48bb78;
+    font-weight: bold;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.rating-hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    flex: 1;
+    padding: 15px;
+    border: none;
+    border-radius: 15px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background: #d0d0d0;
+}
+
+/* ========== 武器选择界面 ========== */
+#weaponSelectScreen {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+#weaponSelectScreen.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.weapon-select-panel {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.weapon-select-panel h2 {
+    color: #1e3c72;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.select-hint {
+    text-align: center;
+    color: #666;
+    margin-bottom: 25px;
+    font-size: 14px;
+}
+
+.weapons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.weapon-option {
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    border: 3px solid transparent;
+    border-radius: 15px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.weapon-option:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.weapon-option.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.weapon-option .weapon-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+}
+
+.weapon-option .weapon-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.weapon-option .weapon-level {
+    font-size: 12px;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.weapon-option .weapon-stats {
+    font-size: 11px;
+    color: #666;
+}
+
+.weapon-option .weapon-stats .stat {
+    margin: 2px 0;
+}
+
+/* ========== 游戏界面 ========== */
+#gameScreen {
+    background: #000;
+}
+
+.game-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    color: white;
+}
+
+.hp-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.bar {
+    width: 150px;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78, #38a169);
+    transition: width 0.3s;
+    width: 100%;
+}
+
+.level-info {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.score-info {
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+.weapon-info {
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px 15px;
+    border-radius: 10px;
+    margin-right: 10px;
+}
+
+.btn-change-weapon {
+    background: rgba(102, 126, 234, 0.8);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-change-weapon:hover {
+    background: rgba(102, 126, 234, 1);
+    transform: scale(1.05);
+}
+
+.weapon-change-panel {
+    position: absolute;
+    top: 80px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 20px;
+    max-width: 400px;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 200;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.weapon-change-panel.hidden {
+    display: none;
+}
+
+.weapon-change-panel h3 {
+    color: #1e3c72;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.weapons-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.weapon-quick-option {
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.weapon-quick-option:hover {
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.weapon-quick-option.active {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #667eea20, #764ba220);
+}
+
+.weapon-quick-option .weapon-icon {
+    font-size: 32px;
+    margin-bottom: 5px;
+}
+
+.weapon-quick-option .weapon-name {
+    font-size: 11px;
+    font-weight: bold;
+    color: #333;
+}
+
+.btn-small {
+    padding: 8px 20px;
+    font-size: 14px;
+    width: 100%;
+}
+
+.powerup-display {
+    position: absolute;
+    top: 80px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 150;
+}
+
+.powerup-item {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    animation: powerupAppear 0.3s ease-out;
+}
+
+@keyframes powerupAppear {
+    0% {
+        transform: translateX(-100px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.powerup-item .powerup-icon {
+    font-size: 24px;
+}
+
+.powerup-item .powerup-info {
+    flex: 1;
+}
+
+.powerup-item .powerup-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.powerup-item .powerup-timer {
+    font-size: 12px;
+    color: #666;
+}
+
+.powerup-item .powerup-bar {
+    width: 100px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 3px;
+}
+
+.powerup-item .powerup-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78, #38a169);
+    transition: width 0.1s linear;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.game-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    z-index: 100;
+}
+
+.control-btn {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.control-btn:active {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(0.95);
+}
+
+/* ========== 通关界面 ========== */
+#victoryScreen {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+}
+
+#victoryScreen.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.victory-content {
+    background: white;
+    border-radius: 30px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    animation: victoryAppear 0.5s ease-out;
+}
+
+@keyframes victoryAppear {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.victory-title {
+    font-size: 36px;
+    font-weight: bold;
+    color: #1e3c72;
+    margin-bottom: 20px;
+    animation: titleBounce 0.6s ease-out 0.3s;
+}
+
+@keyframes titleBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+
+.victory-stars {
+    font-size: 48px;
+    margin-bottom: 30px;
+    animation: starsAppear 0.8s ease-out 0.5s both;
+}
+
+@keyframes starsAppear {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.3);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.victory-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+}
+
+.stat-item {
+    flex: 1;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.victory-rewards {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.victory-rewards h3 {
+    color: #92400e;
+    margin-bottom: 15px;
+}
+
+.reward-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reward-item {
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 16px;
+    color: #333;
+}
+
+.btn-large {
+    width: 100%;
+    padding: 18px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-large:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+}

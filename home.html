@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注小树 - 首页</title>
+    <link rel="stylesheet" href="home.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🌳 专注小树</h1>
+            <p class="subtitle">柏皓的家</p>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <div class="main-content">
+            <!-- 上方功能卡片 -->
+            <div class="function-cards function-cards-top">
+                <button class="mini-card" onclick="goToPet()">
+                    <div class="mini-icon">🐣</div>
+                    <div class="mini-label">记事宠物</div>
+                </button>
+                
+                <button class="mini-card" onclick="location.href='diary.html'">
+                    <div class="mini-icon">🌌</div>
+                    <div class="mini-label">星空打卡</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToRace()">
+                    <div class="mini-icon">🏎️</div>
+                    <div class="mini-label">口算竞速</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToEyecare()">
+                    <div class="mini-icon">👀</div>
+                    <div class="mini-label">护眼训练</div>
+                </button>
+            </div>
+
+            <!-- 中心大卡片 - 我的房间 -->
+            <div class="room-card">
+                <div class="room-container">
+                    <!-- 房间背景 -->
+                    <div class="room-background">
+                        <!-- 墙壁装饰 -->
+                        <div class="wall-decoration">
+                            <div class="wall-item window-item">
+                                <div class="window-frame"></div>
+                                <div class="window-light"></div>
+                            </div>
+                            <div class="wall-item">🖼️</div>
+                            <div class="wall-item clock">🕐</div>
+                        </div>
+                        
+                        <!-- 左侧家具 -->
+                        <div class="furniture-left">
+                            <div class="bookshelf">📚</div>
+                            <div class="plant">🪴</div>
+                        </div>
+                        
+                        <!-- 右侧家具 -->
+                        <div class="furniture-right">
+                            <div class="lamp">💡</div>
+                            <div class="table">🪑</div>
+                        </div>
+                        
+                        <!-- 地毯区域 -->
+                        <div class="carpet-area">
+                            <!-- 地毯 -->
+                            <div class="carpet"></div>
+                            
+                            <!-- 地毯上的装饰 -->
+                            <div class="carpet-toys">
+                                <div class="toy">⚽</div>
+                                <div class="toy">🧸</div>
+                            </div>
+                            
+                            <!-- 宠物 -->
+                            <div class="pet-character" id="roomPet" onclick="interactWithPet()">
+                                <div class="interact-hint">点我互动</div>
+                                <div class="pet-emoji">🥚</div>
+                                <div class="pet-bubble hidden" id="petBubble">你好呀！</div>
+                            </div>
+                            
+                            <!-- 柏皓 - 火柴人 -->
+                            <div class="owner-character" id="roomOwner" onclick="interactWithOwner()">
+                                <div class="interact-hint">这是我</div>
+                                <div class="stickman">
+                                    <div class="stickman-head"></div>
+                                    <div class="stickman-body"></div>
+                                    <div class="stickman-arm stickman-arm-left"></div>
+                                    <div class="stickman-arm stickman-arm-right"></div>
+                                    <div class="stickman-leg stickman-leg-left"></div>
+                                    <div class="stickman-leg stickman-leg-right"></div>
+                                </div>
+                                <div class="owner-name">柏皓</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 资产显示 -->
+                        <div class="assets-display">
+                            <div class="asset-item">
+                                <span class="asset-icon">🌳</span>
+                                <span class="asset-value" id="roomTrees">0</span>
+                            </div>
+                            <div class="asset-item">
+                                <span class="asset-icon">🍃</span>
+                                <span class="asset-value" id="roomCoins">0</span>
+                            </div>
+                            <div class="asset-item">
+                                <span class="asset-icon">🔥</span>
+                                <span class="asset-value" id="roomStreak">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下方功能卡片 -->
+            <div class="function-cards function-cards-bottom">
+                <button class="mini-card" onclick="goToReading()">
+                    <div class="mini-icon">📖</div>
+                    <div class="mini-label">阅读探险</div>
+                </button>
+                
+                <button class="mini-card" onclick="location.href='tower-game.html'">
+                    <div class="mini-icon">⚔️</div>
+                    <div class="mini-label">学习塔防</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToShop()">
+                    <div class="mini-icon">🛒</div>
+                    <div class="mini-label">背景商城</div>
+                </button>
+
+                <button class="mini-card" onclick="location.href='top-game.html'">
+                    <div class="mini-icon">⚙️</div>
+                    <div class="mini-label">旧版陀螺</div>
+                </button>
+
+                <!-- 新增：3D 陀螺竞技场入口 -->
+                <button class="mini-card premium-card" onclick="location.href='top-arena-3d.html'">
+                    <div class="mini-icon">🏟️</div>
+                    <div class="mini-label">3D 陀螺竞技场</div>
+                    <div class="new-tag">NEW</div>
+                </button>
+                
+                <button class="mini-card" onclick="goToFocus()">
+                    <div class="mini-icon">🧘</div>
+                    <div class="mini-label">专注训练</div>
+                </button>
+            </div>
+        </div>
+
+        <!-- 兑换金币按钮 -->
+        <button class="exchange-btn" id="exchangeBtn" onclick="showExchangeModal()">
+            <span class="exchange-icon">🌳 → 🍃</span>
+            <span class="exchange-text">兑换金币</span>
+        </button>
+    </div>
+
+    <!-- 兑换金币弹窗 -->
+    <div class="modal hidden" id="exchangeModal">
+        <div class="modal-content">
+            <h2>兑换金币</h2>
+            
+            <div class="exchange-visual">
+                <span class="exchange-from">🌳 × 10</span>
+                <span class="exchange-arrow">→</span>
+                <span class="exchange-to">🍃 × 1</span>
+            </div>
+            
+            <div class="exchange-info">
+                <p>当前小树：<span id="modalAvailableTrees">0</span> 棵</p>
+                <p>可兑换：<span id="maxExchangeTimes">0</span> 次</p>
+            </div>
+            
+            <div class="exchange-input">
+                <label>兑换次数：</label>
+                <input type="number" id="exchangeTimes" value="1" min="1" max="1">
+                <button class="btn-max" onclick="setMaxExchange()">最大</button>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="confirmExchange()">确认兑换</button>
+                <button class="btn btn-secondary" onclick="closeExchangeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 成功提示 -->
+    <div class="toast hidden" id="toast"></div>
+
+    <script src="common.js"></script>
+    <script src="home.js"></script>
+</body>
+</html>

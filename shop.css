@@ -1,0 +1,414 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* 头部 */
+.shop-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.btn-back {
+    padding: 10px 20px;
+    background: #e2e8f0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: #cbd5e0;
+}
+
+.shop-header h1 {
+    font-size: 24px;
+    color: #333;
+}
+
+.coin-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #f7fafc;
+    border-radius: 25px;
+}
+
+.coin-icon {
+    font-size: 24px;
+}
+
+.coin-count {
+    font-size: 20px;
+    font-weight: bold;
+    color: #48bb78;
+}
+
+/* 背景图列表 */
+.backgrounds-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.background-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.background-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.background-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+.background-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-text {
+    font-size: 14px;
+    color: #666;
+}
+
+.progress-bar {
+    width: 100px;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78 0%, #38a169 100%);
+    transition: width 0.3s ease;
+}
+
+.unlocked-badge {
+    padding: 5px 15px;
+    background: #48bb78;
+    color: white;
+    border-radius: 15px;
+    font-size: 14px;
+}
+
+/* 拼图网格 */
+.puzzle-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    aspect-ratio: 1;
+    background: #cbd5e0;
+    border-radius: 10px;
+    overflow: hidden;
+    padding: 3px;
+}
+
+.puzzle-piece {
+    aspect-ratio: 1;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    background-size: 400% 400%;
+    background-repeat: no-repeat;
+}
+
+.puzzle-piece.locked {
+    filter: grayscale(100%) blur(8px) brightness(0.7);
+    background: #a0aec0;
+}
+
+.puzzle-piece.locked::before {
+    content: '🔒';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    z-index: 1;
+}
+
+.puzzle-piece:not(.locked):hover {
+    transform: scale(1.05);
+    z-index: 2;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.puzzle-piece.locked:hover {
+    filter: grayscale(100%) blur(6px) brightness(0.8);
+}
+
+/* 弹窗 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-content h2 {
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.unlock-preview {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+    border-radius: 10px;
+    background-size: 400% 400%;
+    background-repeat: no-repeat;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.unlock-info {
+    background: #f7fafc;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.unlock-cost {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.cost-icon {
+    font-size: 24px;
+}
+
+.unlock-current {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+.btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: #48bb78;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #38a169;
+}
+
+.btn-primary:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: #e2e8f0;
+    color: #666;
+}
+
+.btn-secondary:hover {
+    background: #cbd5e0;
+}
+
+/* 完成庆祝 */
+.completion-content {
+    text-align: center;
+}
+
+.celebration {
+    font-size: 80px;
+    animation: bounce 0.6s ease infinite alternate;
+}
+
+@keyframes bounce {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(-20px);
+    }
+}
+
+.completion-text {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.completed-image {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 15px;
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.completion-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* 提示消息 */
+.toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 2000;
+    animation: slideDown 0.3s ease;
+}
+
+.toast.hidden {
+    display: none;
+}
+
+.toast.success {
+    background: #48bb78;
+    color: white;
+}
+
+.toast.error {
+    background: #f56565;
+    color: white;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+/* 解锁动画 */
+@keyframes pieceUnlock {
+    0% {
+        filter: grayscale(100%) blur(8px) brightness(0.7);
+        transform: scale(0.8);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        filter: grayscale(0%) blur(0px) brightness(1);
+        transform: scale(1);
+    }
+}
+
+.puzzle-piece.unlocking {
+    animation: pieceUnlock 0.6s ease forwards;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .shop-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .shop-header h1 {
+        font-size: 20px;
+    }
+}

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>塔防视觉预览</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #fff; font-family: 'PingFang SC','Microsoft YaHei',sans-serif; }
+h2 { padding: 16px; color: #fbbf24; font-size: 16px; }
+canvas { display: block; margin: 0 auto; }
+.label { text-align: center; color: #94a3b8; font-size: 13px; padding: 8px; }
+</style>
+</head>
+<body>
+<h2>🎨 塔防视觉预览（Canvas SVG渲染）</h2>
+<canvas id="c" width="900" height="420"></canvas>
+<div class="label">动态演示：塔旋转 · 敌人移动 · 子弹飞行 · 爆炸特效</div>
+
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const T = 72; // tile size
+
+// ===== 离屏缓存 =====
+function makeOffscreen(w, h, drawFn) {
+    const oc = document.createElement('canvas');
+    oc.width = w; oc.height = h;
+    drawFn(oc.getContext('2d'), w, h);
+    return oc;
+}
+
+// ===== 草地tile =====
+const grassTile = makeOffscreen(T, T, (g, w, h) => {
+    g.fillStyle = '#4a7c3f';
+    g.fillRect(0, 0, w, h);
+    // 草纹
+    g.strokeStyle = 'rgba(255,255,255,0.06)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+        g.beginPath();
+        g.moveTo(Math.random()*w, 0);
+        g.lineTo(Math.random()*w, h);
+        g.stroke();
+    }
+    // 暗边
+    g.strokeStyle = 'rgba(0,0,0,0.15)';
+    g.lineWidth = 1;
+    g.strokeRect(0.5, 0.5, w-1, h-1);
+});
+
+// ===== 路径tile =====
+function makeRoadTile(type) {
+    return makeOffscreen(T, T, (g, w, h) => {
+        g.fillStyle = '#c8a96e';
+        g.fillRect(0, 0, w, h);
+        // 路面纹理
+        g.fillStyle = 'rgba(0,0,0,0.06)';
+        for (let i = 0; i < 4; i++) {
+            g.fillRect(Math.random()*w, Math.random()*h, 8+Math.random()*12, 3);
+        }
+        // 路边线
+        g.strokeStyle = '#b8996e';
+        g.lineWidth = 2;
+        g.strokeRect(1, 1, w-2, h-2);
+    });
+}
+const roadTile = makeRoadTile('h');
+
+// ===== 塔底座 =====
+const towerBase = makeOffscreen(T, T, (g, w, h) => {
+    const cx = w/2, cy = h/2, r = w*0.38;
+    // 阴影
+    g.fillStyle = 'rgba(0,0,0,0.3)';
+    g.beginPath();
+    g.ellipse(cx, cy+4, r*0.9, r*0.35, 0, 0, Math.PI*2);
+    g.fill();
+    // 底座
+    const grad = g.createRadialGradient(cx-r*0.3, cy-r*0.3, 0, cx, cy, r);
+    grad.addColorStop(0, '#6b7280');
+    grad.addColorStop(0.5, '#374151');
+    grad.addColorStop(1, '#1f2937');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI*2);
+    g.fill();
+    // 高光环
+    g.strokeStyle = 'rgba(255,255,255,0.2)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(cx, cy, r-1, Math.PI*1.1, Math.PI*1.9);
+    g.stroke();
+});
+
+// ===== 各种炮管 =====
+function makeCannon(color, shape) {
+    return makeOffscreen(T, T, (g, w, h) => {
+        const cx = w/2, cy = h/2;
+        if (shape === 'arrow') {
+            // 弓箭塔：三角形箭头
+            g.fillStyle = color;
+            g.beginPath();
+            g.moveTo(cx, cy - w*0.35);
+            g.lineTo(cx + w*0.12, cy + w*0.1);
+            g.lineTo(cx - w*0.12, cy + w*0.1);
+            g.closePath();
+            g.fill();
+            g.strokeStyle = 'rgba(255,255,255,0.4)';
+            g.lineWidth = 1.5;
+            g.stroke();
+            // 弓弦
+            g.strokeStyle = color;
+            g.lineWidth = 2;
+            g.beginPath();
+            g.arc(cx, cy+w*0.05, w*0.22, Math.PI*0.15, Math.PI*0.85);
+            g.stroke();
+        } else if (shape === 'cannon') {
+            // 炮塔：粗炮管
+            g.fillStyle = color;
+            g.beginPath();
+            g.roundRect(cx-w*0.1, cy-w*0.38, w*0.2, w*0.42, 4);
+            g.fill();
+            g.strokeStyle = 'rgba(255,255,255,0.3)';
+            g.lineWidth = 1.5;
+            g.stroke();
+            // 炮口
+            g.fillStyle = '#1f2937';
+            g.beginPath();
+            g.arc(cx, cy-w*0.38, w*0.1, 0, Math.PI*2);
+            g.fill();
+        } else if (shape === 'ice') {
+            // 冰冻塔：雪花形
+            g.strokeStyle = color;
+            g.lineWidth = 3;
+            for (let i = 0; i < 6; i++) {
+                const a = (i/6)*Math.PI*2;
+                g.beginPath();
+                g.moveTo(cx, cy);
+                g.lineTo(cx + Math.cos(a)*w*0.32, cy + Math.sin(a)*w*0.32);
+                g.stroke();
+            }
+            g.fillStyle = color;
+            g.beginPath();
+            g.arc(cx, cy, w*0.1, 0, Math.PI*2);
+            g.fill();
+        } else if (shape === 'lightning') {
+            // 闪电塔：闪电形
+            g.fillStyle = color;
+            g.beginPath();
+            g.moveTo(cx+w*0.08, cy-w*0.35);
+            g.lineTo(cx-w*0.08, cy-w*0.02);
+            g.lineTo(cx+w*0.06, cy-w*0.02);
+            g.lineTo(cx-w*0.1, cy+w*0.35);
+            g.lineTo(cx+w*0.12, cy+w*0.02);
+            g.lineTo(cx-w*0.04, cy+w*0.02);
+            g.closePath();
+            g.fill();
+            g.strokeStyle = 'rgba(255,255,255,0.5)';
+            g.lineWidth = 1;
+            g.stroke();
+        }
+    });
+}
+
+const cannons = {
+    arrow:     makeCannon('#86efac', 'arrow'),
+    cannon:    makeCannon('#fb923c', 'cannon'),
+    ice:       makeCannon('#93c5fd', 'ice'),
+    lightning: makeCannon('#c4b5fd', 'lightning'),
+};
+
+// ===== 敌人 =====
+function makeEnemy(color, type) {
+    return makeOffscreen(T*0.7, T*0.7, (g, w, h) => {
+        const cx = w/2, cy = h/2;
+        if (type === 'tank') {
+            // 坦克车身
+            g.fillStyle = color;
+            g.beginPath();
+            g.roundRect(cx-w*0.38, cy-h*0.22, w*0.76, h*0.44, 6);
+            g.fill();
+            // 炮塔
+            g.fillStyle = '#1f2937';
+            g.beginPath();
+            g.arc(cx, cy, w*0.2, 0, Math.PI*2);
+            g.fill();
+            // 炮管
+            g.strokeStyle = '#374151';
+            g.lineWidth = 4;
+            g.beginPath();
+            g.moveTo(cx, cy);
+            g.lineTo(cx + w*0.35, cy);
+            g.stroke();
+            // 履带
+            g.fillStyle = '#374151';
+            g.fillRect(cx-w*0.38, cy-h*0.3, w*0.76, h*0.1);
+            g.fillRect(cx-w*0.38, cy+h*0.2, w*0.76, h*0.1);
+        } else if (type === 'soldier') {
+            // 士兵身体
+            g.fillStyle = color;
+            g.beginPath();
+            g.roundRect(cx-w*0.18, cy-h*0.1, w*0.36, h*0.38, 4);
+            g.fill();
+            // 头
+            g.fillStyle = '#fde68a';
+            g.beginPath();
+            g.arc(cx, cy-h*0.2, w*0.18, 0, Math.PI*2);
+            g.fill();
+            // 头盔
+            g.fillStyle = color;
+            g.beginPath();
+            g.arc(cx, cy-h*0.22, w*0.18, Math.PI, 0);
+            g.fill();
+        } else if (type === 'ufo') {
+            // UFO碟形
+            const grad = g.createRadialGradient(cx, cy, 0, cx, cy, w*0.38);
+            grad.addColorStop(0, '#a78bfa');
+            grad.addColorStop(1, color);
+            g.fillStyle = grad;
+            g.beginPath();
+            g.ellipse(cx, cy, w*0.42, h*0.18, 0, 0, Math.PI*2);
+            g.fill();
+            // 驾驶舱
+            g.fillStyle = 'rgba(196,181,253,0.6)';
+            g.beginPath();
+            g.ellipse(cx, cy-h*0.1, w*0.2, h*0.18, 0, 0, Math.PI*2);
+            g.fill();
+            // 灯光
+            g.fillStyle = '#fbbf24';
+            for (let i = 0; i < 4; i++) {
+                const a = (i/4)*Math.PI*2;
+                g.beginPath();
+                g.arc(cx+Math.cos(a)*w*0.28, cy+Math.sin(a)*h*0.1, 3, 0, Math.PI*2);
+                g.fill();
+            }
+        }
+    });
+}
+
+const enemies = [
+    makeEnemy('#4ade80', 'tank'),
+    makeEnemy('#f87171', 'soldier'),
+    makeEnemy('#818cf8', 'ufo'),
+];
+
+// ===== 游戏状态 =====
+const PATH = [
+    {x:0,y:2},{x:1,y:2},{x:2,y:2},{x:3,y:2},
+    {x:3,y:1},{x:3,y:0},
+    {x:4,y:0},{x:5,y:0},{x:6,y:0},{x:7,y:0},{x:8,y:0},{x:9,y:0},{x:10,y:0},{x:11,y:0},
+];
+const COLS = 12, ROWS = 4;
+
+const towers = [
+    {x:1, y:0, type:'arrow',     angle:0, color:'#86efac'},
+    {x:2, y:1, type:'cannon',    angle:0, color:'#fb923c'},
+    {x:5, y:1, type:'ice',       angle:0, color:'#93c5fd'},
+    {x:8, y:1, type:'lightning', angle:0, color:'#c4b5fd'},
+];
+
+let ens = [];
+let buls = [];
+let particles = [];
+let t = 0;
+
+function spawnEnemy() {
+    ens.push({
+        px: 0, py: 2*T + T/2,
+        pathIdx: 0, progress: 0,
+        hp: 100, maxHp: 100,
+        speed: 1.2 + Math.random()*0.5,
+        type: Math.floor(Math.random()*3),
+        dead: false,
+    });
+}
+
+function update() {
+    t++;
+    if (t % 90 === 0) spawnEnemy();
+
+    // 移动敌人
+    ens.forEach(e => {
+        if (e.dead) return;
+        e.progress += e.speed;
+        if (e.progress >= T) {
+            e.progress -= T;
+            e.pathIdx++;
+            if (e.pathIdx >= PATH.length) { e.dead = true; return; }
+        }
+        const cur = PATH[e.pathIdx];
+        const nxt = PATH[Math.min(e.pathIdx+1, PATH.length-1)];
+        const p = e.progress / T;
+        e.px = (cur.x + (nxt.x-cur.x)*p) * T + T/2;
+        e.py = (cur.y + (nxt.y-cur.y)*p) * T + T/2;
+    });
+    ens = ens.filter(e => !e.dead);
+
+    // 塔攻击
+    towers.forEach(tw => {
+        tw.cooldown = (tw.cooldown||0) - 1;
+        const tx = tw.x*T+T/2, ty = tw.y*T+T/2;
+        const range = tw.type === 'lightning' ? T*3 : T*2.2;
+        let target = null, minD = range;
+        ens.forEach(e => {
+            const d = Math.hypot(e.px-tx, e.py-ty);
+            if (d < minD) { minD = d; target = e; }
+        });
+        if (target) {
+            tw.angle = Math.atan2(target.py-ty, target.px-tx);
+            if (tw.cooldown <= 0) {
+                tw.cooldown = tw.type==='cannon' ? 80 : tw.type==='lightning' ? 60 : 40;
+                const colors = {arrow:'#86efac',cannon:'#fb923c',ice:'#93c5fd',lightning:'#c4b5fd'};
+                buls.push({ x:tx, y:ty, target, speed:5+Math.random()*2,
+                    color: colors[tw.type], size: tw.type==='cannon'?7:4,
+                    type: tw.type, dead:false });
+            }
+        }
+    });
+
+    // 移动子弹
+    buls.forEach(b => {
+        if (b.dead) return;
+        const dx = b.target.px-b.x, dy = b.target.py-b.y;
+        const d = Math.hypot(dx, dy);
+        if (d < b.speed) {
+            b.dead = true;
+            b.target.hp -= b.type==='cannon' ? 30 : 15;
+            // 爆炸粒子
+            for (let i = 0; i < (b.type==='cannon'?12:5); i++) {
+                const a = Math.random()*Math.PI*2;
+                const spd = 1+Math.random()*3;
+                particles.push({ x:b.target.px, y:b.target.py,
+                    vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
+                    life:1, color:b.color, size:b.type==='cannon'?4:2 });
+            }
+            if (b.target.hp <= 0) b.target.dead = true;
+        } else {
+            b.x += dx/d*b.speed;
+            b.y += dy/d*b.speed;
+        }
+    });
+    buls = buls.filter(b => !b.dead);
+    ens = ens.filter(e => !e.dead);
+
+    // 粒子
+    particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        p.vx *= 0.92; p.vy *= 0.92;
+        p.life -= 0.04;
+    });
+    particles = particles.filter(p => p.life > 0);
+}
+
+function drawMap() {
+    const pathSet = new Set(PATH.map(p => `${p.x},${p.y}`));
+    for (let r = 0; r < ROWS; r++)
+        for (let col = 0; col < COLS; col++)
+            ctx.drawImage(pathSet.has(`${col},${r}`) ? roadTile : grassTile, col*T, r*T);
+}
+
+function drawTowers() {
+    towers.forEach(tw => {
+        ctx.drawImage(towerBase, tw.x*T, tw.y*T);
+        ctx.save();
+        ctx.translate(tw.x*T+T/2, tw.y*T+T/2);
+        ctx.rotate(tw.angle + Math.PI/2);
+        ctx.drawImage(cannons[tw.type], -T/2, -T/2);
+        ctx.restore();
+        // 레벨 뱃지
+        ctx.fillStyle = tw.color;
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Lv.1', tw.x*T+T/2, tw.y*T+T-4);
+    });
+}
+
+function drawEnemies() {
+    ens.forEach(e => {
+        const img = enemies[e.type];
+        ctx.drawImage(img, e.px-img.width/2, e.py-img.height/2);
+        // 血条
+        const bw = T*0.7, bh = 5;
+        const bx = e.px-bw/2, by = e.py-img.height/2-8;
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(bx-1, by-1, bw+2, bh+2);
+        ctx.fillStyle = e.hp/e.maxHp > 0.5 ? '#4ade80' : '#f87171';
+        ctx.fillRect(bx, by, bw*(e.hp/e.maxHp), bh);
+    });
+}
+
+function drawBullets() {
+    buls.forEach(b => {
+        if (b.type === 'lightning') {
+            // 闪电线
+            ctx.strokeStyle = b.color;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = b.color;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.moveTo(b.x, b.y);
+            // 锯齿闪电
+            const dx = b.target.px-b.x, dy = b.target.py-b.y;
+            const steps = 4;
+            for (let i = 1; i <= steps; i++) {
+                const px = b.x + dx*(i/steps) + (Math.random()-0.5)*12;
+                const py = b.y + dy*(i/steps) + (Math.random()-0.5)*12;
+                ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        } else if (b.type === 'ice') {
+            // 冰晶
+            ctx.fillStyle = b.color;
+            ctx.shadowColor = b.color;
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = (i/6)*Math.PI*2;
+                const r = i%2===0 ? b.size*1.5 : b.size*0.7;
+                i===0 ? ctx.moveTo(b.x+Math.cos(a)*r, b.y+Math.sin(a)*r)
+                      : ctx.lineTo(b.x+Math.cos(a)*r, b.y+Math.sin(a)*r);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        } else {
+            // 普通子弹
+            ctx.fillStyle = b.color;
+            ctx.shadowColor = b.color;
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.size, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.beginPath();
+            ctx.arc(b.x-b.size*0.3, b.y-b.size*0.3, b.size*0.35, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    });
+}
+
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+}
+
+function loop() {
+    update();
+    ctx.clearRect(0, 0, c.width, c.height);
+    drawMap();
+    drawTowers();
+    drawEnemies();
+    drawBullets();
+    drawParticles();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

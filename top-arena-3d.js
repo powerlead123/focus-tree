@@ -1,0 +1,2884 @@
+// 陀螺竞技场 3D进阶版 核心逻辑
+
+// ===== 密码锁 =====
+// 日期密码：取当天星期几的英语全拼，例如 星期一 → "monday"
+function lockGetPwd() {
+    const now = new Date();
+    const day = now.getDay(); // 0 是周日，1-6 是周一到周六
+    const englishMap = {
+        0: 'sunday',
+        1: 'monday',
+        2: 'tuesday',
+        3: 'wednesday',
+        4: 'thursday',
+        5: 'friday',
+        6: 'saturday'
+    };
+    return englishMap[day];
+}
+
+function lockVerify() {
+    const inputEl = document.getElementById('realLockInput');
+    const lockBuffer = inputEl.value.trim().toLowerCase();
+    
+    if (lockBuffer === lockGetPwd()) {
+        document.getElementById('lockOverlay').classList.add('hidden');
+        inputEl.value = ''; // 清空密码框
+    } else {
+        document.getElementById('lockError').textContent = '密码错误，请重试';
+        inputEl.value = '';
+        inputEl.focus();
+        const box = document.querySelector('.lock-box');
+        box.style.animation = 'none';
+        box.offsetHeight;
+        box.style.animation = 'lockShake 0.4s ease';
+    }
+}
+
+// 页面加载时自动聚焦到密码框
+window.addEventListener('DOMContentLoaded', () => {
+    const lockInput = document.getElementById('realLockInput');
+    if(lockInput) {
+        // 给一点点延迟确保弹窗渲染完成
+        setTimeout(() => lockInput.focus(), 100);
+    }
+});
+
+// ===== 陀螺配置 (LV1 到 LV50) =====
+const TOP_TYPES = [
+    { id: 1, name: 'LV1', emoji: '⚪', hp: 5, cost: 4, color: '#e5e5e5', tier: 1 },
+    { id: 2, name: 'LV2', emoji: '🔵', hp: 10, cost: 4, color: '#60a5fa', tier: 2 },
+    { id: 3, name: 'LV3', emoji: '🟢', hp: 15, cost: 4, color: '#4ade80', tier: 3 },
+    { id: 4, name: 'LV4', emoji: '🟡', hp: 20, cost: 4, color: '#facc15', tier: 4 },
+    { id: 5, name: 'LV5', emoji: '🟠', hp: 25, cost: 4, color: '#fb923c', tier: 5 },
+    { id: 6, name: 'LV6', emoji: '🔴', hp: 30, cost: 4, color: '#f87171', tier: 6 },
+    { id: 7, name: 'LV7', emoji: '🟣', hp: 35, cost: 4, color: '#c084fc', tier: 7 },
+    { id: 8, name: 'LV8', emoji: '⚫', hp: 40, cost: 4, color: '#374151', tier: 8 },
+    { id: 9, name: 'LV9', emoji: '💎', hp: 45, cost: 4, color: '#22d3ee', tier: 9 },
+    { id: 10, name: 'LV10', emoji: '👑', hp: 50, cost: 4, color: '#fbbf24', tier: 10 },
+    { id: 11, name: 'LV11', emoji: '🔥', hp: 55, cost: 4, color: '#ef4444', tier: 11 },
+    { id: 12, name: 'LV12', emoji: '❄️', hp: 60, cost: 4, color: '#38bdf8', tier: 12 },
+    { id: 13, name: 'LV13', emoji: '⚡', hp: 65, cost: 4, color: '#f59e0b', tier: 13 },
+    { id: 14, name: 'LV14', emoji: '🌪️', hp: 70, cost: 4, color: '#a855f7', tier: 14 },
+    { id: 15, name: 'LV15', emoji: '🌊', hp: 75, cost: 4, color: '#0ea5e9', tier: 15 },
+    { id: 16, name: 'LV16', emoji: '🪨', hp: 80, cost: 4, color: '#78716c', tier: 16 },
+    { id: 17, name: 'LV17', emoji: '🌿', hp: 85, cost: 4, color: '#22c55e', tier: 17 },
+    { id: 18, name: 'LV18', emoji: '☀️', hp: 90, cost: 4, color: '#fbbf24', tier: 18 },
+    { id: 19, name: 'LV19', emoji: '🌙', hp: 95, cost: 4, color: '#818cf8', tier: 19 },
+    { id: 20, name: 'LV20', emoji: '⭐', hp: 100, cost: 4, color: '#fbbf24', tier: 20 },
+    { id: 21, name: 'LV21', emoji: '💫', hp: 105, cost: 4, color: '#c084fc', tier: 21 },
+    { id: 22, name: 'LV22', emoji: '🌈', hp: 110, cost: 4, color: '#f472b6', tier: 22 },
+    { id: 23, name: 'LV23', emoji: '🔮', hp: 115, cost: 4, color: '#a855f7', tier: 23 },
+    { id: 24, name: 'LV24', emoji: '💠', hp: 120, cost: 4, color: '#22d3ee', tier: 24 },
+    { id: 25, name: 'LV25', emoji: '🎯', hp: 125, cost: 4, color: '#f43f5e', tier: 25 },
+    { id: 26, name: 'LV26', emoji: '🛡️', hp: 130, cost: 4, color: '#64748b', tier: 26 },
+    { id: 27, name: 'LV27', emoji: '⚔️', hp: 135, cost: 4, color: '#94a3b8', tier: 27 },
+    { id: 28, name: 'LV28', emoji: '🗡️', hp: 140, cost: 4, color: '#cbd5e1', tier: 28 },
+    { id: 29, name: 'LV29', emoji: '🏹', hp: 145, cost: 4, color: '#dc2626', tier: 29 },
+    { id: 30, name: 'LV30', emoji: '🦅', hp: 150, cost: 4, color: '#f97316', tier: 30 },
+    { id: 31, name: 'LV31', emoji: '🐉', hp: 155, cost: 4, color: '#16a34a', tier: 31 },
+    { id: 32, name: 'LV32', emoji: '🦁', hp: 160, cost: 4, color: '#ea580c', tier: 32 },
+    { id: 33, name: 'LV33', emoji: '🐯', hp: 165, cost: 4, color: '#f97316', tier: 33 },
+    { id: 34, name: 'LV34', emoji: '🐺', hp: 170, cost: 4, color: '#6b7280', tier: 34 },
+    { id: 35, name: 'LV35', emoji: '🦊', hp: 175, cost: 4, color: '#f97316', tier: 35 },
+    { id: 36, name: 'LV36', emoji: '🦉', hp: 180, cost: 4, color: '#a855f7', tier: 36 },
+    { id: 37, name: 'LV37', emoji: '🐍', hp: 185, cost: 4, color: '#16a34a', tier: 37 },
+    { id: 38, name: 'LV38', emoji: '🦋', hp: 190, cost: 4, color: '#22d3ee', tier: 38 },
+    { id: 39, name: 'LV39', emoji: '🐲', hp: 195, cost: 4, color: '#dc2626', tier: 39 },
+    { id: 40, name: 'LV40', emoji: '👹', hp: 200, cost: 4, color: '#7f1d1d', tier: 40 },
+    { id: 41, name: 'LV41', emoji: '👺', hp: 210, cost: 4, color: '#991b1b', tier: 41 },
+    { id: 42, name: 'LV42', emoji: '🤖', hp: 220, cost: 4, color: '#3b82f6', tier: 42 },
+    { id: 43, name: 'LV43', emoji: '👾', hp: 230, cost: 4, color: '#a855f7', tier: 43 },
+    { id: 44, name: 'LV44', emoji: '🎃', hp: 240, cost: 4, color: '#f97316', tier: 44 },
+    { id: 45, name: 'LV45', emoji: '💀', hp: 250, cost: 4, color: '#475569', tier: 45 },
+    { id: 46, name: 'LV46', emoji: '☠️', hp: 260, cost: 4, color: '#1e293b', tier: 46 },
+    { id: 47, name: 'LV47', emoji: '🌑', hp: 270, cost: 4, color: '#0f172a', tier: 47 },
+    { id: 48, name: 'LV48', emoji: '🌌', hp: 280, cost: 4, color: '#4c1d95', tier: 48 },
+    { id: 49, name: 'LV49', emoji: '⚛️', hp: 290, cost: 4, color: '#06b6d4', tier: 49 },
+    { id: 50, name: 'LV50', emoji: '🔱', hp: 300, cost: 4, color: '#fbbf24', tier: 50 }
+];
+
+const STUDENT_NAMES = [
+    '孙博渊', '蔡静轩', '史卓远', '胡殷阳', '雷远', '张睿琪', '黄小易',
+    '叶宇辰', '陈佳铭', '李一帆', '孙尚峻', '刘维熙', '郑博文', '魏嘉浩', '陈宏维',
+    '焦艾嘉', '马凯北', '赵胤凡', '周进杉', '朱宜萌', '赵家豪', '刘泽琪', '郭潇祺',
+    '裴名播', '闫翊晨', '孙玄霆', '秦俊坤', '陈雨桐', '刘思成', '蒋逸宣', '王思承',
+    '王可泽', '王梓瑞', '刘桐菲', '路嘉瑶', '武玥', '王梓萌', '闫祥文', '朱昊天'
+];
+
+// ===== 状态管理 =====
+const ARENA_KEY = 'focusTree_topArenaData_v2';
+// TOWER_KEY 已在 tower-data.js 中定义
+
+// ===== 特殊陀螺系统 =====
+const SPECIAL_TICKETS_KEY = 'focusTree_specialTickets';
+const SPECIAL_TOPS_KEY = 'focusTree_specialTops';
+const SPECIAL_TOPS_DATE_KEY = 'focusTree_specialTicketsDate';
+
+// ===== 特殊陀螺配置 =====
+const SPECIAL_TOPS = [
+    {
+        id: 'huluwa1',
+        name: '大娃陀螺',
+        emoji: '👶',
+        hp: 35,
+        baseMass: 24,  // 对应LV7的基础质量
+        color: '#dc2626',  // 红色，代表大娃
+        tier: 7,
+        description: '葫芦娃大娃，可变大变小。最大可变大2.2倍，质量同步增加，对敌人造成3倍伤害！',
+        ability: 'sizeChange',  // 特殊能力：大小变化
+        maxSize: 2.2,  // 最大放大倍数（变大到2.2倍）
+        minSize: 0.7,  // 最小缩小倍数
+        damageBonus: 3  // 变大时伤害倍数（最大3倍伤害）
+    }
+];
+
+let arenaData = {
+    baseTier: 1,            // 当前发放的基准陀螺等级
+    fragments: 0,           // 基准碎片 (满3升1)
+    gachaTickets: 0,        // 抽奖券
+    efficiencyStars: 0,     // 效率之星
+    lastCheckedDate: null,  // 记录上次派发每日零星奖励的日期
+    inventory: [],          // 当前场下留存
+    discoveredTops: [],     // 曾经出现过的陀螺类型ID（用于图鉴高亮）
+    currentLevel: 1,        // 关卡进度
+    dailyTasks: {           // 每日任务完成情况
+        homework: false,
+        essay: false,
+        perfect: false,
+        date: null
+    }
+};
+
+// 画布渲染控制
+const canvas = document.getElementById('arenaCanvas');
+const ctx = canvas.getContext('2d');
+let w, h;
+let topsOnBoard = []; // 存活在网格或场上的所有陀螺
+let particles = [];
+let animFrame = null;
+let gameState = 'setup'; // setup, playing, ended
+
+// 布局控制
+const GRID_COLS = 6;
+const GRID_ROWS = 5;
+let cellSize = 120; // 会根据屏幕自适应
+
+// selectedDeployTopId 已废除，改为 autoDeployToGrid 自动落子
+
+let matchTimeoutId = null; 
+
+// ===== 初始化引擎 =====
+function initEngine() {
+    loadData();
+    
+    // 修复未放置的特殊陀螺（gridR: -1）
+    fixUnplacedSpecialTops();
+    
+    checkDailyRewards();
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // 初始化Z键监听（用于解锁家长评定按钮）
+    initRatingButtonLock();
+    
+    updateHUD();
+    buildGridOverlay();
+    
+    // 初始化时生成一波假设的敌人（为了画面有东西）
+    spawnEnemies();
+
+    // 绘制循环
+    requestAnimationFrame(renderLoop);
+}
+
+// 修复未放置的特殊陀螺，自动寻找空位放置
+function fixUnplacedSpecialTops() {
+    let needsSave = false;
+    
+    arenaData.inventory.forEach(item => {
+        if (item.isSpecial && item.gridR < 0 && item.gridC < 0) {
+            // 寻找空位
+            for (let r = 0; r < GRID_ROWS; r++) {
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const occupied = arenaData.inventory.some(i => 
+                        i.gridR >= 0 && i.gridC >= 0 && i.gridR === r && i.gridC === c
+                    );
+                    if (!occupied) {
+                        item.gridR = r;
+                        item.gridC = c;
+                        needsSave = true;
+                        console.log(`Fixed special top ${item.id} to grid (${r}, ${c})`);
+                        return; // 只修复一个，避免多个都放到同一个位置
+                    }
+                }
+            }
+        }
+    });
+    
+    if (needsSave) {
+        saveData();
+    }
+}
+
+// ===== Z键解锁家长评定按钮 =====
+let isZKeyPressed = false;
+
+function initRatingButtonLock() {
+    // 监听键盘按下
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'z' || e.key === 'Z') {
+            isZKeyPressed = true;
+            unlockRatingButtons();
+        }
+    });
+    
+    // 监听键盘释放
+    document.addEventListener('keyup', (e) => {
+        if (e.key === 'z' || e.key === 'Z') {
+            isZKeyPressed = false;
+            lockRatingButtons();
+        }
+    });
+}
+
+function unlockRatingButtons() {
+    const buttons = ['btnRate1', 'btnRate2', 'btnRate3'];
+    buttons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.classList.remove('rating-locked');
+            btn.classList.add('rating-unlocked');
+        }
+    });
+}
+
+function lockRatingButtons() {
+    const buttons = ['btnRate1', 'btnRate2', 'btnRate3'];
+    buttons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.classList.remove('rating-unlocked');
+            btn.classList.add('rating-locked');
+        }
+    });
+}
+
+// 修改awardEfficiencyStar函数，添加Z键验证
+const originalAwardEfficiencyStar = awardEfficiencyStar;
+awardEfficiencyStar = function(starCount) {
+    if (!isZKeyPressed) {
+        // Z键未按住，不执行任何操作
+        return;
+    }
+    originalAwardEfficiencyStar(starCount);
+}
+
+function loadData() {
+    let raw = localStorage.getItem(ARENA_KEY);
+    if (raw) {
+        arenaData = Object.assign(arenaData, JSON.parse(raw));
+    } else {
+        saveData();
+    }
+    
+    // 初始化直接利用共用的资产同步函数将缓存写入战场
+    reloadAssetsFromInventory();
+}
+function saveData() {
+    localStorage.setItem(ARENA_KEY, JSON.stringify(arenaData));
+}
+
+// ===== 核心每日算法 (碎片与券发放) =====
+function checkDailyRewards() {
+    let tData = getTowerData();
+    let today = new Date().toLocaleDateString('zh-CN');
+    
+    if (arenaData.lastCheckedDate === today) return; // 今天已经结算过了
+
+    // 遍历昨/今积分历史，寻找 `hwDone` 或 `essay`
+    // 判断是否有触发条件
+    let qualify = false;
+    for (let record of tData.history || []) {
+        if (record.date === today && (record.label.includes('学校作业全') || record.label.includes('达标作文'))) {
+            qualify = true;
+            break;
+        }
+    }
+
+    if (qualify) {
+        // 完成作业：给1个碎片 + 1张抽奖券
+        arenaData.fragments += 1;
+        arenaData.gachaTickets += 1;
+        
+        // 碎片满 3 片升级
+        if (arenaData.fragments >= 3) {
+            arenaData.fragments = 0;
+            if (arenaData.baseTier < 50) {
+                arenaData.baseTier += 1;
+            }
+        }
+        arenaData.lastCheckedDate = today;
+        saveData();
+    }
+}
+
+// ===== 画布与渲染系统 =====
+function resizeCanvas() {
+    w = window.innerWidth;
+    h = window.innerHeight;
+    canvas.width = w;
+    canvas.height = h;
+}
+
+function renderLoop() {
+    // 画布清理（带有拖影效果）- 使用淡蓝色背景，不刺眼
+    ctx.fillStyle = 'rgba(219, 234, 254, 0.4)';
+    ctx.fillRect(0, 0, w, h);
+    
+    // 如果是游戏状态，更新物理
+    if (gameState === 'playing') {
+        updatePhysics();
+        
+        // 扫清死掉的陀螺，并制造爆炸震屏特效
+        for (let i = topsOnBoard.length - 1; i >= 0; i--) {
+            if (topsOnBoard[i].hp <= 0) {
+                let deadTop = topsOnBoard[i];
+                createParticles(deadTop.x, deadTop.y, deadTop.color);
+                createParticles(deadTop.x, deadTop.y, '#ffffff');
+                createParticles(deadTop.x, deadTop.y, '#ff0000');
+                topsOnBoard.splice(i, 1);
+                triggerShake(); // 只有机甲爆破了才震动半秒
+            }
+        }
+        
+        // 胜负判定引擎
+        let enemiesCount = topsOnBoard.filter(t => t.isEnemy).length;
+        let playersCount = topsOnBoard.filter(t => !t.isEnemy).length;
+        
+        if (enemiesCount === 0) {
+            if (matchTimeoutId) clearTimeout(matchTimeoutId);
+            endMatch(true); // 斩草除根，赢
+        } else if (playersCount === 0) {
+            if (matchTimeoutId) clearTimeout(matchTimeoutId);
+            endMatch(false); // 全军覆没，输
+        }
+    } else if (gameState === 'setup') {
+        // === 极其致命与丝滑的更新：备战区全自动雷达级吸附对齐系统 ===
+        // 在这之前由于浏览器渲染或者页面 Transition，getBoundingClientRect 获取到了宽度或坐标为0！
+        // 彻底丢弃静态计算，改为引擎级实时逐帧拉取真正的物理排布，并伴随缓动动画
+        topsOnBoard.forEach(t => {
+            if (!t.isEnemy && t.gridR >= 0 && t.gridC >= 0) {
+                let cell = document.querySelector(`.grid-cell[data-r="${t.gridR}"][data-c="${t.gridC}"]`);
+                if (cell) {
+                    let rect = cell.getBoundingClientRect();
+                    // 仅当 DOM 有有效实体且被真正渲染时，更新其锚点坐标
+                    if (rect.width > 0 && rect.height > 0) {
+                        let targetX = rect.left + rect.width / 2;
+                        let targetY = rect.top + rect.height / 2;
+                        
+                        // 初次登场光速部署，后续平滑过渡（例如浏览器拉升或动画过程）
+                        if (t.x === 0 && t.y === 0) {
+                            t.x = targetX;
+                            t.y = targetY;
+                        } else {
+                            t.x += (targetX - t.x) * 0.25; 
+                            t.y += (targetY - t.y) * 0.25;
+                        }
+                    }
+                }
+            }
+        });
+        
+        // --- 敌军战阵怠速呼吸动画 ---
+        topsOnBoard.forEach(t => {
+            if (t.isEnemy) {
+                t.angle += 0.05; // 仅自转光环
+            } else {
+                t.angle += 0.05;
+            }
+        });
+    }
+
+    // 渲染粒子与主光影实体
+    renderParticles();
+    renderTops();
+    
+    animFrame = requestAnimationFrame(renderLoop);
+}
+
+// ===== 获取动态质量（特殊陀螺会随大小变化）=====
+function getDynamicMass(top) {
+    if (!top.isSpecial || top.specialId !== 'huluwa1') {
+        return top.mass;
+    }
+    
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa1');
+    if (!specialTop) return top.mass;
+    
+    // 根据当前大小计算质量
+    const time = Date.now() * 0.001;
+    const sizeMultiplier = specialTop.minSize + (specialTop.maxSize - specialTop.minSize) * 
+                          (0.5 + 0.5 * Math.sin(time));
+    
+    // 质量随大小线性增加
+    return top.mass * sizeMultiplier;
+}
+
+// ===== 特殊陀螺伤害加成计算 =====
+function getSpecialDamageBonus(top, baseDamage) {
+    if (!top.isSpecial || top.specialId !== 'huluwa1') {
+        return baseDamage;
+    }
+    
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa1');
+    if (!specialTop) return baseDamage;
+    
+    // 根据当前大小计算伤害加成
+    const time = Date.now() * 0.001;
+    const sizeMultiplier = specialTop.minSize + (specialTop.maxSize - specialTop.minSize) * 
+                          (0.5 + 0.5 * Math.sin(time));
+    
+    // 越大伤害越高，最大时伤害3倍
+    const damageBonus = 1 + (sizeMultiplier - specialTop.minSize) / 
+                      (specialTop.maxSize - specialTop.minSize) * 
+                      (specialTop.damageBonus - 1);
+    
+    return baseDamage * damageBonus;
+}
+
+// ===== 战场上特殊陀螺渲染 =====
+function renderSpecialTopOnBoard(top, cx, cy, r) {
+    const specialTop = SPECIAL_TOPS.find(st => st.id === top.specialId);
+    if (!specialTop) return;
+    
+    ctx.save();
+    ctx.translate(cx, cy);
+    
+    const hRatio = 0.55;
+    const color = specialTop.color;
+    
+    // 特殊能力：大小变化动画
+    let sizeMultiplier = 1;
+    if (specialTop.ability === 'sizeChange') {
+        // 根据时间周期性变化大小
+        const time = Date.now() * 0.001;
+        sizeMultiplier = specialTop.minSize + (specialTop.maxSize - specialTop.minSize) * 
+                        (0.5 + 0.5 * Math.sin(time));
+        r *= sizeMultiplier;
+    }
+    
+    // 特殊光效 - 葫芦娃大娃的红色光环
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = color;
+    
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 特殊陀螺独特的葫芦形状设计
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+    
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦上部小圆
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.3, -r * 0.2, r * 0.6, r * 0.4);
+    
+    // 葫芦顶部
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.65, r * 0.25, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 装饰叶子
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.ellipse(r * 0.15, -r * 0.75, r * 0.2, r * 0.08, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 旋转的光环效果
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 2);
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 10]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    // 特殊标记 - 大娃表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👶', 0, -r * 0.1);
+    
+    ctx.restore();
+    
+    // 显示名称
+    ctx.font = 'bold 14px "Arial Black", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = '#fbbf24';
+    ctx.strokeText(specialTop.name, cx, cy + r + 25);
+    ctx.fillText(specialTop.name, cx, cy + r + 25);
+    
+    // 血条
+    const maxHp = specialTop.hp;
+    const hpRatio = Math.max(0, top.hp / maxHp);
+    const barW = r * 1.5;
+    const barH = 5;
+    const barY = cy + r + 10;
+    
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(cx - barW/2, barY, barW, barH);
+    ctx.fillStyle = '#10b981';
+    ctx.fillRect(cx - barW/2, barY, barW * hpRatio, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - barW/2, barY, barW, barH);
+}
+
+// 取色微调器 (生成 3D 阴影用)
+function shadeColor(color, percent) {
+    if (!color) return '#000000';
+    // 强制把 #fff 之类的三位简短色值转换为 #ffffff 标准六位色值，以防止越界导致致命的 NaN 渲染崩溃
+    if (color.length === 4) {
+        color = '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+    }
+    let R = parseInt(color.substring(1,3), 16);
+    let G = parseInt(color.substring(3,5), 16);
+    let B = parseInt(color.substring(5,7), 16);
+    R = parseInt(R * (100 + percent) / 100);
+    G = parseInt(G * (100 + percent) / 100);
+    B = parseInt(B * (100 + percent) / 100);
+    R = Math.max(0, Math.min(255, R)) || 0;
+    G = Math.max(0, Math.min(255, G)) || 0;
+    B = Math.max(0, Math.min(255, B)) || 0;
+    let RR = R.toString(16).padStart(2, '0');
+    let GG = G.toString(16).padStart(2, '0');
+    let BB = B.toString(16).padStart(2, '0');
+    return "#"+RR+GG+BB;
+}
+
+// ==== 图鉴专用：渲染单个陀螺的3D预览到Canvas ====
+function renderTopPreview(type, canvasSize = 120) {
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.width = canvasSize;
+    previewCanvas.height = canvasSize;
+    const pCtx = previewCanvas.getContext('2d');
+    
+    // 透明背景
+    pCtx.clearRect(0, 0, canvasSize, canvasSize);
+    
+    const cx = canvasSize / 2;
+    const cy = canvasSize / 2 + 10;
+    const r = canvasSize * 0.35;
+    const t = type.tier;
+    const hRatio = 0.55;
+    const angle = Date.now() * 0.001; // 静态旋转角度
+    
+    pCtx.save();
+    pCtx.translate(cx, cy);
+    
+    // 底部阴影
+    pCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    pCtx.beginPath();
+    pCtx.ellipse(0, r * hRatio + 5, r, r * hRatio, 0, 0, Math.PI * 2);
+    pCtx.fill();
+    
+    // 友方蓝色光环底圈
+    pCtx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+    pCtx.beginPath();
+    pCtx.ellipse(0, 3, r * 1.2, r * 1.2 * hRatio, 0, 0, Math.PI * 2);
+    pCtx.fill();
+    pCtx.strokeStyle = '#38bdf8';
+    pCtx.lineWidth = 1.5;
+    pCtx.stroke();
+    
+    // 中心支撑柱
+    let pegR = 2 + t * 0.3;
+    let pegH = Math.floor(r * hRatio + 5);
+    for (let py = pegH; py >= 0; py--) {
+        pCtx.beginPath();
+        pCtx.ellipse(0, py, pegR, pegR * hRatio, 0, 0, Math.PI * 2);
+        if (py === pegH) {
+            pCtx.fillStyle = type.color;
+        } else {
+            let pegGrad = pCtx.createLinearGradient(-pegR, 0, pegR, 0);
+            pegGrad.addColorStop(0, '#111');
+            pegGrad.addColorStop(0.3, '#f8fafc');
+            pegGrad.addColorStop(0.8, '#475569');
+            pegGrad.addColorStop(1, '#0f172a');
+            pCtx.fillStyle = pegGrad;
+        }
+        pCtx.fill();
+    }
+    
+    // 根据等级定义3D切片组
+    let parts = [];
+    if (t === 1) {
+        parts.push({ scale: 1.0, height: 4, color: type.color });
+    } else if (t === 2) {
+        parts.push({ scale: 1.0, height: 5, color: '#555' });
+        parts.push({ scale: 0.8, height: 4, color: type.color, dots: 2 });
+    } else if (t === 3) {
+        parts.push({ scale: 0.7, height: 4, color: '#333' });
+        parts.push({ scale: 1.1, height: 6, color: type.color, dots: 3 });
+    } else if (t === 4) {
+        parts.push({ scale: 0.6, height: 5, color: '#555' });
+        parts.push({ scale: 1.0, height: 6, color: type.color, dots: 4 });
+        parts.push({ scale: 0.4, height: 5, color: '#fff' });
+    } else if (t === 5) {
+        parts.push({ scale: 0.9, height: 3, color: type.color });
+        parts.push({ scale: 1.0, height: 7, color: '#2b2b2b', dots: 5 });
+        parts.push({ scale: 0.7, height: 6, color: type.color });
+    } else if (t === 6) {
+        parts.push({ scale: 1.0, height: 8, color: type.color, dots: 3 });
+        parts.push({ scale: 0.9, height: 2, color: '#fff' });
+        parts.push({ scale: 0.5, height: 8, color: '#111' });
+        parts.push({ scale: 0.3, height: 4, color: type.color });
+    } else if (t === 7) {
+        parts.push({ scale: 0.4, height: 6, color: '#111' });
+        parts.push({ scale: 1.2, height: 5, color: type.color, dots: 6 });
+        parts.push({ scale: 0.5, height: 7, color: '#ccc', dots: 3, rev: true });
+    } else if (t === 8) {
+        parts.push({ scale: 0.8, height: 6, color: '#222' });
+        parts.push({ scale: 1.1, height: 7, color: type.color, dots: 4 });
+        parts.push({ scale: 0.9, height: 5, color: '#fff' });
+        parts.push({ scale: 0.5, height: 9, color: type.color, dots: 4, rev: true });
+    } else if (t === 9) {
+        parts.push({ scale: 0.7, height: 5, color: '#000' });
+        parts.push({ scale: 1.0, height: 9, color: type.color, dots: 8 });
+        parts.push({ scale: 0.8, height: 3, color: '#333' });
+        parts.push({ scale: 0.6, height: 6, color: type.color, dots: 4 });
+        parts.push({ scale: 0.2, height: 12, color: '#fff' });
+    } else if (t === 10) {
+        parts.push({ scale: 0.5, height: 6, color: '#0f172a' });
+        parts.push({ scale: 1.2, height: 9, color: type.color, dots: 10 });
+        parts.push({ scale: 1.0, height: 5, color: '#fff' });
+        parts.push({ scale: 0.7, height: 7, color: type.color, dots: 5, rev: true });
+        parts.push({ scale: 0.3, height: 15, color: '#fbbf24' });
+    } else if (t === 11) {
+        parts.push({ scale: 0.6, height: 8, color: '#1e293b' });
+        parts.push({ scale: 1.0, height: 7, color: '#cbd5e1', dots: 6 });
+        parts.push({ scale: 1.3, height: 6, color: type.color, dots: 12, rev: true });
+        parts.push({ scale: 0.8, height: 5, color: '#fff' });
+        parts.push({ scale: 0.4, height: 18, color: type.color });
+    } else if (t === 12) {
+        parts.push({ scale: 0.5, height: 10, color: '#0f172a' });
+        parts.push({ scale: 1.1, height: 8, color: type.color, dots: 8 });
+        parts.push({ scale: 1.4, height: 5, color: '#fff', dots: 4 });
+        parts.push({ scale: 1.0, height: 6, color: type.color, dots: 6, rev: true });
+        parts.push({ scale: 0.3, height: 22, color: '#fbbf24' });
+    } else if (t <= 20) {
+        // LV13-20: 动物系列风格 - 更流线型
+        let intensity = (t - 12) / 8;
+        parts.push({ scale: 0.4 + intensity * 0.2, height: 8 + intensity * 4, color: '#1e293b' });
+        parts.push({ scale: 1.0 + intensity * 0.3, height: 6 + intensity * 2, color: type.color, dots: Math.floor(8 + intensity * 8) });
+        parts.push({ scale: 0.9, height: 4, color: '#fff' });
+        parts.push({ scale: 0.6, height: 10 + intensity * 5, color: type.color, dots: Math.floor(6 + intensity * 4), rev: true });
+        parts.push({ scale: 0.25, height: 25 + intensity * 10, color: '#fbbf24' });
+    } else if (t <= 30) {
+        // LV21-30: 神话系列风格 - 更华丽
+        let intensity = (t - 20) / 10;
+        parts.push({ scale: 0.5, height: 12, color: '#0f172a' });
+        parts.push({ scale: 0.8, height: 5, color: '#cbd5e1', dots: 6 });
+        parts.push({ scale: 1.2 + intensity * 0.2, height: 8 + intensity * 4, color: type.color, dots: Math.floor(10 + intensity * 10) });
+        parts.push({ scale: 1.0, height: 6, color: '#fff', dots: 4 });
+        parts.push({ scale: 0.7, height: 12 + intensity * 6, color: type.color, dots: Math.floor(8 + intensity * 6), rev: true });
+        parts.push({ scale: 0.3, height: 30 + intensity * 15, color: '#fbbf24' });
+    } else if (t <= 40) {
+        // LV31-40: 元素系列风格 - 更几何化
+        let intensity = (t - 30) / 10;
+        parts.push({ scale: 0.6, height: 10, color: '#1e293b' });
+        parts.push({ scale: 1.0, height: 4, color: '#94a3b8', dots: 8 });
+        parts.push({ scale: 1.3 + intensity * 0.2, height: 10 + intensity * 3, color: type.color, dots: Math.floor(12 + intensity * 8) });
+        parts.push({ scale: 1.1, height: 5, color: '#e2e8f0' });
+        parts.push({ scale: 0.9, height: 8, color: type.color, dots: 6 });
+        parts.push({ scale: 0.5, height: 15 + intensity * 10, color: type.color, dots: Math.floor(6 + intensity * 4), rev: true });
+        parts.push({ scale: 0.2, height: 40 + intensity * 20, color: '#fbbf24' });
+    } else {
+        // LV41-50: 传说系列风格 - 最华丽
+        let intensity = (t - 40) / 10;
+        parts.push({ scale: 0.7, height: 15, color: '#0f172a' });
+        parts.push({ scale: 1.1, height: 6, color: '#64748b', dots: 10 });
+        parts.push({ scale: 1.4, height: 8, color: '#fff', dots: 6 });
+        parts.push({ scale: 1.5 + intensity * 0.1, height: 12 + intensity * 4, color: type.color, dots: Math.floor(16 + intensity * 8) });
+        parts.push({ scale: 1.2, height: 6, color: '#e2e8f0', dots: 8 });
+        parts.push({ scale: 0.8, height: 18 + intensity * 8, color: type.color, dots: Math.floor(10 + intensity * 6), rev: true });
+        parts.push({ scale: 0.4, height: 50 + intensity * 30, color: '#fbbf24' });
+    }
+    
+    // 从底部向顶部渲染3D实体
+    let currentY = 0;
+    for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+        let part = parts[pIdx];
+        let layerR = r * part.scale;
+        let layerH = part.height;
+        
+        // 绘制侧表面
+        for (let i = layerH; i > 0; i--) {
+            let y = currentY - i;
+            pCtx.beginPath();
+            pCtx.ellipse(0, y, layerR, layerR * hRatio, 0, 0, Math.PI * 2);
+            
+            let sideGrad = pCtx.createLinearGradient(-layerR, 0, layerR, 0);
+            sideGrad.addColorStop(0, shadeColor(part.color, -50));
+            sideGrad.addColorStop(0.3, part.color);
+            sideGrad.addColorStop(0.7, shadeColor(part.color, -60));
+            sideGrad.addColorStop(1, shadeColor(part.color, -80));
+            
+            pCtx.fillStyle = sideGrad;
+            pCtx.fill();
+        }
+        
+        // 绘制顶面
+        currentY -= layerH;
+        pCtx.beginPath();
+        pCtx.ellipse(0, currentY, layerR, layerR * hRatio, 0, 0, Math.PI * 2);
+        
+        let topGrad = pCtx.createLinearGradient(-layerR, currentY - layerR, layerR, currentY + layerR);
+        topGrad.addColorStop(0, '#ffffff');
+        topGrad.addColorStop(0.4, part.color);
+        topGrad.addColorStop(1, shadeColor(part.color, -30));
+        
+        pCtx.fillStyle = topGrad;
+        pCtx.fill();
+        
+        pCtx.lineWidth = Math.max(0.5, layerR * 0.05);
+        pCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        pCtx.stroke();
+        
+        // 科幻光环
+        if (part.dots > 0) {
+            pCtx.save();
+            pCtx.translate(0, currentY);
+            pCtx.scale(1, hRatio);
+            pCtx.rotate(angle * (part.rev ? -1.5 : 1.0));
+            
+            pCtx.fillStyle = 'rgba(255,255,255,0.9)';
+            let dotR = layerR * 0.75;
+            for (let a = 0; a < part.dots; a++) {
+                let rad = (a * Math.PI * 2) / part.dots;
+                pCtx.beginPath();
+                pCtx.arc(Math.cos(rad) * dotR, Math.sin(rad) * dotR, 2, 0, Math.PI * 2);
+                pCtx.fill();
+            }
+            pCtx.restore();
+        }
+    }
+    
+    pCtx.restore();
+    return previewCanvas.toDataURL('image/png');
+}
+
+// ==== 全新设计：真 3D 圆柱叠加科技渲染引擎 ====
+function renderTops() {
+    topsOnBoard.forEach(top => {
+        let cx = top.x;
+        let cy = top.y;
+        let r = top.radius;
+        let t = top.tier || 1;
+
+        // 特殊陀螺使用独立渲染
+        if (top.isSpecial) {
+            renderSpecialTopOnBoard(top, cx, cy, r);
+            return;
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // --- 1. 拖影与底部阴影层 ---
+        let hRatio = 0.55; // 3D 透视角度，0.55 呈现俯视 45 度角的质感
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // --- 1.2 极度明显的阵营高光底圈识别 ---
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = top.isEnemy ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = top.isEnemy ? '#ef4444' : '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 核心修复：移除全局 ctx.rotate(top.angle)，强制保证 3D 图层严格沿着屏幕 Y 轴(垂直立起)堆叠！
+        // 金属高光应与环境光对齐(不随本体旋转)，只有发光点引擎需要自转。
+        // 这是隐藏在底层盘下面的“这根棍”，支撑着从引擎重心到落地阴影中心的链接，呈现完美三维结构
+        let pegR = 3 + t * 0.4; // 随等级逐渐变得更结实
+        let pegH = Math.floor(r * hRatio + 8); // 底部延伸直到恰好与影子的中心点发生物理重合！
+        for (let py = pegH; py >= 0; py--) {
+            ctx.beginPath();
+            ctx.ellipse(0, py, pegR, pegR * hRatio, 0, 0, Math.PI * 2);
+            if (py === pegH) {
+                // 圆珠笔尖轴承点：映射机甲本身的能量核光泽
+                ctx.fillStyle = top.color; 
+            } else {
+                let pegGrad = ctx.createLinearGradient(-pegR, 0, pegR, 0);
+                pegGrad.addColorStop(0, '#111');
+                pegGrad.addColorStop(0.3, '#f8fafc'); // 高反光点
+                pegGrad.addColorStop(0.8, '#475569');
+                pegGrad.addColorStop(1, '#0f172a');
+                ctx.fillStyle = pegGrad;
+            }
+            ctx.fill();
+        }
+
+        // --- 2. 为每1级量身定制完全不同的 3D 堆叠切片组（从下到上） ---
+        let parts = [];
+        if (t === 1) { // L1: 简易薄饼
+            parts.push({ scale: 1.0, height: 4, color: top.color });
+        } else if (t === 2) { // L2: 双层浅盘
+            parts.push({ scale: 1.0, height: 5, color: '#555' });
+            parts.push({ scale: 0.8, height: 4, color: top.color, dots: 2 });
+        } else if (t === 3) { // L3: 宽翼平盘
+            parts.push({ scale: 0.7, height: 4, color: '#333' });
+            parts.push({ scale: 1.1, height: 6, color: top.color, dots: 3 });
+        } else if (t === 4) { // L4: 高跟三塔
+            parts.push({ scale: 0.6, height: 5, color: '#555' });
+            parts.push({ scale: 1.0, height: 6, color: top.color, dots: 4 });
+            parts.push({ scale: 0.4, height: 5, color: '#fff' });
+        } else if (t === 5) { // L5: 倒扣铁桶
+            parts.push({ scale: 0.9, height: 3, color: top.color });
+            parts.push({ scale: 1.0, height: 7, color: '#2b2b2b', dots: 5 });
+            parts.push({ scale: 0.7, height: 6, color: top.color });
+        } else if (t === 6) { // L6: 凹陷聚能环
+            parts.push({ scale: 1.0, height: 8, color: top.color, dots: 3 });
+            parts.push({ scale: 0.9, height: 2, color: '#fff' });
+            parts.push({ scale: 0.5, height: 8, color: '#111' });
+            parts.push({ scale: 0.3, height: 4, color: top.color });
+        } else if (t === 7) { // L7: 悬浮飞碟（带逆光环）
+            parts.push({ scale: 0.4, height: 6, color: '#111' });
+            parts.push({ scale: 1.2, height: 5, color: top.color, dots: 6 });
+            parts.push({ scale: 0.5, height: 7, color: '#ccc', dots: 3, rev: true });
+        } else if (t === 8) { // L8: 千层重装甲
+            parts.push({ scale: 0.8, height: 6, color: '#222' });
+            parts.push({ scale: 1.1, height: 7, color: top.color, dots: 4 });
+            parts.push({ scale: 0.9, height: 5, color: '#fff' });
+            parts.push({ scale: 0.5, height: 9, color: top.color, dots: 4, rev: true });
+        } else if (t === 9) { // L9: 深渊黑洞堆芯
+            parts.push({ scale: 0.7, height: 5, color: '#000' });
+            parts.push({ scale: 1.0, height: 9, color: top.color, dots: 8 });
+            parts.push({ scale: 0.8, height: 3, color: '#333' });
+            parts.push({ scale: 0.6, height: 6, color: top.color, dots: 4 });
+            parts.push({ scale: 0.2, height: 12, color: '#fff' });
+        } else if (t === 10) { // L10: 帝王能量塔
+            parts.push({ scale: 0.5, height: 6, color: '#0f172a' });
+            parts.push({ scale: 1.2, height: 9, color: top.color, dots: 10 });
+            parts.push({ scale: 1.0, height: 5, color: '#fff' });
+            parts.push({ scale: 0.7, height: 7, color: top.color, dots: 5, rev: true });
+            parts.push({ scale: 0.3, height: 15, color: '#fbbf24' }); // 金色尖椎
+        } else if (t === 11) { // 钻石：反重力水晶
+            parts.push({ scale: 0.6, height: 8, color: '#1e293b' });
+            parts.push({ scale: 1.0, height: 7, color: '#cbd5e1', dots: 6 });
+            parts.push({ scale: 1.3, height: 6, color: top.color, dots: 12, rev: true });
+            parts.push({ scale: 0.8, height: 5, color: '#fff' });
+            parts.push({ scale: 0.4, height: 18, color: top.color });
+        } else { // 神阶巨钻 (t>=12)
+            parts.push({ scale: 0.8, height: 6, color: '#475569' });
+            parts.push({ scale: 1.4, height: 11, color: top.color, dots: 16 });
+            parts.push({ scale: 1.1, height: 6, color: '#94a3b8' });
+            parts.push({ scale: 0.8, height: 9, color: '#e2e8f0', dots: 8, rev: true });
+            parts.push({ scale: 0.5, height: 7, color: top.color });
+            parts.push({ scale: 0.2, height: 30, color: '#fbbf24' }); // 超长贯穿神枪
+        }
+
+        // --- 3. 从底部向顶部，逐像素切片渲染 3D 实体 ---
+        let currentY = 0;
+        
+        for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+            let part = parts[pIdx];
+            let layerR = r * part.scale;
+            let layerH = part.height;
+            
+            // 绘制侧表面厚度 (Y轴拉伸叠加法)
+            for (let i = layerH; i > 0; i--) {
+                let y = currentY - i;
+                ctx.beginPath();
+                ctx.ellipse(0, y, layerR, layerR * hRatio, 0, 0, Math.PI * 2);
+                
+                // 侧边 3D 球形光照渐变
+                let sideGrad = ctx.createLinearGradient(-layerR, 0, layerR, 0);
+                sideGrad.addColorStop(0, shadeColor(part.color, -50));
+                sideGrad.addColorStop(0.3, part.color);
+                sideGrad.addColorStop(0.7, shadeColor(part.color, -60));
+                sideGrad.addColorStop(1, shadeColor(part.color, -80));
+                
+                ctx.fillStyle = sideGrad;
+                ctx.fill();
+            }
+            
+            // 绘制当前部件的光滑顶面
+            currentY -= layerH;
+            ctx.beginPath();
+            ctx.ellipse(0, currentY, layerR, layerR * hRatio, 0, 0, Math.PI * 2);
+            
+            let topGrad = ctx.createLinearGradient(-layerR, currentY - layerR, layerR, currentY + layerR);
+            topGrad.addColorStop(0, '#ffffff'); // 顶部高光
+            topGrad.addColorStop(0.4, part.color);
+            topGrad.addColorStop(1, shadeColor(part.color, -30));
+            
+            ctx.fillStyle = topGrad;
+            ctx.fill();
+            
+            // 顶面加入细微硬切角高光描边
+            ctx.lineWidth = Math.max(0.5, layerR * 0.05);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.stroke();
+            
+            // --- 4. 追加科幻光环自转动画 (根据每层的明确定义) ---
+            if (part.dots > 0) {
+                ctx.save();
+                ctx.translate(0, currentY);
+                ctx.scale(1, hRatio); // 模拟俯视
+                
+                ctx.rotate(top.angle * (part.rev ? -1.5 : 1.0)); // 差速正反转轮毂
+                
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                let dotR = layerR * 0.75;
+                for (let a = 0; a < part.dots; a++) {
+                    let rad = (a * Math.PI * 2) / part.dots;
+                    ctx.beginPath();
+                    ctx.arc(Math.cos(rad) * dotR, Math.sin(rad) * dotR, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        ctx.restore();
+        
+        // --- 5. 画外标语 (重新对焦高科技极简文字) ---
+        // 收到命令：移除全部敌方的“目标：XXX”名称标语，让画面更干净。我军保留 LV 级别。
+        // 显示陀螺等级：敌方显示在头顶上方（血条上方），我方显示在底座下方
+        let displayName = top.name;
+        ctx.font = 'bold 14px "Arial Black", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3;
+        
+        if (top.isEnemy) {
+            // 敌方：等级显示在头顶上方（血条上方）
+            ctx.fillStyle = '#f87171'; // 红色调
+            ctx.strokeText(displayName, top.x, top.y - top.radius - 25);
+            ctx.fillText(displayName, top.x, top.y - top.radius - 25);
+        } else {
+            // 我方：等级显示在底座下方
+            ctx.fillStyle = '#67e8f9';
+            ctx.strokeText(displayName, top.x, top.y + top.radius + 25);
+            ctx.fillText(displayName, top.x, top.y + top.radius + 25);
+        }
+
+        // --- 6. 核心血条显示 (HP Bar) ---
+        let maxHp = top.isEnemy ? 20 : TOP_TYPES.find(x => x.id === top.typeId).hp;
+        let hpRatio = Math.max(0, top.hp / maxHp);
+        let barW = r * 1.5;
+        let barH = 5;
+        // 敌人在头顶上面，我们在底座下面
+        let barY = top.isEnemy ? top.y - top.radius - 12 : top.y + top.radius + 10;
+        
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(top.x - barW/2, barY, barW, barH);
+        ctx.fillStyle = top.isEnemy ? '#ef4444' : '#10b981';
+        ctx.fillRect(top.x - barW/2, barY, barW * hpRatio, barH);
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(top.x - barW/2, barY, barW, barH);
+    });
+}
+
+// ===== 物理引擎与碰撞机制 =====
+function updatePhysics() {
+    for (let i = 0; i < topsOnBoard.length; i++) {
+        let t1 = topsOnBoard[i];
+        
+        // 移动
+        t1.x += t1.vx;
+        t1.y += t1.vy;
+        t1.angle += t1.rSpeed;
+        
+        // 全屏边界反弹逻辑 & 孤狼索敌制导
+        let hitWall = false;
+        if (t1.x - t1.radius < 0) { t1.x = t1.radius; t1.vx *= -1; hitWall = true; }
+        if (t1.x + t1.radius > w) { t1.x = w - t1.radius; t1.vx *= -1; hitWall = true; }
+        if (t1.y - t1.radius < 0) { t1.y = t1.radius; t1.vy *= -1; hitWall = true; }
+        if (t1.y + t1.radius > h) { t1.y = h - t1.radius; t1.vy *= -1; hitWall = true; }
+        
+        if (hitWall) {
+            createParticles(t1.x, t1.y, t1.color);
+            
+            // 扫描场上同阵营与敌对阵营数量
+            let myTeam = topsOnBoard.filter(t => t.isEnemy === t1.isEnemy);
+            let oppTeam = topsOnBoard.filter(t => t.isEnemy !== t1.isEnemy);
+            
+            // 触发全军雷达索敌巡航系统：由于场地极大，改为所有机甲每次碰撞物理墙壁后，
+            // 都会利用反弹力强行修正轨道，通过雷达锁定距离自己最近的死敌发动冲锋！
+            if (oppTeam.length > 0) {
+                // 找出距离最近的死敌
+                let target = oppTeam.reduce((prev, curr) => {
+                    let d1 = Math.pow(prev.x - t1.x, 2) + Math.pow(prev.y - t1.y, 2);
+                    let d2 = Math.pow(curr.x - t1.x, 2) + Math.pow(curr.y - t1.y, 2);
+                    return d1 < d2 ? prev : curr;
+                });
+                
+                let dx = target.x - t1.x;
+                let dy = target.y - t1.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                let speed = Math.sqrt(t1.vx*t1.vx + t1.vy*t1.vy);
+                // 强制将动能速度矢量无缝重指向最近的敌人，化身为不死不休的制导炮弹！
+                t1.vx = (dx / dist) * speed;
+                t1.vy = (dy / dist) * speed;
+            }
+        }
+        
+        // 圆级碰撞检测
+        for (let j = i + 1; j < topsOnBoard.length; j++) {
+            let t2 = topsOnBoard[j];
+            let dx = t2.x - t1.x;
+            let dy = t2.y - t1.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist < t1.radius + t2.radius) {
+                // 碰撞响应 (弹性碰撞)
+                let nx = dx / dist;
+                let ny = dy / dist;
+                let kx = (t1.vx - t2.vx);
+                let ky = (t1.vy - t2.vy);
+                
+                // 获取动态质量（特殊陀螺会随大小变化）
+                let m1 = getDynamicMass(t1);
+                let m2 = getDynamicMass(t2);
+                
+                let p = 2 * (nx * kx + ny * ky) / (m1 + m2);
+
+                t1.vx -= p * m2 * nx;
+                t1.vy -= p * m2 * ny;
+                t2.vx += p * m1 * nx;
+                t2.vy += p * m1 * ny;
+
+                // 防重叠修正
+                let overlap = 0.5 * (t1.radius + t2.radius - dist + 1);
+                t1.x -= overlap * nx;
+                t1.y -= overlap * ny;
+                t2.x += overlap * nx;
+                t2.y += overlap * ny;
+
+                // 屏幕震动 & 粒子
+                // 收到长官指令：取消轻微摩擦的烦人震屏，保留火花粒子
+                createParticles(t1.x + dx/2, t1.y + dy/2, t1.isEnemy !== t2.isEnemy ? '#ff0000' : '#ffffff');
+
+                // 播放碰撞音效（敌我碰撞时）
+                if (t1.isEnemy !== t2.isEnemy) {
+                    playCollisionSound();
+                }
+
+                // 实际硬核动能伤害计算
+                if (t1.isEnemy !== t2.isEnemy) {
+                    let relVel = Math.sqrt(kx*kx + ky*ky);
+                    if (relVel > 2) {
+                        // 相对速度越大，自身质量越大，给对方造成的粉碎力越强
+                        // 伤害系数从25降到15，让质量差异更明显
+                        let dmgToT2 = (relVel * m1) / 15;
+                        let dmgToT1 = (relVel * m2) / 15;
+                        
+                        // 特殊陀螺能力：大娃变大时伤害加倍
+                        dmgToT2 = getSpecialDamageBonus(t1, dmgToT2);
+                        dmgToT1 = getSpecialDamageBonus(t2, dmgToT1);
+                        
+                        t1.hp -= dmgToT1;
+                        t2.hp -= dmgToT2;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===== 音效系统 =====
+let audioContext = null;
+
+// 初始化音频上下文（需要用户交互后才能使用）
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+// 播放碰撞音效
+function playCollisionSound() {
+    if (!audioContext) {
+        initAudio();
+    }
+    if (!audioContext) return; // 如果浏览器不支持，直接返回
+
+    // 创建振荡器
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    // 连接节点
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // 设置音效参数 - 低沉的撞击声
+    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.1);
+
+    // 设置音量包络
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+    // 播放
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.15);
+}
+
+// ===== 视觉特效：屏幕震动与粒子系统 =====
+function triggerShake() {
+    const canvasWrap = document.getElementById('arenaCanvas');
+    canvasWrap.classList.remove('shake');
+    void canvasWrap.offsetWidth; // 触发重绘
+    canvasWrap.classList.add('shake');
+    
+    // 轻微闪屏
+    const flash = document.getElementById('screenFlash');
+    flash.style.opacity = '0.1';
+    setTimeout(() => { flash.style.opacity = '0'; }, 50);
+}
+
+function createParticles(x, y, color) {
+    for (let i = 0; i < 5; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            life: 1.0,
+            color: color
+        });
+    }
+}
+
+function renderParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.life -= 0.05;
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+            continue;
+        }
+        p.x += p.vx;
+        p.y += p.vy;
+        
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3 * p.life, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+}
+
+// ===== 网格与交互 =====
+function buildGridOverlay() {
+    const grid = document.getElementById('gridOverlay');
+    grid.innerHTML = '';
+    
+    for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+            let cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            // 添加坐标标识给后期的自动派兵寻找空位
+            cell.dataset.r = r;
+            cell.dataset.c = c;
+            
+            // 检查这个格子是否有资产占据
+            let occupant = topsOnBoard.find(t => !t.isEnemy && t.gridR === r && t.gridC === c);
+            if (occupant) {
+                cell.classList.add('occupied');
+                
+                // 核心视觉修复：把原先挡在格子正中央导致玩家看不清 3D 模型的巨大文字改成左上角科技感标牌
+                cell.innerHTML = `<div style="position: absolute; top: 4px; left: 6px; font-size: 14px; color: ${occupant.color}; font-weight: 900; text-shadow: 0 0 5px #000, 0 0 10px ${occupant.color};">${occupant.name}</div>`;
+                
+                // 增加用户互动：点击同类资产进行升星合成！
+                // 特殊陀螺不能合成
+                if (!occupant.isSpecial) {
+                    cell.onclick = () => tryMergeTop(occupant.typeId, r, c, cell);
+                }
+                
+                // 去掉原来极不稳定的 setTimeout 劫持坐标，全权交由 renderLoop 实时吸附
+            }
+            
+            grid.appendChild(cell);
+        }
+    }
+}
+
+// 核心资产同步映射：将本机的 inventory 数据转化到场上 topsOnBoard，并刷新网格 UI
+function reloadAssetsFromInventory() {
+    // 剔除己方老兵，仅保留原有的敌兵资产
+    topsOnBoard = topsOnBoard.filter(t => t.isEnemy);
+    
+    // 把清单里的资产一一挂载回 3D 渲染器里
+    if (arenaData.inventory && arenaData.inventory.length > 0) {
+        arenaData.inventory.forEach(inv => {
+            // 处理特殊陀螺
+            if (inv.isSpecial) {
+                let specialTop = SPECIAL_TOPS.find(t => t.id === inv.id);
+                if (specialTop) {
+                    topsOnBoard.push({
+                        typeId: inv.id,
+                        specialId: inv.id,
+                        isSpecial: true,
+                        tier: specialTop.tier,
+                        isEnemy: false,
+                        x: 0, y: 0, 
+                        vx: 0, vy: 0, rSpeed: 0, angle: 0,
+                        radius: 35, mass: specialTop.baseMass,
+                        color: specialTop.color, name: specialTop.name, hp: specialTop.hp,
+                        gridR: inv.gridR, gridC: inv.gridC
+                    });
+                }
+            } else {
+                // 处理普通陀螺
+                let targetTop = TOP_TYPES.find(t => t.id === inv.id);
+                if (targetTop) {
+                    topsOnBoard.push({
+                        typeId: targetTop.id,
+                        tier: targetTop.tier,
+                        isEnemy: false,
+                        x: 0, y: 0, 
+                        vx: 0, vy: 0, rSpeed: 0, angle: 0,
+                        radius: 35, mass: 10 + targetTop.tier * 2,
+                        color: targetTop.color, name: targetTop.name, hp: targetTop.hp,
+                        gridR: inv.gridR, gridC: inv.gridC
+                    });
+                }
+            }
+        });
+    }
+    
+    // 同步把 UI 上的 5x6 全铺满
+    buildGridOverlay();
+    updateHUD();
+}
+
+// 合成升级机制 (核心玩法的最后拼图)
+function tryMergeTop(typeId, r, c, cellElement) {
+    if (gameState !== 'setup') return;
+
+    let targetTopType = TOP_TYPES.find(t => t.id === typeId);
+    if (!targetTopType || targetTopType.tier >= 50) {
+        // 如果是最高级，不可合成
+        cellElement.style.boxShadow = 'inset 0 0 15px #f43f5e';
+        setTimeout(() => cellElement.style.boxShadow = '', 400);
+        return;
+    }
+
+    // 寻找库存里是否有相同 typeId（等级）但属于另一个位置的材料
+    let pairIndex = arenaData.inventory.findIndex(inv => 
+        inv.id === typeId && !(inv.gridR === r && inv.gridC === c)
+    );
+
+    if (pairIndex !== -1) {
+        let nextTypeId = typeId + 1; // 刚好晋升1级
+        let nextTypeObj = TOP_TYPES.find(t => t.id === nextTypeId);
+        
+        // 销毁材料 A（远端的兄弟）
+        arenaData.inventory.splice(pairIndex, 1);
+        
+        // 销毁材料 B（当前点击的自己）
+        let clickedIndex = arenaData.inventory.findIndex(inv => inv.gridR === r && inv.gridC === c);
+        if (clickedIndex !== -1) {
+            arenaData.inventory.splice(clickedIndex, 1);
+        }
+
+        // 把强大的结合体种在此网格
+        arenaData.inventory.push({ id: nextTypeId, gridR: r, gridC: c });
+        saveData();
+
+        // 直接用热重载刷上全界面，不留残留！
+        reloadAssetsFromInventory();
+        triggerShake();
+        
+        // 我们给刚刚合成出来的新格子上点临时魔法特效
+        let newCell = document.querySelector(`.grid-cell[data-r="${r}"][data-c="${c}"]`);
+        if (newCell) {
+            newCell.style.transform = 'scale(1.2)';
+            newCell.style.boxShadow = '0 0 30px ' + nextTypeObj.color;
+            newCell.style.zIndex = "10";
+            setTimeout(() => {
+                newCell.style.transform = 'scale(1)';
+                newCell.style.boxShadow = '';
+                newCell.style.zIndex = "";
+            }, 600);
+        }
+    } else {
+        // 合成失败：落单了兄弟！
+        cellElement.style.boxShadow = 'inset 0 0 20px rgba(255, 0, 0, 0.8)';
+        setTimeout(() => { cellElement.style.boxShadow = ''; }, 300);
+    }
+}
+
+// 自动随机找空格子降落
+function autoDeployToGrid(topId) {
+    let emptyCells = Array.from(document.querySelectorAll('.grid-cell:not(.occupied)'));
+    if (emptyCells.length === 0) {
+        alert("长官，战场网格已满，无法再容纳新陀螺了！");
+        return false;
+    }
+
+    let targetTop = TOP_TYPES.find(t => t.id === topId);
+    if (!targetTop) return false;
+
+    // 随机选一个空格子
+    let randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    let rect = randomCell.getBoundingClientRect();
+    let absX = rect.left + rect.width / 2;
+    let absY = rect.top + rect.height / 2;
+    
+    let rPos = parseInt(randomCell.dataset.r);
+    let cPos = parseInt(randomCell.dataset.c);
+
+    topsOnBoard.push({
+        typeId: targetTop.id,
+        tier: targetTop.tier,
+        isEnemy: false,
+        x: absX, y: absY,
+        vx: 0, vy: 0, rSpeed: 0, angle: 0,
+        radius: 35, mass: 10 + targetTop.tier * 2,
+        color: targetTop.color, name: targetTop.name, hp: targetTop.hp,
+        gridR: rPos, gridC: cPos
+    });
+    
+    // 写入永久资产库
+    arenaData.inventory.push({ id: topId, gridR: rPos, gridC: cPos });
+    
+    // 记录到图鉴（如果还没有记录过）
+    if (!arenaData.discoveredTops.includes(topId)) {
+        arenaData.discoveredTops.push(topId);
+    }
+    
+    saveData();
+    
+    // 直接用渲染通道重新分配所有的样式与事件，这样我们就不必手动操作 DOM 了
+    reloadAssetsFromInventory();
+    
+    triggerShake(); 
+    return true;
+}
+
+function spawnEnemies() {
+    // 1. 核心商业化机制：情报战力刺探 (DDA)
+    // 系统首先秘密计算我军库存资产的总破坏力
+    let myPower = 0;
+    arenaData.inventory.forEach(item => {
+        let t = TOP_TYPES.find(x => x.id === item.id);
+        if (t) {
+            let mass = 10 + t.tier * 2;
+            myPower += mass * t.hp; // 最直接暴力的动能与耐久度乘积为战力基准
+        }
+    });
+
+    // 给予新兵一个保底战力（避免网格全空时游戏直接白给）
+    if (myPower < 60) myPower = 60;
+
+    // 2. 情绪调节系统 - "过山车式挑战曲线"
+    // 越往后关卡压力越大，但初始更友好
+    let difficultyFactor = 0.4 + (arenaData.currentLevel * 0.06); 
+    
+    // 挫败感护城河：如果在当前关卡惨遭滑铁卢，每失败 1 次，下次派来的敌军总体削弱 30%
+    // 让孩子更容易在连败后获得胜利，建立信心
+    let fails = arenaData.fails || 0;
+    difficultyFactor -= (fails * 0.30);
+    
+    // 给军部情报增加不确定性，有时是软柿子，有时是硬骨头（防止玩家摸透规律）
+    difficultyFactor *= (0.75 + Math.random() * 0.25); 
+
+    // 设置心理学极值：再弱也不能低于 25% 的数值，再强不能超过常规 1.5倍 的绝望压制
+    difficultyFactor = Math.max(0.25, Math.min(difficultyFactor, 1.5));
+    let targetEnemyPower = myPower * difficultyFactor;
+    
+    // 3. 构建匹配战力的反派机甲军团
+    let spawnedPower = 0;
+    // 敌军的前沿科技随着玩家探索加深而解密，略高于玩家当前普遍水平，制造稀有级压迫感
+    let maxEnemyTier = Math.min(50, Math.ceil(arenaData.currentLevel / 2) + 1); 
+    
+    let safeLoops = 0;
+    // 不断招募机神填满目标战力池
+    while (spawnedPower < targetEnemyPower && safeLoops < 15) {
+        safeLoops++;
+        
+        // 允许随机刷出下水道杂兵或者罕见的高阶主力
+        let tier = Math.max(1, Math.floor(Math.random() * maxEnemyTier) + 1);
+        let typeObj = TOP_TYPES.find(t => t.tier === tier);
+        if(!typeObj) continue;
+        
+        let mass = 10 + tier * 2;
+        let pwr = mass * typeObj.hp;
+        spawnedPower += pwr;
+        
+        // 赋予反派极致危险的光源色调
+        let enemyColors = ['#f43f5e', '#a855f7', '#111111', '#b91c1c', '#ea580c'];
+        
+        // 敌方陀螺生成在红色边框安全区域内
+        // 安全区域：top: 80px, left: 140px, right: 140px, height: calc(100vh - 80px - 45vh - 70px)
+        let minX = 140 + 40;  // 左侧边界 + 边距
+        let maxX = w - 140 - 40;  // 右侧边界 - 边距
+        let minY = 80 + 40;  // 顶部边界 + 边距
+        let maxY = h - (h * 0.45) - 70 - 40;  // 底部边界（留出放置区域和按钮）- 边距
+        
+        let enemyX = Math.random() * (maxX - minX) + minX;
+        let enemyY = Math.random() * (maxY - minY) + minY;
+
+        topsOnBoard.push({
+            typeId: typeObj.id,
+            isEnemy: true,
+            tier: typeObj.tier,
+            name: typeObj.name,
+            x: enemyX,
+            y: enemyY,
+            vx: 0, vy: 0, rSpeed: 0, angle: 0,
+            radius: 35,
+            mass: mass,
+            color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
+            hp: typeObj.hp
+        });
+    }
+}
+
+// 回收全场功能已删除
+
+// ===== 游戏阶段控制 =====
+function startMatch() {
+    if (topsOnBoard.filter(t => !t.isEnemy).length === 0) {
+        alert("长官，请先布置我方陀螺！");
+        return;
+    }
+
+    // 初始化音频上下文（需要用户交互）
+    initAudio();
+
+    gameState = 'playing';
+
+    // UI 淡出
+    document.getElementById('uiOverlay').classList.add('fade-out');
+    document.getElementById('gridOverlay').classList.add('hidden');
+
+    // 隐藏战场红框
+    const battleZone = document.getElementById('battleZone');
+    if (battleZone) battleZone.classList.add('hidden');
+    
+    // 赋予全员初始速度，并修复坐标异常的陀螺
+    topsOnBoard.forEach(t => {
+        // 关键修复：如果我方陀螺坐标还停留在初始 (0,0) 或超出画布，
+        // 则将其随机部署到画布下半区的有效区域
+        if (t.x <= 0 || t.y <= 0 || t.x >= w || t.y >= h) {
+            if (!t.isEnemy) {
+                t.x = Math.random() * (w - 150) + 75;
+                t.y = h / 2 + Math.random() * (h / 2 - 100) + 50;
+            } else {
+                t.x = Math.random() * (w - 150) + 75;
+                t.y = Math.random() * (h / 2 - 100) + 50;
+            }
+        }
+        t.vx = (Math.random() - 0.5) * 15;
+        t.vy = (Math.random() - 0.5) * 15;
+        t.rSpeed = (Math.random() - 0.5) * 0.5;
+    });
+    
+    // 真正的死斗模式！取消超时系统，必须战死一方才会结束
+    if (matchTimeoutId) {
+        clearTimeout(matchTimeoutId);
+        matchTimeoutId = null;
+    }
+}
+
+function endMatch(isWin) {
+    if (gameState === 'ended') return; // 防止重复触发
+    gameState = 'ended';
+    topsOnBoard.forEach(t => { t.vx = 0; t.vy = 0; t.rSpeed = 0; });
+    
+    // 定制结果文案
+    document.getElementById('resultTitle').textContent = isWin ? "🔥 大获全胜！" : "💥 战斗落败";
+    document.getElementById('resultTitle').style.color = isWin ? "#10b981" : "#ef4444";
+    document.getElementById('resultDesc').textContent = isWin 
+        ? "敌军已被全部撕碎！您的数字资产完好无损，关卡等级成功提升！" 
+        : "我方军团全军覆没... 别灰心，已经使用时空序列将您的陀螺资产安全传送回老巢！";
+        
+    if (isWin) {
+        arenaData.currentLevel++;
+        arenaData.fails = 0; // 高歌猛进，重置连败包袱
+        saveData(); // 保存最新的关卡数据
+    } else {
+        arenaData.fails = (arenaData.fails || 0) + 1; // 不屈不挠，增加失败补偿系数
+        saveData();
+    }
+    
+    let resultOverlay = document.getElementById('resultOverlay');
+    resultOverlay.classList.remove('hidden');
+}
+
+function closeResult() {
+    document.getElementById('resultOverlay').classList.add('hidden');
+    document.getElementById('uiOverlay').classList.remove('fade-out');
+    document.getElementById('gridOverlay').classList.remove('hidden');
+    
+    gameState = 'setup';
+    
+    setTimeout(() => {
+        // 清理并更新局势
+        topsOnBoard = [];
+        spawnEnemies();
+        // 直接从我的数字资产库倒回场上并刷新
+        reloadAssetsFromInventory();
+    }, 500);
+}
+
+// ===== UI 数据绑定与弹窗控制 =====
+function updateHUD() {
+    let tData = getTowerData();
+    document.getElementById('hudLevel').textContent = '关卡 ' + arenaData.currentLevel;
+    document.getElementById('hudPts').textContent = '积分: ' + tData.points;
+}
+
+function openModal(id) {
+    document.getElementById(id).classList.remove('hidden');
+    
+    if (id === 'modalBaseInfo') {
+        let baseObj = TOP_TYPES.find(t => t.tier === arenaData.baseTier);
+        // 如果找不到对应的陀螺类型，使用默认的LV1
+        if (!baseObj) {
+            baseObj = TOP_TYPES.find(t => t.tier === 1);
+            arenaData.baseTier = 1;
+            saveData();
+        }
+
+        // 更新当前等级和下一等级的名称
+        const currentLevelName = document.getElementById('currentLevelName');
+        const nextLevelName = document.getElementById('nextLevelName');
+        if (currentLevelName) currentLevelName.textContent = baseObj.name;
+        if (nextLevelName) nextLevelName.textContent = 'LV' + Math.min(baseObj.tier + 1, 50);
+
+        // 更新碎片进度
+        const currentFragments = document.getElementById('currentFragments');
+        const requiredFragments = document.getElementById('requiredFragments');
+        if (currentFragments) currentFragments.textContent = arenaData.fragments;
+        if (requiredFragments) requiredFragments.textContent = '3';
+
+        // 渲染陀螺预览
+        renderUpgradeVisual();
+    }
+    else if (id === 'modalGacha') {
+        document.getElementById('gachaTickets').textContent = arenaData.gachaTickets;
+        wheelRotation = 0;
+        const canvas = document.getElementById('gachaWheel');
+        if (canvas) {
+            canvas.style.transform = 'rotate(0deg)';
+        }
+        // 绘制转盘 - 延迟500ms确保modal已完全显示
+        setTimeout(() => {
+            console.log('Modal should be visible now, drawing wheel...');
+            drawWheel();
+        }, 500);
+    }
+    else if (id === 'modalEfficiency') {
+        document.getElementById('efficiencyStars').textContent = arenaData.efficiencyStars;
+    }
+    else if (id === 'modalDex') {
+        let dexGrid = document.getElementById('dexGrid');
+        dexGrid.innerHTML = '';
+        
+        TOP_TYPES.forEach(type => {
+            // 检查是否曾经在棋盘里出现过（图鉴高亮条件）
+            let isDiscovered = arenaData.discoveredTops && arenaData.discoveredTops.includes(type.id);
+            // 检查当前是否拥有
+            let ownedCount = arenaData.inventory.filter(item => item.id === type.id).length;
+            let isOwned = ownedCount > 0;
+            
+            let itemDiv = document.createElement('div');
+            itemDiv.className = 'dex-item';
+            
+            // 样式区分：曾经出现过则点亮，未出现则灰暗锁定
+            if (isDiscovered) {
+                itemDiv.style.border = `2px solid ${type.color}`;
+                itemDiv.style.boxShadow = `inset 0 0 15px ${type.color}, 0 0 10px ${type.color}`;
+                itemDiv.style.background = 'rgba(255,255,255,0.1)';
+            } else {
+                itemDiv.style.border = '2px solid #333';
+                itemDiv.style.filter = 'grayscale(100%) opacity(0.5)';
+                itemDiv.style.background = 'rgba(0,0,0,0.3)';
+            }
+            
+            // 生成3D预览图
+            let previewDataUrl = renderTopPreview(type, 140);
+            
+            let html = `
+                <div class="dex-preview-container" style="position: relative; width: 100%; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                    <img src="${previewDataUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; ${isDiscovered ? '' : 'filter: grayscale(100%);'}">
+                </div>
+                <div class="dex-name" style="color: ${isDiscovered ? type.color : '#666'}; font-size: 16px; font-weight: bold; text-shadow: 0 0 10px ${isDiscovered ? type.color : 'transparent'};">${type.name}</div>
+                <div class="dex-tier" style="margin-top: 8px; font-size: 12px;">
+                    <div style="color: ${isDiscovered ? '#94a3b8' : '#555'};">碰撞质量: ${10 + type.tier * 2}</div>
+                    <div style="color: ${isDiscovered ? '#94a3b8' : '#555'}; margin-top:3px;">护盾血量: ${type.hp}</div>
+                </div>
+                <div style="font-size: 13px; margin-top: 10px; font-weight: bold; color: ${isOwned ? '#38bdf8' : (isDiscovered ? '#fbbf24' : '#555')}">
+                    ${isOwned ? `现役数量: ${ownedCount} 阵列` : (isDiscovered ? '已收录' : '未解锁')}
+                </div>
+            `;
+            itemDiv.innerHTML = html;
+            dexGrid.appendChild(itemDiv);
+        });
+    }
+    else if (id === 'modalSpecialTops') {
+        renderSpecialTopsModal();
+    }
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.add('hidden');
+}
+
+// --- 部署基准陀螺逻辑 ---
+function deployBaseTop() {
+    let tData = getTowerData();
+    let baseObj = TOP_TYPES.find(t => t.tier === arenaData.baseTier);
+    if (!baseObj) return;
+
+    if (tData.points >= baseObj.cost) {
+        if (autoDeployToGrid(baseObj.id)) { // 尝试扣费并真正发兵
+            tData.points -= baseObj.cost;
+            localStorage.setItem(TOWER_KEY, JSON.stringify(tData));
+            updateHUD();
+        }
+    } else {
+        alert("长官，积分别不够用啦，快去写作业！");
+    }
+}
+
+// --- 转盘抽奖逻辑 ---
+let wheelRotation = 0;
+let isSpinning = false;
+
+// 绘制转盘
+function drawWheel() {
+    const canvas = document.getElementById('gachaWheel');
+    if (!canvas) {
+        console.log('Canvas not found');
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.log('Context not available');
+        return;
+    }
+    
+    console.log('Drawing wheel...');
+    
+    // 设置canvas尺寸
+    canvas.width = 350;
+    canvas.height = 350;
+    
+    const centerX = 175;
+    const centerY = 175;
+    const radius = 150;
+    
+    // 填充背景色
+    ctx.fillStyle = '#1e3a5f';
+    ctx.fillRect(0, 0, 350, 350);
+    
+    // 获取当前基准陀螺等级
+    const baseTier = arenaData.baseTier || 1;
+    const rewardTiers = [
+        Math.min(baseTier + 3, 50),
+        Math.min(baseTier + 4, 50),
+        Math.min(baseTier + 5, 50),
+        Math.min(baseTier + 6, 50)
+    ];
+    
+    // 扇形配置
+    const segments = [
+        { tier: rewardTiers[0], angle: 144, color: '#0ea5e9', prob: 40 },
+        { tier: rewardTiers[1], angle: 108, color: '#8b5cf6', prob: 30 },
+        { tier: rewardTiers[2], angle: 72, color: '#f59e0b', prob: 20 },
+        { tier: rewardTiers[3], angle: 36, color: '#ef4444', prob: 10 }
+    ];
+    
+    let currentAngle = -90;
+    
+    segments.forEach((seg) => {
+        const startAngle = (currentAngle * Math.PI) / 180;
+        const endAngle = ((currentAngle + seg.angle) * Math.PI) / 180;
+        
+        // 绘制扇形
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.closePath();
+        
+        // 填充颜色
+        ctx.fillStyle = seg.color;
+        ctx.fill();
+        
+        // 边框
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // 文字
+        const textAngle = (currentAngle + seg.angle / 2) * Math.PI / 180;
+        const textX = centerX + Math.cos(textAngle) * (radius * 0.6);
+        const textY = centerY + Math.sin(textAngle) * (radius * 0.6);
+        
+        ctx.save();
+        ctx.translate(textX, textY);
+        ctx.rotate(textAngle + Math.PI / 2);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('LV' + seg.tier, 0, -8);
+        ctx.font = '12px Arial';
+        ctx.fillText(seg.prob + '%', 0, 10);
+        ctx.restore();
+        
+        currentAngle += seg.angle;
+    });
+    
+    // 外圈
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+    
+    // 内圈
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+    ctx.fillStyle = '#1e293b';
+    ctx.fill();
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    
+    console.log('Wheel drawn');
+}
+
+// 转动转盘
+function spinWheel() {
+    if (isSpinning) return;
+    
+    if (arenaData.gachaTickets <= 0) {
+        alert("🎫 抽奖券余额不足！去完成作业或作文来获取券吧！");
+        return;
+    }
+    
+    isSpinning = true;
+    const btn = document.getElementById('btnDoGacha');
+    btn.disabled = true;
+    btn.textContent = '🎰 转盘中...';
+    
+    // 扣除抽奖券
+    arenaData.gachaTickets -= 1;
+    saveData();
+    document.getElementById('gachaTickets').textContent = arenaData.gachaTickets;
+    
+    const canvas = document.getElementById('gachaWheel');
+    
+    // 确定奖励（根据概率）
+    const baseTier = arenaData.baseTier;
+    const rand = Math.random() * 100;
+    let targetTier;
+    let targetAngle;
+    
+    // 概率：+3级 40%, +4级 30%, +5级 20%, +6级 10%
+    // 注意：转盘从-90度（顶部）开始绘制，所以角度需要调整
+    let targetSectorStart, targetSectorEnd;
+    if (rand < 40) {
+        targetTier = Math.min(baseTier + 3, 50);
+        targetSectorStart = 0;    // 0-144度
+        targetSectorEnd = 144;
+    } else if (rand < 70) {
+        targetTier = Math.min(baseTier + 4, 50);
+        targetSectorStart = 144;  // 144-252度
+        targetSectorEnd = 252;
+    } else if (rand < 90) {
+        targetTier = Math.min(baseTier + 5, 50);
+        targetSectorStart = 252;  // 252-324度
+        targetSectorEnd = 324;
+    } else {
+        targetTier = Math.min(baseTier + 6, 50);
+        targetSectorStart = 324;  // 324-360度
+        targetSectorEnd = 360;
+    }
+    
+    // 在目标扇区内随机选择一个角度
+    targetAngle = targetSectorStart + Math.random() * (targetSectorEnd - targetSectorStart);
+    
+    // 计算最终角度（加上多圈旋转）
+    // 指针在顶部（0度位置），所以要让目标扇区停在顶部，需要旋转到 -targetAngle
+    const spins = 5 + Math.floor(Math.random() * 3); // 5-7圈
+    const finalRotation = wheelRotation + spins * 360 - targetAngle;
+    
+    // 动画参数
+    const duration = 4000; // 4秒
+    const startTime = Date.now();
+    const startRotation = wheelRotation;
+    
+    function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // 缓动函数（先快后慢）
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        wheelRotation = startRotation + (finalRotation - startRotation) * easeOut;
+        canvas.style.transform = `rotate(${wheelRotation}deg)`;
+        
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            // 动画结束
+            isSpinning = false;
+            btn.disabled = false;
+            btn.textContent = '🎲 转动转盘';
+            
+            // 显示结果
+            showGachaResult(targetTier);
+        }
+    }
+    
+    animate();
+}
+
+// 显示抽奖结果
+function showGachaResult(tier) {
+    const topType = TOP_TYPES.find(t => t.tier === tier);
+    
+    // 创建结果弹窗
+    const resultDiv = document.createElement('div');
+    resultDiv.className = 'gacha-result';
+    
+    // 生成陀螺预览图
+    const previewDataUrl = renderTopPreview(topType, 150);
+    
+    resultDiv.innerHTML = `
+        <h3>🎉 恭喜获得！</h3>
+        <div class="top-preview-large">
+            <img src="${previewDataUrl}" style="width: 100%; height: 100%; object-fit: contain;">
+        </div>
+        <div style="font-size: 24px; font-weight: bold; color: ${topType.color}; margin-bottom: 10px;">${topType.name}</div>
+        <div style="color: #94a3b8; margin-bottom: 20px;">血量: ${topType.hp} | 等级: ${topType.tier}</div>
+        <button class="btn-action" onclick="this.parentElement.remove(); deployGachaResult(${topType.id})" style="padding: 12px 30px; font-size: 16px;">🚀 部署到战场</button>
+    `;
+    
+    document.body.appendChild(resultDiv);
+}
+
+// 部署抽奖结果到战场
+function deployGachaResult(topId) {
+    if (autoDeployToGrid(topId)) {
+        const topType = TOP_TYPES.find(t => t.id === topId);
+        closeModal('modalGacha');
+    } else {
+        alert('⚠️ 战场已满，无法部署更多陀螺！');
+    }
+}
+
+// --- 作业效率评定与陀螺兑换逻辑 ---
+
+// 评定奖励钻石（1-3颗）
+function awardEfficiencyStar(starCount) {
+    arenaData.efficiencyStars += starCount;
+    saveData();
+    document.getElementById('efficiencyStars').textContent = arenaData.efficiencyStars;
+    
+    // 刷新兑换卡片状态
+    renderExchangeCards();
+    
+    alert(`⭐️ 已成功发放 ${starCount} 颗钻石！`);
+}
+
+// 渲染兑换卡片网格
+function renderExchangeCards() {
+    const grid = document.getElementById('exchangeGrid');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+
+    // 定义每个等级陀螺所需的钻石数 (LV1-LV50)
+    // 价格设计：让孩子能够通过努力逐步兑换，每天最多3颗钻石
+    const diamondCosts = {
+        1: 1, 2: 2, 3: 3, 4: 5, 5: 7,      // 1-2天可兑换
+        6: 9, 7: 12, 8: 15, 9: 18, 10: 22,   // 3-7天可兑换
+        11: 27, 12: 33, 13: 40, 14: 48, 15: 57,   // 9-19天可兑换
+        16: 67, 17: 78, 18: 90, 19: 103, 20: 117,  // 22-39天可兑换
+        21: 132, 22: 148, 23: 165, 24: 183, 25: 202,  // 44-67天可兑换
+        26: 222, 27: 243, 28: 265, 29: 288, 30: 312,  // 74-104天可兑换
+        31: 337, 32: 363, 33: 390, 34: 418, 35: 447,  // 112-149天可兑换
+        36: 477, 37: 508, 38: 540, 39: 573, 40: 607,  // 159-202天可兑换
+        41: 642, 42: 678, 43: 715, 44: 753, 45: 792,  // 214-264天可兑换
+        46: 832, 47: 873, 48: 915, 49: 958, 50: 1002  // 277-334天可兑换
+    };
+
+    // 计算当前能支付的最高等级
+    let maxAffordableTier = 0;
+    for (let tier = 1; tier <= 50; tier++) {
+        if (arenaData.efficiencyStars >= diamondCosts[tier]) {
+            maxAffordableTier = tier;
+        }
+    }
+
+    // 显示范围：能支付的最高等级 + 5，但至少显示到LV5
+    let maxDisplayTier = Math.max(5, maxAffordableTier + 5);
+    maxDisplayTier = Math.min(maxDisplayTier, 50); // 不超过50
+
+    TOP_TYPES.forEach(type => {
+        // 如果超过显示范围，跳过
+        if (type.tier > maxDisplayTier) return;
+
+        const cost = diamondCosts[type.tier];
+        const canAfford = arenaData.efficiencyStars >= cost;
+
+        const card = document.createElement('div');
+        card.className = `exchange-card ${canAfford ? 'available' : 'locked'}`;
+
+        // 生成3D预览图
+        const previewDataUrl = renderTopPreview(type, 100);
+
+        card.innerHTML = `
+            <div class="exchange-preview">
+                <img src="${previewDataUrl}" alt="${type.name}">
+            </div>
+            <div class="exchange-info">
+                <div class="exchange-name">${type.name}</div>
+                <div class="exchange-stats">血量: ${type.hp}</div>
+                <div class="exchange-cost">
+                    <span class="cost-value">${cost}</span> 💎
+                </div>
+            </div>
+            <button class="btn-exchange" ${canAfford ? '' : 'disabled'} onclick="exchangeForTop(${type.id}, ${cost})">
+                ${canAfford ? '立即兑换' : '钻石不足'}
+            </button>
+        `;
+
+        grid.appendChild(card);
+    });
+}
+
+// 兑换陀螺并部署到战场
+function exchangeForTop(topId, cost) {
+    if (arenaData.efficiencyStars < cost) {
+        alert("💎 钻石不足！");
+        return;
+    }
+    
+    // 尝试自动部署到网格
+    if (autoDeployToGrid(topId)) {
+        // 扣除钻石
+        arenaData.efficiencyStars -= cost;
+        saveData();
+        
+        // 更新显示
+        document.getElementById('efficiencyStars').textContent = arenaData.efficiencyStars;
+        
+        // 刷新兑换卡片
+        renderExchangeCards();
+        
+        // 获取陀螺信息
+        const topType = TOP_TYPES.find(t => t.id === topId);
+        alert(`🎉 成功兑换 ${topType.name}！已自动部署到战场！`);
+        
+        // 关闭弹窗
+        closeModal('modalEfficiency');
+    } else {
+        alert("⚠️ 战场已满，无法部署更多陀螺！");
+    }
+}
+
+// 修改openModal函数，在打开效率弹窗时渲染卡片
+const originalOpenModal = openModal;
+openModal = function(id) {
+    // 调用原来的openModal函数
+    originalOpenModal(id);
+    
+    if (id === 'modalEfficiency') {
+        document.getElementById('efficiencyStars').textContent = arenaData.efficiencyStars;
+        renderExchangeCards();
+    }
+    else if (id === 'modalGacha') {
+        // 已在originalOpenModal中处理
+    }
+    else if (id === 'modalDex') {
+        let dexGrid = document.getElementById('dexGrid');
+        dexGrid.innerHTML = '';
+        
+        TOP_TYPES.forEach(type => {
+            let isDiscovered = arenaData.discoveredTops && arenaData.discoveredTops.includes(type.id);
+            let ownedCount = arenaData.inventory.filter(item => item.id === type.id).length;
+            let isOwned = ownedCount > 0;
+            
+            let itemDiv = document.createElement('div');
+            itemDiv.className = 'dex-item';
+            
+            if (isDiscovered) {
+                itemDiv.style.border = `2px solid ${type.color}`;
+                itemDiv.style.boxShadow = `inset 0 0 15px ${type.color}, 0 0 10px ${type.color}`;
+                itemDiv.style.background = 'rgba(255,255,255,0.1)';
+            } else {
+                itemDiv.style.border = '2px solid #333';
+                itemDiv.style.filter = 'grayscale(100%) opacity(0.5)';
+                itemDiv.style.background = 'rgba(0,0,0,0.3)';
+            }
+            
+            let previewDataUrl = renderTopPreview(type, 140);
+            
+            let html = `
+                <div class="dex-preview-container" style="position: relative; width: 100%; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                    <img src="${previewDataUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; ${isDiscovered ? '' : 'filter: grayscale(100%);'}">
+                </div>
+                <div class="dex-name" style="color: ${isDiscovered ? type.color : '#666'}; font-size: 16px; font-weight: bold; text-shadow: 0 0 10px ${isDiscovered ? type.color : 'transparent'};">${type.name}</div>
+                <div class="dex-tier" style="margin-top: 8px; font-size: 12px;">
+                    <div style="color: ${isDiscovered ? '#94a3b8' : '#555'};">碰撞质量: ${10 + type.tier * 2}</div>
+                    <div style="color: ${isDiscovered ? '#94a3b8' : '#555'}; margin-top:3px;">护盾血量: ${type.hp}</div>
+                </div>
+                <div style="font-size: 13px; margin-top: 10px; font-weight: bold; color: ${isOwned ? '#38bdf8' : (isDiscovered ? '#fbbf24' : '#555')}">
+                    ${isOwned ? `现役数量: ${ownedCount} 阵列` : (isDiscovered ? '已收录' : '未解锁')}
+                </div>
+            `;
+            itemDiv.innerHTML = html;
+            dexGrid.appendChild(itemDiv);
+        });
+    }
+}
+
+
+// ===== 基准陀螺升级系统 =====
+
+// 每个等级需要的碎片数量
+const FRAGMENT_REQUIREMENTS = {
+    1: 3,  // LV1->LV2 需要3个碎片
+    2: 4,  // LV2->LV3 需要4个碎片
+    3: 5,  // LV3->LV4 需要5个碎片
+    4: 6,  // LV4->LV5 需要6个碎片
+    5: 7,  // LV5->LV6 需要7个碎片
+    6: 8,  // LV6->LV7 需要8个碎片
+    7: 10, // LV7->LV8 需要10个碎片
+    8: 12, // LV8->LV9 需要12个碎片
+    9: 15, // LV9->LV10 需要15个碎片
+    10: 20 // LV10->LV11 需要20个碎片
+};
+
+// 获取当前等级需要的碎片数
+function getRequiredFragments(tier) {
+    return FRAGMENT_REQUIREMENTS[tier] || 3;
+}
+
+// 切换任务完成状态并领取碎片
+function toggleFragment(taskType) {
+    // Z键验证
+    if (!isZKeyPressed) {
+        const checkbox = document.getElementById(`check${taskType.charAt(0).toUpperCase() + taskType.slice(1)}`);
+        checkbox.checked = false;
+        return;
+    }
+    
+    const today = new Date().toLocaleDateString('zh-CN');
+    
+    // 检查是否是新的一天
+    if (arenaData.dailyTasks.date !== today) {
+        arenaData.dailyTasks = {
+            homework: false,
+            essay: false,
+            perfect: false,
+            date: today
+        };
+    }
+    
+    const checkbox = document.getElementById(`check${taskType.charAt(0).toUpperCase() + taskType.slice(1)}`);
+    const label = document.getElementById(`label${taskType.charAt(0).toUpperCase() + taskType.slice(1)}`);
+    const status = document.getElementById(`status${taskType.charAt(0).toUpperCase() + taskType.slice(1)}`);
+    
+    if (checkbox.checked && !arenaData.dailyTasks[taskType]) {
+        // 领取碎片
+        arenaData.dailyTasks[taskType] = true;
+        arenaData.fragments++;
+        
+        // 如果是"作业全对"，额外奖励1张抽奖券
+        if (taskType === 'perfect') {
+            arenaData.gachaTickets++;
+            showTicketToast();
+        }
+        
+        // 检查是否升级
+        checkUpgrade();
+        
+        // 检查是否三项任务都完成，奖励特殊陀螺券
+        checkAndAwardSpecialTicket();
+        
+        saveData();
+        
+        // 更新UI
+        label.classList.add('completed');
+        status.textContent = '已领取';
+        
+        // 播放气泡动画
+        playBubbleAnimation();
+        
+        // 刷新升级示意图
+        renderUpgradeVisual();
+        
+        // 显示获得碎片提示
+        showFragmentToast();
+    } else if (!checkbox.checked) {
+        checkbox.checked = true;
+    }
+}
+
+// 检查是否升级
+function checkUpgrade() {
+    const required = getRequiredFragments(arenaData.baseTier);
+    
+    if (arenaData.fragments >= required) {
+        // 升级
+        arenaData.fragments -= required;
+        if (arenaData.baseTier < 50) {
+            arenaData.baseTier++;
+        }
+
+        // 显示升级成功动画
+        setTimeout(() => {
+            alert(`🎉 恭喜！基准陀螺升级到 LV${arenaData.baseTier}！`);
+            renderUpgradeVisual();
+        }, 500);
+    }
+}
+
+// 播放气泡动画
+function playBubbleAnimation() {
+    const container = document.getElementById('bubbleContainer');
+    if (!container) return;
+    
+    // 创建多个气泡
+    for (let i = 0; i < 8; i++) {
+        setTimeout(() => {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.style.left = `${45 + Math.random() * 10}%`;
+            bubble.style.animationDelay = `${Math.random() * 0.5}s`;
+            bubble.style.animationDuration = `${1.5 + Math.random()}s`;
+            container.appendChild(bubble);
+            
+            // 动画结束后移除
+            setTimeout(() => {
+                bubble.remove();
+            }, 2500);
+        }, i * 100);
+    }
+}
+
+// 显示获得碎片提示
+function showFragmentToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: #000;
+        padding: 20px 40px;
+        border-radius: 15px;
+        font-size: 24px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 10px 40px rgba(251, 191, 36, 0.5);
+        animation: toastPop 0.5s ease;
+    `;
+    toast.textContent = '🧩 +1 碎片！';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastFade 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 1500);
+}
+
+// 显示获得抽奖券提示
+function showTicketToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 30%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #a855f7, #7c3aed);
+        color: #fff;
+        padding: 15px 30px;
+        border-radius: 15px;
+        font-size: 20px;
+        font-weight: bold;
+        z-index: 10001;
+        box-shadow: 0 10px 40px rgba(168, 85, 247, 0.5);
+        animation: toastPop 0.5s ease;
+    `;
+    toast.textContent = '🎫 +1 抽奖券！';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastFade 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 1500);
+}
+
+// 渲染升级示意图
+function renderUpgradeVisual() {
+    const currentTier = arenaData.baseTier;
+    const nextTier = Math.min(currentTier + 1, 50);
+    const fragments = arenaData.fragments;
+    const required = getRequiredFragments(currentTier);
+    
+    // 更新文字
+    document.getElementById('currentLevelName').textContent = `LV${currentTier}`;
+    document.getElementById('nextLevelName').textContent = `LV${nextTier}`;
+    document.getElementById('currentFragments').textContent = fragments;
+    document.getElementById('requiredFragments').textContent = required;
+    
+    // 渲染当前等级陀螺
+    const currentCanvas = document.getElementById('currentLevelCanvas');
+    if (currentCanvas) {
+        const currentType = TOP_TYPES.find(t => t.tier === currentTier);
+        renderTopToCanvas(currentType, currentCanvas);
+    }
+    
+    // 渲染下一等级陀螺（带碎片遮罩）
+    const nextCanvas = document.getElementById('nextLevelCanvas');
+    if (nextCanvas) {
+        const nextType = TOP_TYPES.find(t => t.tier === nextTier);
+        renderTopToCanvas(nextType, nextCanvas);
+        
+        // 添加碎片进度遮罩
+        updateFragmentOverlay(fragments, required);
+    }
+}
+
+// 渲染陀螺到指定canvas
+function renderTopToCanvas(type, canvas) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 检查type是否有效
+    if (!type || !type.tier) {
+        // 显示错误提示
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('陀螺数据错误', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    // 使用现有的renderTopPreview逻辑，但直接绘制到canvas
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2 + 10;
+    const r = 35;
+    const t = type.tier;
+    const hRatio = 0.55;
+    
+    ctx.save();
+    ctx.translate(cx, cy);
+    
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 5, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 光环底圈
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(0, 3, r * 1.2, r * 1.2 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // 中心支撑柱
+    let pegR = 2 + t * 0.3;
+    let pegH = Math.floor(r * hRatio + 5);
+    for (let py = pegH; py >= 0; py--) {
+        ctx.beginPath();
+        ctx.ellipse(0, py, pegR, pegR * hRatio, 0, 0, Math.PI * 2);
+        if (py === pegH) {
+            ctx.fillStyle = type.color;
+        } else {
+            let pegGrad = ctx.createLinearGradient(-pegR, 0, pegR, 0);
+            pegGrad.addColorStop(0, '#111');
+            pegGrad.addColorStop(0.3, '#f8fafc');
+            pegGrad.addColorStop(0.8, '#475569');
+            pegGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = pegGrad;
+        }
+        ctx.fill();
+    }
+    
+    // 根据等级定义3D切片组
+    let parts = [];
+    if (t === 1) {
+        parts.push({ scale: 1.0, height: 4, color: type.color });
+    } else if (t === 2) {
+        parts.push({ scale: 1.0, height: 5, color: '#555' });
+        parts.push({ scale: 0.8, height: 4, color: type.color, dots: 2 });
+    } else if (t === 3) {
+        parts.push({ scale: 0.7, height: 4, color: '#333' });
+        parts.push({ scale: 1.1, height: 6, color: type.color, dots: 3 });
+    } else if (t === 4) {
+        parts.push({ scale: 0.6, height: 5, color: '#555' });
+        parts.push({ scale: 1.0, height: 6, color: type.color, dots: 4 });
+        parts.push({ scale: 0.4, height: 5, color: '#fff' });
+    } else if (t === 5) {
+        parts.push({ scale: 0.9, height: 3, color: type.color });
+        parts.push({ scale: 1.0, height: 7, color: '#2b2b2b', dots: 5 });
+        parts.push({ scale: 0.7, height: 6, color: type.color });
+    } else if (t === 6) {
+        parts.push({ scale: 1.0, height: 8, color: type.color, dots: 3 });
+        parts.push({ scale: 0.9, height: 2, color: '#fff' });
+        parts.push({ scale: 0.5, height: 8, color: '#111' });
+        parts.push({ scale: 0.3, height: 4, color: type.color });
+    } else if (t === 7) {
+        parts.push({ scale: 0.4, height: 6, color: '#111' });
+        parts.push({ scale: 1.2, height: 5, color: type.color, dots: 6 });
+        parts.push({ scale: 0.5, height: 7, color: '#ccc', dots: 3, rev: true });
+    } else if (t === 8) {
+        parts.push({ scale: 0.8, height: 6, color: '#222' });
+        parts.push({ scale: 1.1, height: 7, color: type.color, dots: 4 });
+        parts.push({ scale: 0.9, height: 5, color: '#fff' });
+        parts.push({ scale: 0.5, height: 9, color: type.color, dots: 4, rev: true });
+    } else if (t === 9) {
+        parts.push({ scale: 0.7, height: 5, color: '#000' });
+        parts.push({ scale: 1.0, height: 9, color: type.color, dots: 8 });
+        parts.push({ scale: 0.8, height: 3, color: '#333' });
+        parts.push({ scale: 0.6, height: 6, color: type.color, dots: 4 });
+        parts.push({ scale: 0.2, height: 12, color: '#fff' });
+    } else if (t === 10) {
+        parts.push({ scale: 0.5, height: 6, color: '#0f172a' });
+        parts.push({ scale: 1.2, height: 9, color: type.color, dots: 10 });
+        parts.push({ scale: 1.0, height: 5, color: '#fff' });
+        parts.push({ scale: 0.7, height: 7, color: type.color, dots: 5, rev: true });
+        parts.push({ scale: 0.3, height: 15, color: '#fbbf24' });
+    } else if (t === 11) {
+        parts.push({ scale: 0.6, height: 8, color: '#1e293b' });
+        parts.push({ scale: 1.0, height: 7, color: '#cbd5e1', dots: 6 });
+        parts.push({ scale: 1.3, height: 6, color: type.color, dots: 12, rev: true });
+        parts.push({ scale: 0.8, height: 5, color: '#fff' });
+        parts.push({ scale: 0.4, height: 18, color: type.color });
+    } else if (t === 12) {
+        parts.push({ scale: 0.5, height: 10, color: '#0f172a' });
+        parts.push({ scale: 1.1, height: 8, color: type.color, dots: 8 });
+        parts.push({ scale: 1.4, height: 5, color: '#fff', dots: 4 });
+        parts.push({ scale: 1.0, height: 6, color: type.color, dots: 6, rev: true });
+        parts.push({ scale: 0.3, height: 22, color: '#fbbf24' });
+    } else if (t <= 20) {
+        // LV13-20: 动物系列风格 - 更流线型
+        let intensity = (t - 12) / 8;
+        parts.push({ scale: 0.4 + intensity * 0.2, height: 8 + intensity * 4, color: '#1e293b' });
+        parts.push({ scale: 1.0 + intensity * 0.3, height: 6 + intensity * 2, color: type.color, dots: Math.floor(8 + intensity * 8) });
+        parts.push({ scale: 0.9, height: 4, color: '#fff' });
+        parts.push({ scale: 0.6, height: 10 + intensity * 5, color: type.color, dots: Math.floor(6 + intensity * 4), rev: true });
+        parts.push({ scale: 0.25, height: 25 + intensity * 10, color: '#fbbf24' });
+    } else if (t <= 30) {
+        // LV21-30: 神话系列风格 - 更华丽
+        let intensity = (t - 20) / 10;
+        parts.push({ scale: 0.5, height: 12, color: '#0f172a' });
+        parts.push({ scale: 0.8, height: 5, color: '#cbd5e1', dots: 6 });
+        parts.push({ scale: 1.2 + intensity * 0.2, height: 8 + intensity * 4, color: type.color, dots: Math.floor(10 + intensity * 10) });
+        parts.push({ scale: 1.0, height: 6, color: '#fff', dots: 4 });
+        parts.push({ scale: 0.7, height: 12 + intensity * 6, color: type.color, dots: Math.floor(8 + intensity * 6), rev: true });
+        parts.push({ scale: 0.3, height: 30 + intensity * 15, color: '#fbbf24' });
+    } else if (t <= 40) {
+        // LV31-40: 元素系列风格 - 更几何化
+        let intensity = (t - 30) / 10;
+        parts.push({ scale: 0.6, height: 10, color: '#1e293b' });
+        parts.push({ scale: 1.0, height: 4, color: '#94a3b8', dots: 8 });
+        parts.push({ scale: 1.3 + intensity * 0.2, height: 10 + intensity * 3, color: type.color, dots: Math.floor(12 + intensity * 8) });
+        parts.push({ scale: 1.1, height: 5, color: '#e2e8f0' });
+        parts.push({ scale: 0.9, height: 8, color: type.color, dots: 6 });
+        parts.push({ scale: 0.5, height: 15 + intensity * 10, color: type.color, dots: Math.floor(6 + intensity * 4), rev: true });
+        parts.push({ scale: 0.2, height: 40 + intensity * 20, color: '#fbbf24' });
+    } else {
+        // LV41-50: 传说系列风格 - 最华丽
+        let intensity = (t - 40) / 10;
+        parts.push({ scale: 0.7, height: 15, color: '#0f172a' });
+        parts.push({ scale: 1.1, height: 6, color: '#64748b', dots: 10 });
+        parts.push({ scale: 1.4, height: 8, color: '#fff', dots: 6 });
+        parts.push({ scale: 1.5 + intensity * 0.1, height: 12 + intensity * 4, color: type.color, dots: Math.floor(16 + intensity * 8) });
+        parts.push({ scale: 1.2, height: 6, color: '#e2e8f0', dots: 8 });
+        parts.push({ scale: 0.8, height: 18 + intensity * 8, color: type.color, dots: Math.floor(10 + intensity * 6), rev: true });
+        parts.push({ scale: 0.4, height: 50 + intensity * 30, color: '#fbbf24' });
+    }
+
+    // 从底部向顶部渲染3D实体
+    let currentY = 0;
+    for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+        let part = parts[pIdx];
+        let layerR = r * part.scale;
+        let layerH = part.height;
+        
+        // 绘制侧表面
+        for (let i = layerH; i > 0; i--) {
+            let y = currentY - i;
+            ctx.beginPath();
+            ctx.ellipse(0, y, layerR, layerR * hRatio, 0, 0, Math.PI * 2);
+            
+            let sideGrad = ctx.createLinearGradient(-layerR, 0, layerR, 0);
+            sideGrad.addColorStop(0, shadeColor(part.color, -50));
+            sideGrad.addColorStop(0.3, part.color);
+            sideGrad.addColorStop(0.7, shadeColor(part.color, -60));
+            sideGrad.addColorStop(1, shadeColor(part.color, -80));
+            
+            ctx.fillStyle = sideGrad;
+            ctx.fill();
+        }
+        
+        // 绘制顶面
+        currentY -= layerH;
+        ctx.beginPath();
+        ctx.ellipse(0, currentY, layerR, layerR * hRatio, 0, 0, Math.PI * 2);
+        
+        let topGrad = ctx.createLinearGradient(-layerR, currentY - layerR, layerR, currentY + layerR);
+        topGrad.addColorStop(0, '#ffffff');
+        topGrad.addColorStop(0.4, part.color);
+        topGrad.addColorStop(1, shadeColor(part.color, -30));
+        
+        ctx.fillStyle = topGrad;
+        ctx.fill();
+        
+        ctx.lineWidth = Math.max(0.5, layerR * 0.05);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.stroke();
+        
+        // 科幻光环
+        if (part.dots > 0) {
+            ctx.save();
+            ctx.translate(0, currentY);
+            ctx.scale(1, hRatio);
+            ctx.rotate(Date.now() * 0.001 * (part.rev ? -1.5 : 1.0));
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            let dotR = layerR * 0.75;
+            for (let a = 0; a < part.dots; a++) {
+                let rad = (a * Math.PI * 2) / part.dots;
+                ctx.beginPath();
+                ctx.arc(Math.cos(rad) * dotR, Math.sin(rad) * dotR, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+    }
+    
+    ctx.restore();
+}
+
+// 更新碎片进度遮罩
+function updateFragmentOverlay(fragments, required) {
+    const overlay = document.getElementById('fragmentOverlay');
+    if (!overlay) return;
+    
+    overlay.innerHTML = '';
+    
+    const percentage = fragments / required;
+    
+    // 创建扇形表示进度
+    if (percentage > 0) {
+        const sector = document.createElement('div');
+        sector.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100px;
+            height: 100px;
+            transform-origin: 0 0;
+            background: conic-gradient(from 0deg, rgba(251, 191, 36, 0.7) 0deg, rgba(251, 191, 36, 0.7) ${percentage * 360}deg, transparent ${percentage * 360}deg);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            clip-path: circle(50%);
+        `;
+        overlay.appendChild(sector);
+    }
+}
+
+// 初始化基准陀螺弹窗
+function initBaseTopModal() {
+    const today = new Date().toLocaleDateString('zh-CN');
+    
+    // 检查是否是新的一天
+    if (arenaData.dailyTasks.date !== today) {
+        arenaData.dailyTasks = {
+            homework: false,
+            essay: false,
+            perfect: false,
+            date: today
+        };
+        saveData();
+    }
+    
+    // 设置复选框状态
+    const tasks = ['homework', 'essay', 'perfect'];
+    tasks.forEach(task => {
+        const checkbox = document.getElementById(`check${task.charAt(0).toUpperCase() + task.slice(1)}`);
+        const label = document.getElementById(`label${task.charAt(0).toUpperCase() + task.slice(1)}`);
+        const status = document.getElementById(`status${task.charAt(0).toUpperCase() + task.slice(1)}`);
+        
+        if (checkbox && arenaData.dailyTasks[task]) {
+            checkbox.checked = true;
+            label.classList.add('completed');
+            status.textContent = '已领取';
+        }
+    });
+    
+    // 渲染升级示意图
+    renderUpgradeVisual();
+    
+    // 启动持续气泡动画
+    startContinuousBubbles();
+}
+
+// 持续气泡动画
+let bubbleInterval = null;
+function startContinuousBubbles() {
+    // 清除之前的定时器
+    if (bubbleInterval) {
+        clearInterval(bubbleInterval);
+    }
+    
+    const container = document.getElementById('bubbleContainer');
+    if (!container) return;
+    
+    // 立即创建一些气泡
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => createBubble(container), i * 300);
+    }
+    
+    // 持续创建气泡
+    bubbleInterval = setInterval(() => {
+        createBubble(container);
+    }, 400);
+}
+
+// ===== 特殊陀螺奖励券系统 =====
+// 获取奖励券数量
+function getSpecialTickets() {
+    const data = localStorage.getItem(SPECIAL_TICKETS_KEY);
+    return data ? parseInt(data) : 0;
+}
+
+// 获取已拥有的特殊陀螺列表
+function getOwnedSpecialTops() {
+    const data = localStorage.getItem(SPECIAL_TOPS_KEY);
+    return data ? JSON.parse(data) : [];
+}
+
+// 检查并奖励特殊陀螺券
+function checkAndAwardSpecialTicket() {
+    const tasks = arenaData.dailyTasks;
+    // 检查三项任务是否都已完成
+    const allCompleted = tasks.homework && tasks.essay && tasks.perfect;
+    
+    if (allCompleted) {
+        // 检查今天是否已经领取过奖励券
+        const today = new Date().toDateString();
+        const lastDate = localStorage.getItem(SPECIAL_TOPS_DATE_KEY);
+        
+        if (lastDate !== today) {
+            // 奖励一张特殊陀螺券
+            const currentTickets = getSpecialTickets();
+            localStorage.setItem(SPECIAL_TICKETS_KEY, currentTickets + 1);
+            localStorage.setItem(SPECIAL_TOPS_DATE_KEY, today);
+            
+            // 显示奖励提示
+            setTimeout(() => {
+                showSpecialTicketToast();
+            }, 800);
+        }
+    }
+}
+
+// 显示特殊陀螺券奖励提示
+function showSpecialTicketToast() {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #f59e0b, #ef4444);
+        color: white;
+        padding: 30px 50px;
+        border-radius: 20px;
+        font-size: 20px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 10px 40px rgba(239, 68, 68, 0.5);
+        text-align: center;
+    `;
+    toast.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 10px;">🎴</div>
+        <div>恭喜完成今日三项任务！</div>
+        <div style="margin-top: 10px; font-size: 16px;">获得特殊陀螺奖励券 × 1</div>
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// ===== 特殊陀螺奖励页面渲染 =====
+function renderSpecialTopsModal() {
+    const tickets = getSpecialTickets();
+    document.getElementById('specialTickets').textContent = tickets;
+    
+    const grid = document.getElementById('specialTopsGrid');
+    grid.innerHTML = '';
+    
+    const ownedSpecialTops = getOwnedSpecialTops();
+    
+    // 渲染每个特殊陀螺
+    SPECIAL_TOPS.forEach(top => {
+        const isOwned = ownedSpecialTops.includes(top.id);
+        const card = document.createElement('div');
+        card.className = `special-top-card ${isOwned ? 'owned' : ''}`;
+        card.dataset.topId = top.id;
+        
+        card.innerHTML = `
+            <div class="special-top-preview">${top.emoji}</div>
+            <div class="special-top-name">${top.name}</div>
+            <div class="special-top-desc">${top.description}</div>
+            <div class="special-top-stats">
+                <span>血量: ${top.hp}</span>
+                <span>质量: ${top.baseMass}</span>
+            </div>
+            <button class="btn-claim-special ${isOwned ? 'owned' : ''}" 
+                    onclick="claimSpecialTop('${top.id}', this)" 
+                    ${isOwned || tickets < 1 ? 'disabled' : ''}>
+                ${isOwned ? '已拥有' : '兑换 (1张券)'}
+            </button>
+        `;
+        
+        grid.appendChild(card);
+    });
+}
+
+// 领取特殊陀螺
+function claimSpecialTop(topId, btnEl) {
+    if (!useSpecialTicket()) {
+        alert('奖励券不足！');
+        return;
+    }
+    
+    const owned = getOwnedSpecialTops();
+    if (owned.includes(topId)) {
+        alert('您已经拥有这个特殊陀螺了！');
+        return;
+    }
+    
+    // 添加到拥有列表
+    owned.push(topId);
+    localStorage.setItem(SPECIAL_TOPS_KEY, JSON.stringify(owned));
+    
+    // 将特殊陀螺添加到战场库存
+    const top = SPECIAL_TOPS.find(t => t.id === topId);
+    if (top) {
+        // 寻找棋盘上的空位
+        let placed = false;
+        for (let r = 0; r < GRID_ROWS && !placed; r++) {
+            for (let c = 0; c < GRID_COLS && !placed; c++) {
+                // 检查这个位置是否已被占用（只检查已放置在棋盘上的陀螺）
+                const occupied = arenaData.inventory.some(item => 
+                    item.gridR >= 0 && item.gridC >= 0 && item.gridR === r && item.gridC === c
+                );
+                if (!occupied) {
+                    // 找到空位，放置特殊陀螺
+                    arenaData.inventory.push({
+                        id: topId,
+                        isSpecial: true,
+                        gridR: r,
+                        gridC: c
+                    });
+                    placed = true;
+                }
+            }
+        }
+        
+        if (!placed) {
+            // 棋盘满了，放入库存但不放置
+            arenaData.inventory.push({
+                id: topId,
+                isSpecial: true,
+                gridR: -1,
+                gridC: -1
+            });
+            alert(`恭喜获得 ${top.name}！棋盘已满，已放入库存。`);
+        } else {
+            alert(`恭喜获得 ${top.name}！已自动部署到棋盘。`);
+        }
+        
+        saveData();
+        
+        // 刷新棋盘显示
+        reloadAssetsFromInventory();
+        
+        // 更新按钮状态
+        btnEl.textContent = '已拥有';
+        btnEl.classList.add('owned');
+        btnEl.disabled = true;
+        
+        // 更新卡片样式
+        const card = btnEl.closest('.special-top-card');
+        card.classList.add('owned');
+        
+        // 更新券数量显示
+        document.getElementById('specialTickets').textContent = getSpecialTickets();
+    }
+}
+
+// 使用奖励券
+function useSpecialTicket() {
+    const tickets = getSpecialTickets();
+    if (tickets > 0) {
+        localStorage.setItem(SPECIAL_TICKETS_KEY, tickets - 1);
+        return true;
+    }
+    return false;
+}
+
+function createBubble(container) {
+    if (!container) return;
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.style.left = `${40 + Math.random() * 20}%`;
+    bubble.style.animationDuration = `${2.5 + Math.random() * 1.5}s`;
+    container.appendChild(bubble);
+    
+    // 动画结束后移除
+    setTimeout(() => {
+        if (bubble.parentNode) {
+            bubble.remove();
+        }
+    }, 4000);
+}
+
+// 修改openModal函数，添加基准陀螺弹窗初始化
+const originalOpenModalBase = openModal;
+openModal = function(id) {
+    // 调用之前的openModal函数（它会调用最原始的openModal）
+    originalOpenModalBase(id);
+    
+    if (id === 'modalBaseInfo') {
+        initBaseTopModal();
+    }
+    else if (id === 'modalEfficiency') {
+        document.getElementById('efficiencyStars').textContent = arenaData.efficiencyStars;
+        renderExchangeCards();
+    }
+    else if (id === 'modalGacha') {
+        // 已在originalOpenModal中处理
+    }
+    else if (id === 'modalDex') {
+        let dexGrid = document.getElementById('dexGrid');
+        dexGrid.innerHTML = '';
+
+        // 计算最高已发现的陀螺等级
+        let maxDiscoveredTier = 0;
+        if (arenaData.discoveredTops && arenaData.discoveredTops.length > 0) {
+            arenaData.discoveredTops.forEach(topId => {
+                const topType = TOP_TYPES.find(t => t.id === topId);
+                if (topType && topType.tier > maxDiscoveredTier) {
+                    maxDiscoveredTier = topType.tier;
+                }
+            });
+        }
+
+        // 显示范围：最高已发现等级 + 6，但至少显示到LV6
+        let maxDisplayTier = Math.max(6, maxDiscoveredTier + 6);
+        maxDisplayTier = Math.min(maxDisplayTier, 50); // 不超过50
+
+        // 只显示到maxDisplayTier的陀螺
+        TOP_TYPES.forEach(type => {
+            // 如果超过显示范围，跳过
+            if (type.tier > maxDisplayTier) return;
+
+            let isDiscovered = arenaData.discoveredTops && arenaData.discoveredTops.includes(type.id);
+            let ownedCount = arenaData.inventory.filter(item => item.id === type.id).length;
+            let isOwned = ownedCount > 0;
+
+            let itemDiv = document.createElement('div');
+            itemDiv.className = 'dex-item';
+
+            if (isDiscovered) {
+                itemDiv.style.border = `2px solid ${type.color}`;
+                itemDiv.style.boxShadow = `inset 0 0 15px ${type.color}, 0 0 10px ${type.color}`;
+                itemDiv.style.background = 'rgba(255,255,255,0.1)';
+            } else {
+                itemDiv.style.border = '2px solid #333';
+                itemDiv.style.filter = 'grayscale(100%) opacity(0.5)';
+                itemDiv.style.background = 'rgba(0,0,0,0.3)';
+            }
+
+            let previewDataUrl = renderTopPreview(type, 140);
+
+            let html = `
+                <div class="dex-preview-container" style="position: relative; width: 100%; height: 100px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px;">
+                    <img src="${previewDataUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; ${isDiscovered ? '' : 'filter: grayscale(100%;'}">
+                </div>
+                <div class="dex-name" style="color: ${isDiscovered ? type.color : '#666'}; font-size: 16px; font-weight: bold; text-shadow: 0 0 10px ${isDiscovered ? type.color : 'transparent'};">${type.name}</div>
+                <div class="dex-tier" style="margin-top: 8px; font-size: 12px;">
+                    <div style="color: ${isDiscovered ? '#94a3b8' : '#555'};">碰撞质量: ${10 + type.tier * 2}</div>
+                    <div style="color: ${isDiscovered ? '#94a3b8' : '#555'}; margin-top:3px;">护盾血量: ${type.hp}</div>
+                </div>
+                <div style="font-size: 13px; margin-top: 10px; font-weight: bold; color: ${isOwned ? '#38bdf8' : (isDiscovered ? '#fbbf24' : '#555')}">
+                    ${isOwned ? `现役数量: ${ownedCount} 阵列` : (isDiscovered ? '已收录' : '未解锁')}
+                </div>
+            `;
+            itemDiv.innerHTML = html;
+            dexGrid.appendChild(itemDiv);
+        });
+    }
+}
+
+// 唤起执行
+window.onload = initEngine;

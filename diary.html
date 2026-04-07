@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星空打卡墙</title>
+    <link rel="stylesheet" href="diary.css">
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="btn-back" onclick="history.back()">← 返回</button>
+            <h1>🌌 星空打卡墙</h1>
+            <div class="header-stats">
+                <span id="totalDays">0天</span>
+                <span id="streakDays">🔥 0连击</span>
+            </div>
+        </header>
+
+        <!-- UFO 背景装饰（Lottie） -->
+        <div class="ufo-deco" id="ufoDeco">
+            <lottie-player src="lottie/Skyfall UFO.json" background="transparent" speed="1" loop autoplay style="width:90px;height:90px;"></lottie-player>
+        </div>
+
+        <!-- 成就徽章区 -->
+        <div class="badges-row" id="badgesRow"></div>
+
+        <!-- 月份导航 -->
+        <div class="month-nav">
+            <button class="nav-btn" id="prevMonth" onclick="changeMonth(-1)">‹</button>
+            <span class="month-label" id="monthLabel"></span>
+            <button class="nav-btn" id="nextMonth" onclick="changeMonth(1)">›</button>
+        </div>
+
+        <!-- 星空墙主体 -->
+        <div class="starwall" id="starwall"></div>
+
+        <!-- 今日打卡按钮（家长操作区） -->
+        <div class="checkin-panel">
+            <div class="panel-title">📋 今日记事打卡</div>
+            <div class="checkin-buttons">
+                <button class="btn-checkin" id="btnCheckin" onclick="doCheckin(false)">
+                    ✅ 完成记事
+                </button>
+                <button class="btn-checkin btn-star" id="btnStarCheckin" onclick="doCheckin(true)">
+                    ⭐ 完成记事 + 星号
+                </button>
+            </div>
+            <div class="today-status" id="todayStatus">今天还没打卡</div>
+        </div>
+    </div>
+
+    <!-- 打卡动画弹窗 -->
+    <div class="anim-overlay" id="animOverlay" onclick="closeAnim()">
+        <div class="anim-box" id="animBox">
+            <lottie-player id="animPlayer" background="transparent" speed="1" style="width:160px;height:160px;"></lottie-player>
+            <div class="anim-text" id="animText"></div>
+        </div>
+    </div>
+
+    <script src="diary.js"></script>
+</body>
+</html>

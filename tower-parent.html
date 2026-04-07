@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习塔防 - 家长端</title>
+    <link rel="stylesheet" href="tower-parent.css">
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <button class="btn-back" onclick="handleReturnToBattle()">← 战场</button>
+        <h1>⚔️ 家长管理</h1>
+        <div class="header-pts" id="headerPts">积分: 0</div>
+    </header>
+
+    <!-- 功能入口卡片 -->
+    <div class="menu-grid">
+        <button class="menu-card" onclick="openPanel('reward')">
+            <div class="menu-icon">✅</div>
+            <div class="menu-label">今日奖励</div>
+        </button>
+        <button class="menu-card" onclick="openPanel('penalty')">
+            <div class="menu-icon">❌</div>
+            <div class="menu-label">今日惩罚</div>
+        </button>
+        <button class="menu-card" onclick="openPanel('shop')">
+            <div class="menu-icon">🔧</div>
+            <div class="menu-label">武器商店</div>
+        </button>
+        <button class="menu-card" onclick="openPanel('slots')">
+            <div class="menu-icon">🗺️</div>
+            <div class="menu-label">塔位解锁</div>
+        </button>
+        <button class="menu-card" onclick="openPanel('history')">
+            <div class="menu-icon">📋</div>
+            <div class="menu-label">积分记录</div>
+        </button>
+    </div>
+
+    <div class="goto-battle">
+        <button class="btn-battle" onclick="handleReturnToBattle()">⚔️ 前往战场</button>
+    </div>
+</div>
+
+<!-- 通用面板弹窗 -->
+<div class="panel-mask" id="panelMask" onclick="closePanel()"></div>
+<div class="panel-drawer" id="panelDrawer">
+    <div class="panel-header">
+        <div class="panel-title" id="panelTitle"></div>
+        <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+</div>
+
+<!-- 升级管理弹窗 -->
+<div class="modal-mask" id="upgradeModal" onclick="handleModalClick(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div>
+                <div class="modal-title" id="modalTitle"></div>
+                <div class="modal-pts" id="modalPts"></div>
+                <div class="modal-stats" id="modalStats"></div>
+            </div>
+            <button class="modal-close" onclick="closeUpgradeModal()">✕</button>
+        </div>
+        <div class="modal-upg-list" id="modalUpgList"></div>
+    </div>
+</div>
+
+<script src="tower-data.js"></script>
+<script src="tower-parent.js"></script>
+</body>
+</html>

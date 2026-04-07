@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>护眼训练</title>
+    <link rel="stylesheet" href="eyecare.css">
+</head>
+<body>
+    <!-- 开始页面 -->
+    <div id="startScreen" class="screen">
+        <div class="start-container">
+            <h1 class="title">👀 护眼训练</h1>
+            <p class="subtitle">找不同数字游戏</p>
+            
+            <div class="instruction-box">
+                <div class="instruction-icon">🎯</div>
+                <h2>游戏规则</h2>
+                <ol class="instruction-list">
+                    <li>请站到<strong>5米外</strong>观看屏幕</li>
+                    <li>屏幕上会出现很多相同的数字</li>
+                    <li>其中<strong>混入1个不同</strong>的数字</li>
+                    <li>快速找出那个不同的数字</li>
+                    <li>每题<strong>4秒</strong>，共<strong>2分钟</strong></li>
+                </ol>
+            </div>
+            
+            <div class="stats-preview">
+                <div class="stat-item">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-text">2分钟</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-text">30道题</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🪙</div>
+                    <div class="stat-text">+5金币</div>
+                </div>
+            </div>
+            
+            <button class="btn-start" onclick="startGame()">开始训练</button>
+            <button class="btn-back" onclick="window.location.href='home.html'">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 游戏页面 -->
+    <div id="gameScreen" class="screen hidden">
+        <div class="game-header">
+            <div class="timer" id="timer">剩余时间：2:00</div>
+            <div class="progress" id="progress">题目：1/30</div>
+            <button class="btn-exit" onclick="exitGame()">退出</button>
+        </div>
+        
+        <div class="game-container" id="gameContainer">
+            <!-- 数字将在这里显示 -->
+        </div>
+        
+        <div class="hint" id="hint">找出不同的数字！</div>
+    </div>
+
+    <!-- 完成页面 -->
+    <div id="completeScreen" class="screen hidden">
+        <div class="complete-container">
+            <div class="complete-icon">🎉</div>
+            <h1 class="complete-title">训练完成！</h1>
+            <p class="complete-text">柏皓的眼睛得到了很好的休息！</p>
+            
+            <div class="reward-box">
+                <div class="reward-icon">🪙</div>
+                <div class="reward-text">获得 <span>5</span> 金币</div>
+            </div>
+            
+            <div class="stats-box">
+                <div class="stat-card">
+                    <div class="stat-label">完成题目</div>
+                    <div class="stat-value" id="completedCount">30</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">训练时长</div>
+                    <div class="stat-value">2分钟</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">今日完成</div>
+                    <div class="stat-value" id="todayCount">1</div>
+                </div>
+            </div>
+            
+            <div class="encouragement">
+                <p>👏 太棒了！坚持护眼训练，保护视力！</p>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="resetGame()">再来一次</button>
+                <button class="btn-secondary" onclick="window.location.href='home.html'">返回首页</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="eyecare.js"></script>
+</body>
+</html>

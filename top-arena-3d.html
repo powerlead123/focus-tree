@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>陀螺竞技场 3D进阶版</title>
+    <link rel="stylesheet" href="top-arena-3d.css">
+</head>
+<body>
+    <!-- 密码锁弹窗（页面加载时显示） -->
+    <div class="lock-overlay" id="lockOverlay">
+        <div class="lock-box">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-title">陀螺竞技场 3D</div>
+            <div class="lock-sub">请输入今日密码</div>
+            
+            <input type="password" id="realLockInput" class="lock-real-input" placeholder="输入密码..." onkeydown="if(event.key==='Enter') lockVerify()">
+            
+            <div class="lock-error" id="lockError"></div>
+            
+            <button class="lock-verify" onclick="lockVerify()" style="margin-top:10px; width:100%; padding:10px; border-radius:8px; border:none; background:#3b82f6; color:white; font-weight:bold; cursor:pointer;">确认密码</button>
+            <button class="lock-back" onclick="location.href='index.html'">← 返回首页</button>
+        </div>
+    </div>
+
+    <!-- 战斗主幕布 (3D光晕渲染层) -->
+    <canvas id="arenaCanvas"></canvas>
+
+    <!-- 战场安全区域（红色边框） -->
+    <div id="battleZone" class="battle-zone"></div>
+
+    <!-- 放置阶段网格覆盖层 -->
+    <div id="gridOverlay" class="grid-overlay"></div>
+
+    <!-- UI: 全局状态覆盖层 (开战时会淡出) -->
+    <div id="uiOverlay" class="ui-overlay">
+        
+        <!-- 顶部: 当前关卡 -->
+        <div class="top-hud">
+            <button class="btn-back" onclick="location.href='index.html'">← 返回主页</button>
+            <div class="level-indicator">
+                <div class="dot"></div>
+                <div class="circle" id="hudLevel">关卡 1</div>
+                <div class="dot"></div>
+            </div>
+            <div class="points-hud" id="hudPts">积分: 0</div>
+        </div>
+
+        <!-- 左侧功能列 -->
+        <div class="side-hud left-side">
+            <!-- 弹出每日获取基准陀螺的等级页面 -->
+            <button class="glass-btn btn-popup-base" onclick="openModal('modalBaseInfo')">
+                <div class="btn-icon">🧩</div>
+                <div class="btn-text">基准陀螺进度</div>
+            </button>
+            
+            <!-- 原部署按钮已移至底部 -->
+            <!-- 弹出每日积分奖励页面 (跳转回日常任务版面) -->
+            <button class="glass-btn btn-pts" onclick="location.href='tower-parent.html?panel=reward&source=top3d'">
+                <div class="btn-icon">✅</div>
+                <div class="btn-text">积分奖励页面</div>
+            </button>
+            
+            <!-- 特殊陀螺奖励页面 -->
+            <button class="glass-btn btn-special" onclick="openModal('modalSpecialTops')">
+                <div class="btn-icon">🎴</div>
+                <div class="btn-text">特殊陀螺奖励</div>
+            </button>
+        </div>
+
+        <!-- 右侧功能列 -->
+        <div class="side-hud right-side">
+            <!-- 奖励陀螺抽奖 -->
+            <button class="glass-btn btn-gacha" onclick="openModal('modalGacha')">
+                <div class="btn-icon">🎁</div>
+                <div class="btn-text">奖励陀螺抽奖</div>
+            </button>
+            
+            <!-- 作业效率奖励弹窗，领取钻石陀螺 -->
+            <button class="glass-btn btn-diamond" onclick="openModal('modalEfficiency')">
+                <div class="btn-icon">💎</div>
+                <div class="btn-text">作业效率奖励</div>
+            </button>
+            
+            <!-- 已有的陀螺种类展示弹窗 -->
+            <button class="glass-btn btn-dex" onclick="openModal('modalDex')">
+                <div class="btn-icon">📚</div>
+                <div class="btn-text">陀螺大图鉴</div>
+            </button>
+        </div>
+
+        <!-- 底部中心控制区 -->
+        <div class="bottom-controls">
+            <!-- 基准陀螺领取 (消耗积分自动部署) -->
+            <button class="glass-btn btn-deploy" onclick="deployBaseTop()">
+                <div class="btn-icon">⚙️</div>
+                <div class="btn-text">一键部署基准陀螺</div>
+            </button>
+            
+            <button id="btnStartMatch" class="btn-battle" onclick="startMatch()">⚔️ 开始比赛</button>
+        </div>
+        
+    </div>
+
+    <!-- 弹窗 1: 基准陀螺碎片进度 -->
+    <div class="modal hidden" id="modalBaseInfo">
+        <div class="modal-content glass-panel base-upgrade-panel">
+            <h2>🧩 我的基准陀螺升级</h2>
+            
+            <!-- 家长评定区域 -->
+            <div class="parent-check-section">
+                <h3>📋 今日任务完成评定</h3>
+                <p class="modal-desc">家长勾选孩子已完成的任务，每项可领取1个升级碎片</p>
+                <div class="check-list">
+                    <label class="check-item" id="labelHomework">
+                        <input type="checkbox" id="checkHomework" onchange="toggleFragment('homework')">
+                        <span class="check-box">✓</span>
+                        <span class="check-text">校内作业已完成</span>
+                        <span class="check-status" id="statusHomework">未领取</span>
+                    </label>
+                    <label class="check-item" id="labelEssay">
+                        <input type="checkbox" id="checkEssay" onchange="toggleFragment('essay')">
+                        <span class="check-box">✓</span>
+                        <span class="check-text">达标作文已写完</span>
+                        <span class="check-status" id="statusEssay">未领取</span>
+                    </label>
+                    <label class="check-item" id="labelPerfect">
+                        <input type="checkbox" id="checkPerfect" onchange="toggleFragment('perfect')">
+                        <span class="check-box">✓</span>
+                        <span class="check-text">作业全对无错误</span>
+                        <span class="check-status" id="statusPerfect">未领取</span>
+                    </label>
+                </div>
+            </div>
+            
+            <hr class="neon-hr">
+            
+            <!-- 升级示意图区域 -->
+            <div class="upgrade-visual-section">
+                <h3>⚡ 升级进度</h3>
+                <div class="upgrade-container">
+                    <!-- 下级陀螺（上方） -->
+                    <div class="top-preview next-level" id="nextLevelPreview">
+                        <div class="top-label">下级: <span id="nextLevelName">LV2</span></div>
+                        <div class="top-image-container">
+                            <canvas id="nextLevelCanvas" width="120" height="120"></canvas>
+                            <div class="fragment-overlay" id="fragmentOverlay"></div>
+                        </div>
+                        <div class="fragment-progress-text">
+                            碎片: <span id="currentFragments">0</span> / <span id="requiredFragments">3</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 升级动画区域 -->
+                    <div class="upgrade-animation">
+                        <div class="bubble-container" id="bubbleContainer"></div>
+                    </div>
+                    
+                    <!-- 当前陀螺（下方） -->
+                    <div class="top-preview current-level" id="currentLevelPreview">
+                        <div class="top-label">当前: <span id="currentLevelName">LV1</span></div>
+                        <div class="top-image-container">
+                            <canvas id="currentLevelCanvas" width="120" height="120"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn-close" onclick="closeModal('modalBaseInfo')">确定</button>
+        </div>
+    </div>
+
+    <!-- 弹窗 2: 奖励陀螺抽奖 -->
+    <div class="modal hidden" id="modalGacha">
+        <div class="modal-content glass-panel gacha-panel">
+            <h2>🎰 陀螺幸运转盘</h2>
+            <p class="modal-desc">作业全对获得每日抽奖机会<br>转动转盘，赢取强力陀螺！</p>
+            <div class="gacha-status">可用抽奖券: <span id="gachaTickets">0</span> 张</div>
+            
+            <!-- 转盘区域 -->
+            <div class="wheel-container">
+                <canvas id="gachaWheel" width="350" height="350" style="background: #0f172a; border-radius: 50%;"></canvas>
+                <div class="wheel-pointer"></div>
+                <div class="wheel-center">🎯</div>
+            </div>
+            
+            <button class="btn-action giant-btn" id="btnDoGacha" onclick="spinWheel()">🎲 转动转盘</button>
+            <button class="btn-close" onclick="closeModal('modalGacha')">返回</button>
+        </div>
+    </div>
+
+    <!-- 弹窗 3: 作业效率评定与钻石陀螺 -->
+    <div class="modal hidden" id="modalEfficiency">
+        <div class="modal-content glass-panel efficiency-panel">
+            <h2>💎 效率之星奖励 (家长专区)</h2>
+            
+            <!-- 家长评定区域 -->
+            <div class="efficiency-rating-section">
+                <p class="modal-desc">家长根据孩子今日表现评定效率<br>每日最高可获得 3 颗钻石 💎</p>
+                <div class="star-status large">当前拥有钻石: <span id="efficiencyStars">0</span> 💎</div>
+                <div class="rating-buttons">
+                    <button class="btn-rating btn-star-1 rating-locked" id="btnRate1" onclick="awardEfficiencyStar(1)">⭐ 奖励 1 颗钻石</button>
+                    <button class="btn-rating btn-star-2 rating-locked" id="btnRate2" onclick="awardEfficiencyStar(2)">⭐⭐ 奖励 2 颗钻石</button>
+                    <button class="btn-rating btn-star-3 rating-locked" id="btnRate3" onclick="awardEfficiencyStar(3)">⭐⭐⭐ 奖励 3 颗钻石</button>
+                </div>
+            </div>
+            
+            <hr class="neon-hr">
+            
+            <!-- 陀螺兑换区域 -->
+            <h3>🎁 兑换高级陀螺</h3>
+            <p class="modal-desc">消耗钻石兑换陀螺，直接放入战场！</p>
+            <div class="exchange-grid" id="exchangeGrid">
+                <!-- 动态生成12个陀螺卡片 -->
+            </div>
+            
+            <button class="btn-close" onclick="closeModal('modalEfficiency')">关闭</button>
+        </div>
+    </div>
+
+    <!-- 弹窗 4: 陀螺大图鉴与背包 -->
+    <div class="modal hidden" id="modalDex">
+        <div class="modal-content glass-panel dex-panel">
+            <h2>📚 陀螺图鉴与图谱</h2>
+            <div class="dex-grid" id="dexGrid">
+                <!-- 动态生成 -->
+            </div>
+            <button class="btn-close" onclick="closeModal('modalDex')">关闭图鉴</button>
+        </div>
+    </div>
+    
+    <!-- 弹窗 5: 特殊陀螺奖励 -->
+    <div class="modal hidden" id="modalSpecialTops">
+        <div class="modal-content glass-panel special-tops-panel">
+            <h2>🎴 特殊陀螺奖励</h2>
+            <div class="special-tops-status">
+                <span>可用奖励券: <strong id="specialTickets">0</strong> 张</span>
+                <span class="special-tops-hint">每日完成基准陀螺升级中的三项任务可获得奖励券</span>
+            </div>
+            <div class="special-tops-grid" id="specialTopsGrid">
+                <!-- 动态生成特殊陀螺卡片 -->
+            </div>
+            <button class="btn-close" onclick="closeModal('modalSpecialTops')">关闭</button>
+        </div>
+    </div>
+    
+    <!-- 全屏遮罩滤镜（用于碰撞大招时的屏幕闪白红等效果） -->
+    <div id="screenFlash" class="screen-flash"></div>
+
+    <!-- 结果弹窗 (战斗结束) -->
+    <div class="modal hidden result-modal" id="resultOverlay">
+        <div class="modal-content glass-panel result-box">
+            <h1 id="resultTitle" class="neon-text">胜利！</h1>
+            <p id="resultDesc">敌方被成功击溃！</p>
+            <button class="btn-action giant-btn" onclick="closeResult()">返回备战</button>
+        </div>
+    </div>
+
+    <!-- 引入数据层与新版逻辑 -->
+    <script src="tower-data.js"></script>
+    <script src="top-arena-3d.js"></script>
+</body>
+</html>
