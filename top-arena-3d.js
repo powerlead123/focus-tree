@@ -1433,8 +1433,16 @@ function spawnEnemies() {
     
     // 3. 构建匹配战力的反派机甲军团
     let spawnedPower = 0;
-    // 敌军的前沿科技随着玩家探索加深而解密，略高于玩家当前普遍水平，制造稀有级压迫感
-    let maxEnemyTier = Math.min(50, Math.ceil(arenaData.currentLevel / 2) + 1); 
+    // 计算我方最高等级陀螺
+    let myMaxTier = 1;
+    arenaData.inventory.forEach(item => {
+        let t = TOP_TYPES.find(x => x.id === item.id);
+        if (t && t.tier > myMaxTier) {
+            myMaxTier = t.tier;
+        }
+    });
+    // 敌方最高等级只比我方高1级（限制公平性）
+    let maxEnemyTier = Math.min(50, myMaxTier + 1); 
     
     let safeLoops = 0;
     // 不断招募机神填满目标战力池
