@@ -130,6 +130,22 @@ const SPECIAL_TOPS = [
         maxSize: 2.2,  // 最大放大倍数（变大到2.2倍）
         minSize: 0.7,  // 最小缩小倍数
         damageBonus: 3  // 变大时伤害倍数（最大3倍伤害）
+    },
+    {
+        id: 'huluwa2',
+        name: '二娃陀螺',
+        emoji: '👀',
+        hp: 35,
+        baseMass: 24,  // 对应LV7的基础质量
+        color: '#f97316',  // 橙色，代表二娃
+        tier: 7,
+        description: '葫芦娃二娃，拥有千里眼和顺风耳！激光眼和声波攻击交替释放，每2秒一次！',
+        ability: 'laserAndSonic',  // 特殊能力：激光眼+声波攻击
+        laserDamage: 15,  // 激光伤害
+        sonicDamage: 12,  // 声波伤害
+        attackInterval: 2000,  // 攻击间隔2秒
+        laserRange: 300,  // 激光射程
+        sonicRange: 150  // 声波范围
     }
 ];
 
@@ -400,11 +416,219 @@ function renderLoop() {
         });
     }
 
+    // 渲染激光和声波效果
+    renderSpecialAttacks();
+    
     // 渲染粒子与主光影实体
     renderParticles();
     renderTops();
     
     animFrame = requestAnimationFrame(renderLoop);
+}
+
+// ===== 渲染特殊陀螺攻击效果（激光和声波）=====
+function renderSpecialAttacks() {
+    const now = Date.now();
+    
+    topsOnBoard.forEach(top => {
+        if (!top.isSpecial || top.specialId !== 'huluwa2') return;
+        
+        const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa2');
+        if (!specialTop) return;
+        
+        // 计算当前攻击阶段
+        if (!top.attackPhase) {
+            top.attackPhase = 'laser';
+            top.attackStartTime = now;
+            // 初始化激光参数
+            top.laserAngle = Math.random() * Math.PI * 2;
+            top.laserDistance = 0;
+        }
+        
+        const timeSincePhaseStart = now - top.attackStartTime;
+        const attackProgress = timeSincePhaseStart / specialTop.attackInterval;
+        
+        // 检查是否需要切换攻击阶段
+        if (attackProgress >= 1) {
+            // 切换攻击阶段
+            if (top.attackPhase === 'laser') {
+                top.attackPhase = 'sonic';
+                // 初始化声波参数
+                top.sonicRadius = 0;
+            } else {
+                top.attackPhase = 'laser';
+                // 初始化激光参数
+                top.laserAngle = Math.random() * Math.PI * 2;
+                top.laserDistance = 0;
+            }
+            top.attackStartTime = now;
+        }
+        
+        if (top.attackPhase === 'laser') {
+            // 激光阶段 - 发射射线
+            renderLaserBeam(top);
+        } else if (top.attackPhase === 'sonic') {
+            // 声波阶段 - 扩散圆环
+            renderSonicWave(top);
+        }
+    });
+}
+
+// 渲染激光射线（带伤害检测）
+function renderLaserBeam(top) {
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa2');
+    if (!specialTop) return;
+    
+    // 激光移动速度
+    const laserSpeed = 10; // 每帧移动10像素
+    
+    // 计算激光当前位置（从陀螺中心向外移动）
+    top.laserDistance += laserSpeed;
+    
+    // 激光线段长度
+    const laserLength = 80;
+    
+    // 激光起点（已经移动出去的距离）
+    const startX = top.x + Math.cos(top.laserAngle) * top.laserDistance;
+    const startY = top.y + Math.sin(top.laserAngle) * top.laserDistance;
+    
+    // 激光终点
+    const endX = startX + Math.cos(top.laserAngle) * laserLength;
+    const endY = startY + Math.sin(top.laserAngle) * laserLength;
+    
+    // 检查激光是否完全移出画布（使用canvas的宽高）
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const margin = 200; // 额外边距确保完全离开视野
+    
+    if (startX < -margin || startX > canvasWidth + margin || 
+        startY < -margin || startY > canvasHeight + margin) {
+        // 激光已完全移出屏幕，不再渲染
+        return;
+    }
+    
+    // ===== 激光伤害检测 =====
+    // 每5帧检测一次伤害（避免过于频繁）
+    if (!top.lastDamageFrame) top.lastDamageFrame = 0;
+    top.lastDamageFrame++;
+    
+    if (top.lastDamageFrame >= 5) {
+        top.lastDamageFrame = 0;
+        
+        topsOnBoard.forEach(enemy => {
+            if (enemy.isEnemy === top.isEnemy) return; // 跳过同阵营
+            
+            // 计算敌方陀螺到激光线段的距离
+            const dist = pointToLineDistance(enemy.x, enemy.y, startX, startY, endX, endY);
+            
+            // 激光宽度约8像素，加上敌方陀螺半径
+            if (dist < enemy.radius + 4) {
+                enemy.hp -= specialTop.laserDamage;
+                createParticles(enemy.x, enemy.y, '#ef4444'); // 红色粒子效果
+            }
+        });
+    }
+    
+    // 激光渐变效果
+    const laserGrad = ctx.createLinearGradient(startX, startY, endX, endY);
+    laserGrad.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+    laserGrad.addColorStop(0.5, 'rgba(239, 68, 68, 1)');
+    laserGrad.addColorStop(1, 'rgba(239, 68, 68, 0.3)');
+    
+    // 激光外发光
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ef4444';
+    
+    // 激光主体
+    ctx.strokeStyle = laserGrad;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    
+    // 激光核心（更亮）
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+    
+    ctx.shadowBlur = 0;
+}
+
+// 渲染声波圆环（带伤害检测）
+function renderSonicWave(top) {
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa2');
+    if (!specialTop) return;
+    
+    // 扩散速度
+    const expandSpeed = 8; // 每帧增加8像素
+    top.sonicRadius += expandSpeed;
+    
+    // 使用canvas尺寸作为边界判断
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    // 计算从陀螺到画布角落的最大距离
+    const maxDist1 = Math.sqrt(top.x * top.x + top.y * top.y);
+    const maxDist2 = Math.sqrt((canvasWidth - top.x) * (canvasWidth - top.x) + top.y * top.y);
+    const maxDist3 = Math.sqrt(top.x * top.x + (canvasHeight - top.y) * (canvasHeight - top.y));
+    const maxDist4 = Math.sqrt((canvasWidth - top.x) * (canvasWidth - top.x) + (canvasHeight - top.y) * (canvasHeight - top.y));
+    const maxScreenRadius = Math.max(maxDist1, maxDist2, maxDist3, maxDist4) + 100;
+    
+    // 如果圆环已经扩散到屏幕外，不再渲染
+    if (top.sonicRadius > maxScreenRadius) {
+        return;
+    }
+    
+    // ===== 声波伤害检测 =====
+    // 声波是扩散的圆环，只有圆环边缘接触敌人时造成伤害
+    // 每3帧检测一次伤害
+    if (!top.lastSonicDamageFrame) top.lastSonicDamageFrame = 0;
+    top.lastSonicDamageFrame++;
+    
+    if (top.lastSonicDamageFrame >= 3) {
+        top.lastSonicDamageFrame = 0;
+        
+        topsOnBoard.forEach(enemy => {
+            if (enemy.isEnemy === top.isEnemy) return; // 跳过同阵营
+            
+            const dx = enemy.x - top.x;
+            const dy = enemy.y - top.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // 声波圆环宽度约10像素，检测圆环边缘是否接触敌人
+            const ringWidth = 10;
+            if (Math.abs(dist - top.sonicRadius) < enemy.radius + ringWidth / 2) {
+                enemy.hp -= specialTop.sonicDamage;
+                createParticles(enemy.x, enemy.y, '#22c55e'); // 绿色粒子效果
+            }
+        });
+    }
+    
+    // 声波透明度随扩散逐渐降低
+    const alpha = Math.max(0, 1 - (top.sonicRadius / maxScreenRadius));
+    
+    // 外圈
+    ctx.strokeStyle = `rgba(34, 197, 94, ${alpha * 0.8})`;
+    ctx.lineWidth = 5;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(top.x, top.y, top.sonicRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 内圈（更亮）
+    ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(top.x, top.y, top.sonicRadius * 0.9, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    ctx.shadowBlur = 0;
 }
 
 // ===== 获取动态质量（特殊陀螺会随大小变化）=====
@@ -423,6 +647,67 @@ function getDynamicMass(top) {
     
     // 质量随大小线性增加
     return top.mass * sizeMultiplier;
+}
+
+// ===== 处理特殊陀螺攻击（二娃的激光和声波）=====
+// 注意：伤害检测现在在 renderSpecialAttacks 中同步进行
+function processSpecialTopAttacks() {
+    // 伤害检测已合并到渲染函数中，确保视觉和伤害同步
+    // 这个函数保留用于兼容性
+}
+
+// 计算点到线段的距离
+function pointToLineDistance(px, py, x1, y1, x2, y2) {
+    const A = px - x1;
+    const B = py - y1;
+    const C = x2 - x1;
+    const D = y2 - y1;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = -1;
+    
+    if (lenSq !== 0) {
+        param = dot / lenSq;
+    }
+    
+    let xx, yy;
+    
+    if (param < 0) {
+        xx = x1;
+        yy = y1;
+    } else if (param > 1) {
+        xx = x2;
+        yy = y2;
+    } else {
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+    
+    const dx = px - xx;
+    const dy = py - yy;
+    
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// 创建激光视觉效果
+function createLaserEffect(x1, y1, x2, y2) {
+    // 激光效果已经在 renderHuluwa2 中绘制
+    // 这里可以添加额外的粒子效果
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+    createParticles(midX, midY, 'rgba(239, 68, 68, 0.5)');
+}
+
+// 创建声波视觉效果
+function createSonicEffect(x, y, range) {
+    // 创建环形粒子效果
+    for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const px = x + Math.cos(angle) * range * 0.8;
+        const py = y + Math.sin(angle) * range * 0.8;
+        createParticles(px, py, 'rgba(34, 197, 94, 0.5)');
+    }
 }
 
 // ===== 特殊陀螺伤害加成计算 =====
@@ -452,6 +737,16 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
     const specialTop = SPECIAL_TOPS.find(st => st.id === top.specialId);
     if (!specialTop) return;
     
+    // 根据陀螺类型选择不同的渲染方式
+    if (specialTop.id === 'huluwa1') {
+        renderHuluwa1(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'huluwa2') {
+        renderHuluwa2(top, cx, cy, r, specialTop);
+    }
+}
+
+// 大娃陀螺渲染
+function renderHuluwa1(top, cx, cy, r, specialTop) {
     ctx.save();
     ctx.translate(cx, cy);
     
@@ -542,6 +837,103 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
     ctx.fillText('👶', 0, -r * 0.1);
     
     ctx.restore();
+    
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 二娃陀螺渲染
+function renderHuluwa2(top, cx, cy, r, specialTop) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    
+    const hRatio = 0.55;
+    const color = specialTop.color;
+    
+    // 特殊光效 - 二娃的橙色光环
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = color;
+    
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // 二娃陀螺外形 - 更流线型，有科技感
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+    
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦上部小圆（更扁平）
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.65, r * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.35, -r * 0.25, r * 0.7, r * 0.5);
+    
+    // 葫芦顶部 - 眼睛位置
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.6, r * 0.3, r * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 装饰耳朵（顺风耳）
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.7, -r * 0.3, r * 0.15, r * 0.25, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(r * 0.7, -r * 0.3, r * 0.15, r * 0.25, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 旋转的光环效果 - 声波环
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 3);
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.6)';  // 绿色声波
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    // 特殊标记 - 二娃表情（千里眼）
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👀', 0, -r * 0.1);
+    
+    ctx.restore();
+    
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 通用信息显示（名称和血条）
+function renderSpecialTopInfo(top, cx, cy, r, specialTop) {
     
     // 显示名称
     ctx.font = 'bold 14px "Arial Black", sans-serif';
@@ -1023,6 +1415,9 @@ function renderTops() {
 
 // ===== 物理引擎与碰撞机制 =====
 function updatePhysics() {
+    // 处理特殊陀螺攻击（二娃的激光和声波）
+    processSpecialTopAttacks();
+    
     for (let i = 0; i < topsOnBoard.length; i++) {
         let t1 = topsOnBoard[i];
         
