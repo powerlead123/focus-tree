@@ -146,6 +146,19 @@ const SPECIAL_TOPS = [
         attackInterval: 2000,  // 攻击间隔2秒
         laserRange: 300,  // 激光射程
         sonicRange: 150  // 声波范围
+    },
+    {
+        id: 'huluwa3',
+        name: '三娃陀螺',
+        emoji: '🛡️',
+        hp: 35,
+        baseMass: 24,  // 对应LV7的基础质量
+        color: '#facc15',  // 黄色，代表三娃（铜头铁臂）
+        tier: 7,
+        description: '葫芦娃三娃，铜头铁臂刀枪不入！拥有铜墙铁壁防护罩，可抵挡5次碰撞伤害！',
+        ability: 'shield',  // 特殊能力：防护罩
+        shieldMaxHits: 5,  // 防护罩最大抵挡次数
+        shieldRadius: 45   // 防护罩半径
     }
 ];
 
@@ -428,6 +441,9 @@ function renderLoop() {
 
 // ===== 渲染特殊陀螺攻击效果（激光和声波）=====
 function renderSpecialAttacks() {
+    // 只有在比赛进行中才渲染攻击效果
+    if (gameState !== 'playing') return;
+    
     const now = Date.now();
     
     topsOnBoard.forEach(top => {
@@ -732,6 +748,54 @@ function getSpecialDamageBonus(top, baseDamage) {
     return baseDamage * damageBonus;
 }
 
+// ===== 三娃防护罩伤害减免 =====
+function applyShieldDamage(top, incomingDamage) {
+    // 检查是否是三娃陀螺
+    if (!top.isSpecial || top.specialId !== 'huluwa3') {
+        return { actualDamage: incomingDamage, shieldHit: false };
+    }
+    
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa3');
+    if (!specialTop) return { actualDamage: incomingDamage, shieldHit: false };
+    
+    // 初始化防护罩状态
+    if (top.shieldHits === undefined) {
+        top.shieldHits = 0;
+    }
+    
+    // 检查防护罩是否还存在
+    if (top.shieldHits >= specialTop.shieldMaxHits) {
+        return { actualDamage: incomingDamage, shieldHit: false };
+    }
+    
+    // 防护罩抵挡伤害
+    top.shieldHits++;
+    
+    // 创建防护罩受击特效
+    createShieldHitEffect(top.x, top.y);
+    
+    // 防护罩完全抵挡伤害
+    return { actualDamage: 0, shieldHit: true };
+}
+
+// 防护罩受击特效
+function createShieldHitEffect(x, y) {
+    // 创建金色火花粒子
+    for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.5;
+        const speed = 2 + Math.random() * 3;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 30,
+            color: '#fbbf24',
+            size: 3 + Math.random() * 2
+        });
+    }
+}
+
 // ===== 战场上特殊陀螺渲染 =====
 function renderSpecialTopOnBoard(top, cx, cy, r) {
     const specialTop = SPECIAL_TOPS.find(st => st.id === top.specialId);
@@ -742,6 +806,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderHuluwa1(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'huluwa2') {
         renderHuluwa2(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'huluwa3') {
+        renderHuluwa3(top, cx, cy, r, specialTop);
     }
 }
 
@@ -925,6 +991,156 @@ function renderHuluwa2(top, cx, cy, r, specialTop) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('👀', 0, -r * 0.1);
+    
+    ctx.restore();
+    
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 三娃陀螺渲染
+function renderHuluwa3(top, cx, cy, r, specialTop) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    
+    const hRatio = 0.55;
+    const color = specialTop.color;
+    
+    // 初始化防护罩状态
+    if (top.shieldHits === undefined) {
+        top.shieldHits = 0;
+    }
+    
+    // 特殊光效 - 三娃的金色光环
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = color;
+    
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // ===== 防护罩渲染 =====
+    if (top.shieldHits < specialTop.shieldMaxHits) {
+        const shieldRadius = specialTop.shieldRadius || 45;
+        const shieldOpacity = 0.6 - (top.shieldHits * 0.1); // 每次碰撞后透明度降低
+        
+        // 防护罩外圈 - 金色光晕
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = '#fbbf24';
+        ctx.strokeStyle = `rgba(251, 191, 36, ${shieldOpacity})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, shieldRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // 防护罩内圈 - 半透明金色填充
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = `rgba(251, 191, 36, ${shieldOpacity * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, shieldRadius - 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // 防护罩裂纹效果
+        if (top.shieldHits > 0) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 - top.shieldHits * 0.15})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // 根据碰撞次数绘制裂纹
+            for (let i = 0; i < top.shieldHits; i++) {
+                const crackAngle = (Math.PI * 2 / specialTop.shieldMaxHits) * i + Math.PI / 6;
+                const innerR = shieldRadius * 0.3;
+                const outerR = shieldRadius * 0.9;
+                
+                // 主裂纹线
+                ctx.moveTo(Math.cos(crackAngle) * innerR, Math.sin(crackAngle) * innerR);
+                ctx.lineTo(Math.cos(crackAngle) * outerR, Math.sin(crackAngle) * outerR);
+                
+                // 分支裂纹
+                const branchAngle1 = crackAngle + 0.3;
+                const branchAngle2 = crackAngle - 0.3;
+                ctx.moveTo(Math.cos(crackAngle) * outerR * 0.6, Math.sin(crackAngle) * outerR * 0.6);
+                ctx.lineTo(Math.cos(branchAngle1) * outerR * 0.8, Math.sin(branchAngle1) * outerR * 0.8);
+                ctx.moveTo(Math.cos(crackAngle) * outerR * 0.6, Math.sin(crackAngle) * outerR * 0.6);
+                ctx.lineTo(Math.cos(branchAngle2) * outerR * 0.8, Math.sin(branchAngle2) * outerR * 0.8);
+            }
+            ctx.stroke();
+        }
+        
+        // 防护罩剩余次数显示
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const remainingHits = specialTop.shieldMaxHits - top.shieldHits;
+        ctx.fillText(`${remainingHits}`, shieldRadius + 10, -shieldRadius + 5);
+    }
+    
+    // 三娃陀螺外形 - 更坚固的形状
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+    
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦上部小圆（更厚实）
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.28, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.3, -r * 0.2, r * 0.6, r * 0.4);
+    
+    // 葫芦顶部
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.68, r * 0.25, r * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 铜头铁臂装饰 - 金属质感环
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.95, r * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 旋转的光环效果 - 铜色光环
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 2);
+    ctx.strokeStyle = 'rgba(180, 83, 9, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    // 特殊标记 - 三娃表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🛡️', 0, -r * 0.1);
     
     ctx.restore();
     
@@ -1514,8 +1730,12 @@ function updatePhysics() {
                         dmgToT2 = getSpecialDamageBonus(t1, dmgToT2);
                         dmgToT1 = getSpecialDamageBonus(t2, dmgToT1);
                         
-                        t1.hp -= dmgToT1;
-                        t2.hp -= dmgToT2;
+                        // 特殊陀螺能力：三娃防护罩减伤
+                        const shieldResult1 = applyShieldDamage(t1, dmgToT1);
+                        const shieldResult2 = applyShieldDamage(t2, dmgToT2);
+                        
+                        t1.hp -= shieldResult1.actualDamage;
+                        t2.hp -= shieldResult2.actualDamage;
                     }
                 }
             }
