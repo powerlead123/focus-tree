@@ -369,15 +369,43 @@ function renderLoop() {
     if (gameState === 'playing') {
         updatePhysics();
         
-        // 扫清死掉的陀螺，并制造爆炸震屏特效
+        // 处理死掉的陀螺 - 先启动飞出动画，再移除
         for (let i = topsOnBoard.length - 1; i >= 0; i--) {
-            if (topsOnBoard[i].hp <= 0) {
+            if (topsOnBoard[i].hp <= 0 && !topsOnBoard[i].isDying) {
                 let deadTop = topsOnBoard[i];
+                deadTop.isDying = true; // 标记为正在死亡动画中
+                deadTop.deathTime = Date.now();
+                
+                // 计算飞出方向 - 随机角度，主要向屏幕边缘飞
+                const centerX = w / 2;
+                const centerY = h / 2;
+                const dx = deadTop.x - centerX;
+                const dy = deadTop.y - centerY;
+                const angle = Math.atan2(dy, dx) + (Math.random() - 0.5) * 0.5; // 稍微随机偏移
+                
+                // 设置飞出速度 - 快速飞出
+                const flySpeed = 15 + Math.random() * 10;
+                deadTop.vx = Math.cos(angle) * flySpeed;
+                deadTop.vy = Math.sin(angle) * flySpeed;
+                deadTop.rSpeed = (Math.random() - 0.5) * 1.5; // 快速旋转
+                
                 createParticles(deadTop.x, deadTop.y, deadTop.color);
                 createParticles(deadTop.x, deadTop.y, '#ffffff');
                 createParticles(deadTop.x, deadTop.y, '#ff0000');
-                topsOnBoard.splice(i, 1);
                 triggerShake(); // 只有机甲爆破了才震动半秒
+            }
+        }
+        
+        // 移除已经飞出屏幕的死亡陀螺
+        for (let i = topsOnBoard.length - 1; i >= 0; i--) {
+            let top = topsOnBoard[i];
+            if (top.isDying) {
+                // 检查是否已飞出屏幕（留一些边距）
+                const margin = 100;
+                if (top.x < -margin || top.x > w + margin || 
+                    top.y < -margin || top.y > h + margin) {
+                    topsOnBoard.splice(i, 1);
+                }
             }
         }
         
