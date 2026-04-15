@@ -1670,6 +1670,11 @@ function updatePhysics() {
         t1.y += t1.vy;
         t1.angle += t1.rSpeed;
         
+        // 正在死亡的陀螺不受边界限制，可以飞出屏幕
+        if (t1.isDying) {
+            continue;
+        }
+        
         // 全屏边界反弹逻辑 & 孤狼索敌制导
         let hitWall = false;
         if (t1.x - t1.radius < 0) { t1.x = t1.radius; t1.vx *= -1; hitWall = true; }
