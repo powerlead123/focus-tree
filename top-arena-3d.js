@@ -188,6 +188,15 @@ let particles = [];
 let animFrame = null;
 let gameState = 'setup'; // setup, playing, ended
 
+// 玻璃破裂效果状态
+let glassCrackState = {
+    crackCount: 0,        // 当前裂纹次数（0-5）
+    maxCracks: 5,         // 最大裂纹次数
+    cracks: [],           // 裂纹路径数组
+    isShattered: false,   // 是否已彻底碎裂
+    shatterTime: 0        // 碎裂动画开始时间
+};
+
 // 布局控制
 const GRID_COLS = 6;
 const GRID_ROWS = 5;
@@ -393,6 +402,9 @@ function renderLoop() {
                 createParticles(deadTop.x, deadTop.y, '#ffffff');
                 createParticles(deadTop.x, deadTop.y, '#ff0000');
                 triggerShake(); // 只有机甲爆破了才震动半秒
+                
+                // 添加玻璃裂纹效果
+                addGlassCrack();
             }
         }
         
@@ -460,11 +472,120 @@ function renderLoop() {
     // 渲染激光和声波效果
     renderSpecialAttacks();
     
+    // 渲染玻璃破裂效果
+    renderGlassCracks();
+    
     // 渲染粒子与主光影实体
     renderParticles();
     renderTops();
     
     animFrame = requestAnimationFrame(renderLoop);
+}
+
+// ===== 渲染玻璃裂纹效果 =====
+function renderGlassCracks() {
+    if (glassCrackState.crackCount === 0 && !glassCrackState.isShattered) return;
+    
+    ctx.save();
+    
+    // 如果已彻底碎裂，显示碎裂动画
+    if (glassCrackState.isShattered) {
+        const elapsed = Date.now() - glassCrackState.shatterTime;
+        const progress = Math.min(elapsed / 1000, 1); // 1秒动画
+        
+        // 碎裂效果 - 整个屏幕玻璃破碎
+        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - progress})`;
+        ctx.lineWidth = 2;
+        ctx.fillStyle = `rgba(200, 220, 255, ${0.3 * (1 - progress)})`;
+        ctx.fillRect(0, 0, w, h);
+        
+        // 绘制大量裂纹
+        for (let i = 0; i < 20; i++) {
+            const startX = Math.random() * w;
+            const startY = Math.random() * h;
+            const angle = Math.random() * Math.PI * 2;
+            const length = 100 + Math.random() * 200;
+            
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(startX + Math.cos(angle) * length, startY + Math.sin(angle) * length);
+            ctx.stroke();
+        }
+        
+        // 重置玻璃状态（动画结束后）
+        if (progress >= 1) {
+            glassCrackState.crackCount = 0;
+            glassCrackState.cracks = [];
+            glassCrackState.isShattered = false;
+        }
+        
+        ctx.restore();
+        return;
+    }
+    
+    // 绘制累积的裂纹
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 5;
+    ctx.shadowColor = 'rgba(200, 220, 255, 0.8)';
+    
+    glassCrackState.cracks.forEach(crack => {
+        ctx.beginPath();
+        ctx.moveTo(crack.startX, crack.startY);
+        
+        // 绘制裂纹路径（带分支）
+        let currentX = crack.startX;
+        let currentY = crack.startY;
+        const segments = 5;
+        
+        for (let i = 0; i < segments; i++) {
+            const angle = crack.angle + (Math.random() - 0.5) * 0.5;
+            const length = crack.length / segments;
+            currentX += Math.cos(angle) * length;
+            currentY += Math.sin(angle) * length;
+            ctx.lineTo(currentX, currentY);
+            
+            // 小分支
+            if (Math.random() > 0.5) {
+                ctx.moveTo(currentX, currentY);
+                ctx.lineTo(
+                    currentX + Math.cos(angle + 0.8) * length * 0.5,
+                    currentY + Math.sin(angle + 0.8) * length * 0.5
+                );
+            }
+        }
+        ctx.stroke();
+    });
+    
+    // 显示剩余次数指示器
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`玻璃: ${glassCrackState.maxCracks - glassCrackState.crackCount}/${glassCrackState.maxCracks}`, w - 20, 30);
+    
+    ctx.restore();
+}
+
+// ===== 添加玻璃裂纹 =====
+function addGlassCrack() {
+    if (glassCrackState.isShattered) return;
+    
+    glassCrackState.crackCount++;
+    
+    // 生成新的裂纹
+    const crack = {
+        startX: Math.random() * w,
+        startY: Math.random() * h,
+        angle: Math.random() * Math.PI * 2,
+        length: 100 + Math.random() * 150
+    };
+    glassCrackState.cracks.push(crack);
+    
+    // 检查是否达到最大裂纹次数
+    if (glassCrackState.crackCount >= glassCrackState.maxCracks) {
+        glassCrackState.isShattered = true;
+        glassCrackState.shatterTime = Date.now();
+    }
 }
 
 // ===== 渲染特殊陀螺攻击效果（激光和声波）=====
@@ -2146,6 +2267,12 @@ function startMatch() {
 
     // 初始化音频上下文（需要用户交互）
     initAudio();
+
+    // 重置玻璃裂纹状态
+    glassCrackState.crackCount = 0;
+    glassCrackState.cracks = [];
+    glassCrackState.isShattered = false;
+    glassCrackState.shatterTime = 0;
 
     gameState = 'playing';
 
