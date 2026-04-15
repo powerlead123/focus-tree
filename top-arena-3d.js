@@ -1406,7 +1406,7 @@ function renderHuluwa4(top, cx, cy, r, specialTop) {
 // 四娃喷火效果渲染
 function renderFireBreath(top, cx, cy, r, specialTop) {
     const now = Date.now();
-    
+
     // 初始化喷火状态
     if (!top.fireState) {
         top.fireState = {
@@ -1415,56 +1415,51 @@ function renderFireBreath(top, cx, cy, r, specialTop) {
             fireAngle: Math.random() * Math.PI * 2
         };
     }
-    
+
     // 检查是否需要切换喷火方向
     const breathDuration = now - top.fireState.breathStartTime;
     if (breathDuration > specialTop.fireDuration) {
         top.fireState.breathStartTime = now;
         top.fireState.fireAngle = Math.random() * Math.PI * 2;
     }
-    
+
     // 计算喷火方向（基于陀螺旋转角度）
     const fireAngle = top.fireState.fireAngle;
-    
+
     // 绘制扇形火焰
     const fireRange = specialTop.fireRange;
     const fireSpread = specialTop.fireAngle / 2;
-    
-    // 火焰渐变
-    const fireGrad = ctx.createRadialGradient(0, 0, r, 0, 0, fireRange);
+
+    // 火焰渐变 - 使用正确的坐标创建渐变
+    const fireGrad = ctx.createRadialGradient(cx, cy, r, cx, cy, fireRange);
     fireGrad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
     fireGrad.addColorStop(0.3, 'rgba(255, 100, 0, 0.6)');
     fireGrad.addColorStop(0.6, 'rgba(255, 50, 0, 0.3)');
     fireGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
-    
-    ctx.save();
-    ctx.translate(cx, cy);
-    
+
     // 绘制扇形火焰区域
     ctx.fillStyle = fireGrad;
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.arc(0, 0, fireRange, fireAngle - fireSpread, fireAngle + fireSpread);
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, fireRange, fireAngle - fireSpread, fireAngle + fireSpread);
     ctx.closePath();
     ctx.fill();
-    
+
     // 绘制火焰粒子效果
-    const particleCount = 10;
+    const particleCount = 15;
     for (let i = 0; i < particleCount; i++) {
         const pAngle = fireAngle + (Math.random() - 0.5) * specialTop.fireAngle;
         const pDist = r + Math.random() * fireRange * 0.8;
-        const px = Math.cos(pAngle) * pDist;
-        const py = Math.sin(pAngle) * pDist;
-        const pSize = 3 + Math.random() * 6;
-        
-        ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${0.6 + Math.random() * 0.4})`;
+        const px = cx + Math.cos(pAngle) * pDist;
+        const py = cy + Math.sin(pAngle) * pDist;
+        const pSize = 4 + Math.random() * 8;
+
+        ctx.fillStyle = `rgba(255, ${80 + Math.random() * 120}, 0, ${0.7 + Math.random() * 0.3})`;
         ctx.beginPath();
         ctx.arc(px, py, pSize, 0, Math.PI * 2);
         ctx.fill();
     }
-    
-    ctx.restore();
-    
+
     // 检测火焰伤害
     applyFireDamage(top, cx, cy, fireAngle, specialTop);
 }
