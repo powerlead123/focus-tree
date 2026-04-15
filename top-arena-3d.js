@@ -1491,13 +1491,17 @@ function applyFireDamage(fireTop, fireX, fireY, fireAngle, specialTop) {
             if (!enemy.fireDamageTimer) {
                 enemy.fireDamageTimer = 0;
             }
-            
+
+            // 标记为正在燃烧
+            enemy.isBurning = true;
+            enemy.burningEndTime = Date.now() + 500; // 燃烧状态持续500ms
+
             // 每10帧（约166ms）造成一次伤害
             enemy.fireDamageTimer++;
             if (enemy.fireDamageTimer >= 10) {
                 enemy.hp -= specialTop.fireDamage;
                 enemy.fireDamageTimer = 0;
-                
+
                 // 创建火焰粒子效果
                 createParticles(enemy.x, enemy.y, '#ff4400');
             }
@@ -1767,6 +1771,60 @@ function renderTopPreview(type, canvasSize = 120) {
     return previewCanvas.toDataURL('image/png');
 }
 
+// ===== 渲染燃烧效果 =====
+function renderBurningEffect(cx, cy, r) {
+    const now = Date.now();
+
+    // 绘制火焰光环
+    ctx.save();
+
+    // 外圈火焰光晕
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ff4400';
+    ctx.strokeStyle = 'rgba(255, 100, 0, 0.8)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.3, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 内圈火焰
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = 'rgba(255, 200, 0, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 1.1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 绘制跳动的火焰粒子
+    const flameCount = 6;
+    for (let i = 0; i < flameCount; i++) {
+        const angle = (now * 0.005) + (i * Math.PI * 2 / flameCount);
+        const dist = r * (0.8 + Math.sin(now * 0.01 + i) * 0.2);
+        const fx = cx + Math.cos(angle) * dist;
+        const fy = cy + Math.sin(angle) * dist;
+        const fSize = 4 + Math.sin(now * 0.02 + i * 0.5) * 2;
+
+        ctx.fillStyle = `rgba(255, ${100 + Math.sin(now * 0.01) * 50}, 0, 0.9)`;
+        ctx.beginPath();
+        ctx.arc(fx, fy, fSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 绘制上升的火星
+    for (let i = 0; i < 4; i++) {
+        const mx = cx + (Math.random() - 0.5) * r * 2;
+        const my = cy - r - Math.random() * 20;
+        const mSize = 2 + Math.random() * 2;
+
+        ctx.fillStyle = `rgba(255, ${150 + Math.random() * 100}, 50, ${0.6 + Math.random() * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(mx, my, mSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+}
+
 // ==== 全新设计：真 3D 圆柱叠加科技渲染引擎 ====
 function renderTops() {
     topsOnBoard.forEach(top => {
@@ -1774,6 +1832,16 @@ function renderTops() {
         let cy = top.y;
         let r = top.radius;
         let t = top.tier || 1;
+
+        // 检查燃烧状态是否过期
+        if (top.isBurning && Date.now() > top.burningEndTime) {
+            top.isBurning = false;
+        }
+
+        // 渲染燃烧效果
+        if (top.isBurning) {
+            renderBurningEffect(cx, cy, r);
+        }
 
         // 特殊陀螺使用独立渲染
         if (top.isSpecial) {
