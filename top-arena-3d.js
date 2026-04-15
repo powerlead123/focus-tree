@@ -523,11 +523,11 @@ function renderGlassCracks() {
         return;
     }
     
-    // 绘制累积的裂纹
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.lineWidth = 2;
-    ctx.shadowBlur = 5;
-    ctx.shadowColor = 'rgba(200, 220, 255, 0.8)';
+    // 绘制累积的裂纹 - 使用深色裂纹，更容易看清
+    ctx.strokeStyle = 'rgba(30, 50, 80, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.shadowBlur = 3;
+    ctx.shadowColor = 'rgba(100, 150, 200, 0.5)';
     
     glassCrackState.cracks.forEach(crack => {
         ctx.beginPath();
