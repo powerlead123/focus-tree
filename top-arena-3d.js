@@ -1492,9 +1492,8 @@ function applyFireDamage(fireTop, fireX, fireY, fireAngle, specialTop) {
                 enemy.fireDamageTimer = 0;
             }
 
-            // 标记为正在燃烧
+            // 标记为正在燃烧（一旦点燃就一直燃烧直到被消灭）
             enemy.isBurning = true;
-            enemy.burningEndTime = Date.now() + 500; // 燃烧状态持续500ms
 
             // 每10帧（约166ms）造成一次伤害
             enemy.fireDamageTimer++;
@@ -1833,12 +1832,7 @@ function renderTops() {
         let r = top.radius;
         let t = top.tier || 1;
 
-        // 检查燃烧状态是否过期
-        if (top.isBurning && Date.now() > top.burningEndTime) {
-            top.isBurning = false;
-        }
-
-        // 渲染燃烧效果
+        // 渲染燃烧效果（一旦点燃就一直燃烧直到被消灭）
         if (top.isBurning) {
             renderBurningEffect(cx, cy, r);
         }
