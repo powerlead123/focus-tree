@@ -512,12 +512,7 @@ function renderGlassCracks() {
             ctx.stroke();
         }
         
-        // 重置玻璃状态（动画结束后）
-        if (progress >= 1) {
-            glassCrackState.crackCount = 0;
-            glassCrackState.cracks = [];
-            glassCrackState.isShattered = false;
-        }
+        // 动画结束后保持碎裂状态（不再重置，每局只碎裂一次）
         
         ctx.restore();
         return;
@@ -568,6 +563,7 @@ function renderGlassCracks() {
 
 // ===== 添加玻璃裂纹 =====
 function addGlassCrack() {
+    // 如果已经彻底碎裂，不再增加裂纹
     if (glassCrackState.isShattered) return;
     
     glassCrackState.crackCount++;
@@ -581,7 +577,7 @@ function addGlassCrack() {
     };
     glassCrackState.cracks.push(crack);
     
-    // 检查是否达到最大裂纹次数
+    // 检查是否达到最大裂纹次数 - 达到后触发碎裂动画，但不再重置
     if (glassCrackState.crackCount >= glassCrackState.maxCracks) {
         glassCrackState.isShattered = true;
         glassCrackState.shatterTime = Date.now();
