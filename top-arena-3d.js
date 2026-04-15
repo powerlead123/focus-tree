@@ -1338,11 +1338,6 @@ function renderHuluwa4(top, cx, cy, r, specialTop) {
     ctx.lineWidth = 2;
     ctx.stroke();
     
-    // ===== 喷火效果渲染 =====
-    if (gameState === 'playing') {
-        renderFireBreath(top, cx, cy, r, specialTop);
-    }
-    
     // 四娃陀螺外形 - 火焰葫芦形状
     // 底部大圆
     const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
@@ -1398,7 +1393,12 @@ function renderHuluwa4(top, cx, cy, r, specialTop) {
     ctx.fillText('🔥', 0, -r * 0.1);
     
     ctx.restore();
-    
+
+    // ===== 喷火效果渲染（在restore之后，使用绝对坐标）=====
+    if (gameState === 'playing') {
+        renderFireBreath(top, cx, cy, r, specialTop);
+    }
+
     // 显示名称和血条
     renderSpecialTopInfo(top, cx, cy, r, specialTop);
 }
