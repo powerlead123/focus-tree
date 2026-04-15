@@ -159,6 +159,21 @@ const SPECIAL_TOPS = [
         ability: 'shield',  // 特殊能力：防护罩
         shieldMaxHits: 5,  // 防护罩最大抵挡次数
         shieldRadius: 45   // 防护罩半径
+    },
+    {
+        id: 'huluwa4',
+        name: '四娃陀螺',
+        emoji: '🔥',
+        hp: 50,
+        baseMass: 30,  // 对应LV10的基础质量
+        color: '#22c55e',  // 绿色，代表四娃（火娃）
+        tier: 10,
+        description: '葫芦娃四娃，火神转世！会向前方喷出烈焰，被火焰烧到的敌人会持续掉血！',
+        ability: 'fireBreath',  // 特殊能力：喷火
+        fireDamage: 3,        // 每秒火焰伤害
+        fireRange: 200,       // 火焰射程
+        fireAngle: Math.PI / 3, // 火焰扇形角度（60度）
+        fireDuration: 3000    // 每次喷火持续时间3秒
     }
 ];
 
@@ -953,6 +968,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderHuluwa2(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'huluwa3') {
         renderHuluwa3(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'huluwa4') {
+        renderHuluwa4(top, cx, cy, r, specialTop);
     }
 }
 
@@ -1291,6 +1308,206 @@ function renderHuluwa3(top, cx, cy, r, specialTop) {
     
     // 显示名称和血条
     renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 四娃陀螺渲染
+function renderHuluwa4(top, cx, cy, r, specialTop) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    
+    const hRatio = 0.55;
+    const color = specialTop.color;
+    
+    // 特殊光效 - 四娃的绿色火焰光环
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#ef4444';
+    
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // ===== 喷火效果渲染 =====
+    if (gameState === 'playing') {
+        renderFireBreath(top, cx, cy, r, specialTop);
+    }
+    
+    // 四娃陀螺外形 - 火焰葫芦形状
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+    
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦上部小圆
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.3, -r * 0.2, r * 0.6, r * 0.4);
+    
+    // 葫芦顶部 - 喷火口
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.65, r * 0.25, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 火焰装饰环
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.95, r * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // 旋转的光环效果 - 火焰光环
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 2);
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    // 特殊标记 - 四娃表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔥', 0, -r * 0.1);
+    
+    ctx.restore();
+    
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 四娃喷火效果渲染
+function renderFireBreath(top, cx, cy, r, specialTop) {
+    const now = Date.now();
+    
+    // 初始化喷火状态
+    if (!top.fireState) {
+        top.fireState = {
+            isBreathing: true,
+            breathStartTime: now,
+            fireAngle: Math.random() * Math.PI * 2
+        };
+    }
+    
+    // 检查是否需要切换喷火方向
+    const breathDuration = now - top.fireState.breathStartTime;
+    if (breathDuration > specialTop.fireDuration) {
+        top.fireState.breathStartTime = now;
+        top.fireState.fireAngle = Math.random() * Math.PI * 2;
+    }
+    
+    // 计算喷火方向（基于陀螺旋转角度）
+    const fireAngle = top.fireState.fireAngle;
+    
+    // 绘制扇形火焰
+    const fireRange = specialTop.fireRange;
+    const fireSpread = specialTop.fireAngle / 2;
+    
+    // 火焰渐变
+    const fireGrad = ctx.createRadialGradient(0, 0, r, 0, 0, fireRange);
+    fireGrad.addColorStop(0, 'rgba(255, 200, 0, 0.8)');
+    fireGrad.addColorStop(0.3, 'rgba(255, 100, 0, 0.6)');
+    fireGrad.addColorStop(0.6, 'rgba(255, 50, 0, 0.3)');
+    fireGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    
+    ctx.save();
+    ctx.translate(cx, cy);
+    
+    // 绘制扇形火焰区域
+    ctx.fillStyle = fireGrad;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, fireRange, fireAngle - fireSpread, fireAngle + fireSpread);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 绘制火焰粒子效果
+    const particleCount = 10;
+    for (let i = 0; i < particleCount; i++) {
+        const pAngle = fireAngle + (Math.random() - 0.5) * specialTop.fireAngle;
+        const pDist = r + Math.random() * fireRange * 0.8;
+        const px = Math.cos(pAngle) * pDist;
+        const py = Math.sin(pAngle) * pDist;
+        const pSize = 3 + Math.random() * 6;
+        
+        ctx.fillStyle = `rgba(255, ${100 + Math.random() * 100}, 0, ${0.6 + Math.random() * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(px, py, pSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    
+    ctx.restore();
+    
+    // 检测火焰伤害
+    applyFireDamage(top, cx, cy, fireAngle, specialTop);
+}
+
+// 四娃火焰伤害检测
+function applyFireDamage(fireTop, fireX, fireY, fireAngle, specialTop) {
+    const fireRange = specialTop.fireRange;
+    const fireSpread = specialTop.fireAngle / 2;
+    
+    topsOnBoard.forEach(enemy => {
+        // 跳过同阵营和已死亡的陀螺
+        if (enemy.isEnemy === fireTop.isEnemy || enemy.hp <= 0) return;
+        
+        // 计算敌人相对于火焰中心的位置
+        const dx = enemy.x - fireX;
+        const dy = enemy.y - fireY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // 检查是否在火焰范围内
+        if (dist > fireRange) return;
+        
+        // 检查是否在火焰角度范围内
+        const enemyAngle = Math.atan2(dy, dx);
+        let angleDiff = Math.abs(enemyAngle - fireAngle);
+        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+        
+        if (angleDiff <= fireSpread) {
+            // 敌人被火焰烧到，持续掉血
+            if (!enemy.fireDamageTimer) {
+                enemy.fireDamageTimer = 0;
+            }
+            
+            // 每10帧（约166ms）造成一次伤害
+            enemy.fireDamageTimer++;
+            if (enemy.fireDamageTimer >= 10) {
+                enemy.hp -= specialTop.fireDamage;
+                enemy.fireDamageTimer = 0;
+                
+                // 创建火焰粒子效果
+                createParticles(enemy.x, enemy.y, '#ff4400');
+            }
+        }
+    });
 }
 
 // 通用信息显示（名称和血条）
