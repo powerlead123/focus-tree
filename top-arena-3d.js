@@ -1742,6 +1742,7 @@ function applyWaterDowngrade(waterTop, waterX, waterY, waterAngle, specialTop) {
 
                 // 降低一级（最低为1级）
                 if (enemy.tier > 1) {
+                    const oldTier = enemy.tier;
                     enemy.tier--;
 
                     // 重新获取新等级的陀螺类型
@@ -1754,12 +1755,20 @@ function applyWaterDowngrade(waterTop, waterX, waterY, waterAngle, specialTop) {
                         enemy.color = newType.color; // 更新颜色
                     }
 
+                    // 更新半径 - 低等级陀螺更小
+                    enemy.radius = 25 + enemy.tier * 1.5; // L1=26.5, L10=40, 逐渐变大
+
                     // 创建降级特效
                     createParticles(enemy.x, enemy.y, '#3b82f6');
                     createParticles(enemy.x, enemy.y, '#60a5fa');
+                    createParticles(enemy.x, enemy.y, '#ffffff');
 
-                    // 显示降级文字提示
-                    showDowngradeText(enemy.x, enemy.y - enemy.radius - 20, enemy.tier);
+                    // 添加降级动画效果 - 缩小动画
+                    enemy.downgradeAnimation = {
+                        startTime: Date.now(),
+                        duration: 500,
+                        oldRadius: 25 + oldTier * 1.5
+                    };
                 }
             }
         }
@@ -2105,6 +2114,19 @@ function renderTops() {
         let cy = top.y;
         let r = top.radius;
         let t = top.tier || 1;
+
+        // 处理降级动画
+        if (top.downgradeAnimation) {
+            const animElapsed = Date.now() - top.downgradeAnimation.startTime;
+            if (animElapsed < top.downgradeAnimation.duration) {
+                // 动画进行中 - 从旧半径过渡到新半径
+                const progress = animElapsed / top.downgradeAnimation.duration;
+                r = top.downgradeAnimation.oldRadius + (top.radius - top.downgradeAnimation.oldRadius) * progress;
+            } else {
+                // 动画结束
+                top.downgradeAnimation = null;
+            }
+        }
 
         // 渲染燃烧效果（一旦点燃就一直燃烧直到被消灭）
         if (top.isBurning) {
