@@ -1642,11 +1642,13 @@ function renderWaterBreath(top, cx, cy, r, specialTop) {
         top.waterState.lastWaterTime = now;
     }
 
-    // 喷水持续500ms
+    // 计算喷水持续时间
+    let waterDuration = 0;
     if (top.waterState.isWatering) {
-        const waterDuration = now - top.waterState.waterStartTime;
+        waterDuration = now - top.waterState.waterStartTime;
         if (waterDuration > 500) {
             top.waterState.isWatering = false;
+            return;
         }
     }
 
