@@ -173,7 +173,8 @@ const SPECIAL_TOPS = [
         fireDamage: 3,        // 每秒火焰伤害
         fireRange: 200,       // 火焰射程
         fireAngle: Math.PI / 3, // 火焰扇形角度（60度）
-        fireDuration: 3000    // 每次喷火持续时间3秒
+        fireInterval: 3000,   // 喷火间隔3秒
+        fireDuration: 500     // 每次喷火持续时间500ms
     },
     {
         id: 'huluwa5',
@@ -1426,23 +1427,38 @@ function renderFireBreath(top, cx, cy, r, specialTop) {
     // 初始化喷火状态
     if (!top.fireState) {
         top.fireState = {
-            isBreathing: true,
-            breathStartTime: now,
-            fireAngle: Math.random() * Math.PI * 2
+            lastFireTime: 0,
+            fireAngle: Math.random() * Math.PI * 2,
+            isFiring: false,
+            fireStartTime: 0
         };
     }
 
-    // 检查是否需要切换喷火方向
-    const breathDuration = now - top.fireState.breathStartTime;
-    if (breathDuration > specialTop.fireDuration) {
-        top.fireState.breathStartTime = now;
+    // 检查是否应该喷火
+    const timeSinceLastFire = now - top.fireState.lastFireTime;
+
+    // 开始新的喷火周期
+    if (!top.fireState.isFiring && timeSinceLastFire >= specialTop.fireInterval) {
+        top.fireState.isFiring = true;
+        top.fireState.fireStartTime = now;
         top.fireState.fireAngle = Math.random() * Math.PI * 2;
+        top.fireState.lastFireTime = now;
     }
 
-    // 计算喷火方向（基于陀螺旋转角度）
-    const fireAngle = top.fireState.fireAngle;
+    // 计算喷火持续时间
+    let fireDuration = 0;
+    if (top.fireState.isFiring) {
+        fireDuration = now - top.fireState.fireStartTime;
+        if (fireDuration > specialTop.fireDuration) {
+            top.fireState.isFiring = false;
+            return;
+        }
+    }
 
-    // 绘制扇形火焰
+    // 只有在喷火状态下才渲染和造成伤害
+    if (!top.fireState.isFiring) return;
+
+    const fireAngle = top.fireState.fireAngle;
     const fireRange = specialTop.fireRange;
     const fireSpread = specialTop.fireAngle / 2;
 
@@ -1476,7 +1492,7 @@ function renderFireBreath(top, cx, cy, r, specialTop) {
         ctx.fill();
     }
 
-    // 检测火焰伤害
+    // 检测火焰伤害（只在喷火期间造成伤害）
     applyFireDamage(top, cx, cy, fireAngle, specialTop);
 }
 
