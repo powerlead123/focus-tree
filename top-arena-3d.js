@@ -1751,15 +1751,35 @@ function applyWaterDowngrade(waterTop, waterX, waterY, waterAngle, specialTop) {
                         enemy.name = newType.name;
                         enemy.hp = Math.min(enemy.hp, newType.hp); // HP不超过新等级上限
                         enemy.mass = 10 + enemy.tier * 2; // 更新质量
+                        enemy.color = newType.color; // 更新颜色
                     }
 
                     // 创建降级特效
                     createParticles(enemy.x, enemy.y, '#3b82f6');
                     createParticles(enemy.x, enemy.y, '#60a5fa');
+
+                    // 显示降级文字提示
+                    showDowngradeText(enemy.x, enemy.y - enemy.radius - 20, enemy.tier);
                 }
             }
         }
     });
+}
+
+// 显示降级文字提示
+function showDowngradeText(x, y, newTier) {
+    // 创建一个临时的文字提示
+    const text = `降级 → LV${newTier}`;
+
+    ctx.save();
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.lineWidth = 3;
+    ctx.fillStyle = '#3b82f6';
+    ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
+    ctx.restore();
 }
 
 // 通用信息显示（名称和血条）
