@@ -174,6 +174,20 @@ const SPECIAL_TOPS = [
         fireRange: 200,       // 火焰射程
         fireAngle: Math.PI / 3, // 火焰扇形角度（60度）
         fireDuration: 3000    // 每次喷火持续时间3秒
+    },
+    {
+        id: 'huluwa5',
+        name: '五娃陀螺',
+        emoji: '💧',
+        hp: 50,
+        baseMass: 30,  // 对应LV10的基础质量
+        color: '#3b82f6',  // 蓝色，代表五娃（水娃）
+        tier: 10,
+        description: '葫芦娃五娃，水神转世！每3秒喷出洪水，被水喷到的敌人会降低一级！',
+        ability: 'waterBreath',  // 特殊能力：喷水
+        waterRange: 250,      // 水柱射程
+        waterAngle: Math.PI / 4, // 水柱扇形角度（45度）
+        waterInterval: 3000   // 喷水间隔3秒
     }
 ];
 
@@ -970,6 +984,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderHuluwa3(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'huluwa4') {
         renderHuluwa4(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'huluwa5') {
+        renderHuluwa5(top, cx, cy, r, specialTop);
     }
 }
 
@@ -1503,6 +1519,242 @@ function applyFireDamage(fireTop, fireX, fireY, fireAngle, specialTop) {
 
                 // 创建火焰粒子效果
                 createParticles(enemy.x, enemy.y, '#ff4400');
+            }
+        }
+    });
+}
+
+// 五娃陀螺渲染
+function renderHuluwa5(top, cx, cy, r, specialTop) {
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const hRatio = 0.55;
+    const color = specialTop.color;
+
+    // 特殊光效 - 五娃的蓝色水光环
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#3b82f6';
+
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 五娃陀螺外形 - 水葫芦形状
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 葫芦上部小圆
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.3, -r * 0.2, r * 0.6, r * 0.4);
+
+    // 葫芦顶部 - 喷水口
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.65, r * 0.25, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 水波纹装饰环
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.95, r * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 旋转的光环效果 - 水波纹光环
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 2);
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 特殊标记 - 五娃表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💧', 0, -r * 0.1);
+
+    ctx.restore();
+
+    // ===== 喷水效果渲染（在restore之后，使用绝对坐标）=====
+    if (gameState === 'playing') {
+        renderWaterBreath(top, cx, cy, r, specialTop);
+    }
+
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 五娃喷水效果渲染
+function renderWaterBreath(top, cx, cy, r, specialTop) {
+    const now = Date.now();
+
+    // 初始化喷水状态
+    if (!top.waterState) {
+        top.waterState = {
+            lastWaterTime: 0,
+            waterAngle: Math.random() * Math.PI * 2,
+            isWatering: false,
+            waterStartTime: 0
+        };
+    }
+
+    // 检查是否应该喷水
+    const timeSinceLastWater = now - top.waterState.lastWaterTime;
+
+    // 开始新的喷水周期
+    if (!top.waterState.isWatering && timeSinceLastWater >= specialTop.waterInterval) {
+        top.waterState.isWatering = true;
+        top.waterState.waterStartTime = now;
+        top.waterState.waterAngle = Math.random() * Math.PI * 2;
+        top.waterState.lastWaterTime = now;
+    }
+
+    // 喷水持续500ms
+    if (top.waterState.isWatering) {
+        const waterDuration = now - top.waterState.waterStartTime;
+        if (waterDuration > 500) {
+            top.waterState.isWatering = false;
+        }
+    }
+
+    // 只有在喷水状态下才渲染和造成伤害
+    if (!top.waterState.isWatering) return;
+
+    const waterAngle = top.waterState.waterAngle;
+    const waterRange = specialTop.waterRange;
+    const waterSpread = specialTop.waterAngle / 2;
+
+    // 水柱渐变
+    const waterGrad = ctx.createRadialGradient(cx, cy, r, cx, cy, waterRange);
+    waterGrad.addColorStop(0, 'rgba(100, 200, 255, 0.9)');
+    waterGrad.addColorStop(0.3, 'rgba(59, 130, 246, 0.7)');
+    waterGrad.addColorStop(0.6, 'rgba(30, 100, 200, 0.4)');
+    waterGrad.addColorStop(1, 'rgba(0, 50, 150, 0)');
+
+    // 绘制扇形水柱区域
+    ctx.fillStyle = waterGrad;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, waterRange, waterAngle - waterSpread, waterAngle + waterSpread);
+    ctx.closePath();
+    ctx.fill();
+
+    // 绘制水波纹效果
+    const waveCount = 3;
+    for (let w = 0; w < waveCount; w++) {
+        const waveRadius = r + (now % 1000) / 1000 * waterRange * 0.8 + w * 30;
+        if (waveRadius < waterRange) {
+            ctx.strokeStyle = `rgba(100, 200, 255, ${0.5 - w * 0.15})`;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, waveRadius, waterAngle - waterSpread, waterAngle + waterSpread);
+            ctx.stroke();
+        }
+    }
+
+    // 绘制水滴粒子效果
+    const particleCount = 20;
+    for (let i = 0; i < particleCount; i++) {
+        const pAngle = waterAngle + (Math.random() - 0.5) * specialTop.waterAngle;
+        const pDist = r + Math.random() * waterRange * 0.9;
+        const px = cx + Math.cos(pAngle) * pDist;
+        const py = cy + Math.sin(pAngle) * pDist;
+        const pSize = 3 + Math.random() * 5;
+
+        ctx.fillStyle = `rgba(${150 + Math.random() * 100}, ${200 + Math.random() * 55}, 255, ${0.6 + Math.random() * 0.4})`;
+        ctx.beginPath();
+        ctx.arc(px, py, pSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 检测水柱降级效果（只在水柱刚开始时触发一次）
+    if (waterDuration < 100) { // 只在喷水前100ms内触发降级
+        applyWaterDowngrade(top, cx, cy, waterAngle, specialTop);
+    }
+}
+
+// 五娃水柱降级效果
+function applyWaterDowngrade(waterTop, waterX, waterY, waterAngle, specialTop) {
+    const waterRange = specialTop.waterRange;
+    const waterSpread = specialTop.waterAngle / 2;
+
+    topsOnBoard.forEach(enemy => {
+        // 跳过同阵营和已死亡的陀螺
+        if (enemy.isEnemy === waterTop.isEnemy || enemy.hp <= 0) return;
+
+        // 计算敌人相对于水柱中心的位置
+        const dx = enemy.x - waterX;
+        const dy = enemy.y - waterY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // 检查是否在水柱范围内
+        if (dist > waterRange) return;
+
+        // 检查是否在水柱角度范围内
+        const enemyAngle = Math.atan2(dy, dx);
+        let angleDiff = Math.abs(enemyAngle - waterAngle);
+        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+
+        if (angleDiff <= waterSpread) {
+            // 敌人被水喷到，降低一级（只在当前比赛中有效）
+            if (!enemy.hasBeenDowngraded) {
+                enemy.hasBeenDowngraded = true;
+
+                // 保存原始等级（用于比赛结束后恢复）
+                if (enemy.originalTier === undefined) {
+                    enemy.originalTier = enemy.tier;
+                }
+
+                // 降低一级（最低为1级）
+                if (enemy.tier > 1) {
+                    enemy.tier--;
+
+                    // 重新获取新等级的陀螺类型
+                    const newType = TOP_TYPES.find(t => t.tier === enemy.tier);
+                    if (newType) {
+                        enemy.typeId = newType.id;
+                        enemy.name = newType.name;
+                        enemy.hp = Math.min(enemy.hp, newType.hp); // HP不超过新等级上限
+                        enemy.mass = 10 + enemy.tier * 2; // 更新质量
+                    }
+
+                    // 创建降级特效
+                    createParticles(enemy.x, enemy.y, '#3b82f6');
+                    createParticles(enemy.x, enemy.y, '#60a5fa');
+                }
             }
         }
     });
