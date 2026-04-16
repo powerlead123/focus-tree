@@ -1758,17 +1758,28 @@ function applyWaterDowngrade(waterTop, waterX, waterY, waterAngle, specialTop) {
                     // 更新半径 - 低等级陀螺更小
                     enemy.radius = 25 + enemy.tier * 1.5; // L1=26.5, L10=40, 逐渐变大
 
-                    // 创建降级特效
-                    createParticles(enemy.x, enemy.y, '#3b82f6');
-                    createParticles(enemy.x, enemy.y, '#60a5fa');
-                    createParticles(enemy.x, enemy.y, '#ffffff');
+                    // 创建大量水特效粒子
+                    for (let i = 0; i < 30; i++) {
+                        createParticles(enemy.x, enemy.y, '#3b82f6');
+                        createParticles(enemy.x, enemy.y, '#60a5fa');
+                        createParticles(enemy.x, enemy.y, '#ffffff');
+                    }
+
+                    // 添加被水击中的动态效果
+                    enemy.waterHitEffect = {
+                        startTime: Date.now(),
+                        duration: 1000
+                    };
 
                     // 添加降级动画效果 - 缩小动画
                     enemy.downgradeAnimation = {
                         startTime: Date.now(),
-                        duration: 500,
+                        duration: 800,
                         oldRadius: 25 + oldTier * 1.5
                     };
+
+                    // 添加文字提示
+                    enemy.showDowngradeText = true;
                 }
             }
         }
@@ -2128,6 +2139,31 @@ function renderTops() {
             }
         }
 
+        // 渲染被水击中的效果
+        if (top.waterHitEffect) {
+            const waterElapsed = Date.now() - top.waterHitEffect.startTime;
+            if (waterElapsed < top.waterHitEffect.duration) {
+                const progress = waterElapsed / top.waterHitEffect.duration;
+                // 蓝色水波纹扩散效果
+                ctx.save();
+                ctx.strokeStyle = `rgba(59, 130, 246, ${1 - progress})`;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + progress * 50, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 水波纹内圈
+                ctx.strokeStyle = `rgba(96, 165, 250, ${0.8 - progress * 0.8})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + progress * 30, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            } else {
+                top.waterHitEffect = null;
+            }
+        }
+
         // 渲染燃烧效果（一旦点燃就一直燃烧直到被消灭）
         if (top.isBurning) {
             renderBurningEffect(cx, cy, r);
@@ -2324,6 +2360,25 @@ function renderTops() {
             ctx.fillStyle = '#67e8f9';
             ctx.strokeText(displayName, top.x, top.y + top.radius + 25);
             ctx.fillText(displayName, top.x, top.y + top.radius + 25);
+        }
+
+        // 显示降级提示文字
+        if (top.showDowngradeText) {
+            ctx.save();
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#3b82f6';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            const textY = top.y - top.radius - 45;
+            ctx.strokeText('被水喷到！降级！', top.x, textY);
+            ctx.fillText('被水喷到！降级！', top.x, textY);
+            ctx.restore();
+
+            // 1秒后隐藏提示
+            setTimeout(() => {
+                top.showDowngradeText = false;
+            }, 1500);
         }
 
         // --- 6. 核心血条显示 (HP Bar) ---
