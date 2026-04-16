@@ -2146,9 +2146,9 @@ function updatePhysics() {
                     let relVel = Math.sqrt(kx*kx + ky*ky);
                     if (relVel > 2) {
                         // 相对速度越大，自身质量越大，给对方造成的粉碎力越强
-                        // 伤害系数从25降到15，让质量差异更明显
-                        let dmgToT2 = (relVel * m1) / 15;
-                        let dmgToT1 = (relVel * m2) / 15;
+                        // 伤害系数30，让碰撞伤害更温和
+                        let dmgToT2 = (relVel * m1) / 30;
+                        let dmgToT1 = (relVel * m2) / 30;
                         
                         // 特殊陀螺能力：大娃变大时伤害加倍
                         dmgToT2 = getSpecialDamageBonus(t1, dmgToT2);
