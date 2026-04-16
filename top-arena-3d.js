@@ -141,8 +141,8 @@ const SPECIAL_TOPS = [
         tier: 7,
         description: '葫芦娃二娃，拥有千里眼和顺风耳！激光眼和声波攻击交替释放，每2秒一次！',
         ability: 'laserAndSonic',  // 特殊能力：激光眼+声波攻击
-        laserDamage: 15,  // 激光伤害
-        sonicDamage: 12,  // 声波伤害
+        laserDamage: 1,   // 激光伤害
+        sonicDamage: 1,   // 声波伤害
         attackInterval: 2000,  // 攻击间隔2秒
         laserRange: 300,  // 激光射程
         sonicRange: 150  // 声波范围
