@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>单词消消乐 3D</title>
+    <link rel="stylesheet" href="word-match.css">
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <!-- 3D 游戏画布 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 游戏UI层 -->
+    <div id="gameUI" class="game-ui">
+        <!-- 顶部信息栏 -->
+        <div class="top-hud">
+            <button class="btn-exit" onclick="exitGame()">← 退出</button>
+            <div class="game-info">
+                <div class="info-item">
+                    <span class="info-label">分数</span>
+                    <span class="info-value" id="scoreDisplay">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">剩余</span>
+                    <span class="info-value" id="remainingDisplay">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">关卡</span>
+                    <span class="info-value" id="levelDisplay">1</span>
+                </div>
+            </div>
+            <div class="difficulty-badge" id="difficultyBadge">中等</div>
+        </div>
+
+        <!-- 警告线 -->
+        <div class="danger-line" id="dangerLine">
+            <span>⚠️ 危险线</span>
+        </div>
+
+        <!-- 危险警告覆盖层 -->
+        <div class="danger-overlay" id="dangerOverlay"></div>
+
+        <!-- 底部输入区 -->
+        <div class="bottom-controls">
+            <div class="input-section">
+                <input type="text" id="wordInput" class="word-input" 
+                       placeholder="输入单词拼写..." autocomplete="off" spellcheck="false">
+                <button class="btn-submit" onclick="submitWord()">✓</button>
+            </div>
+            <div class="input-hint">
+                看到中文，输入对应的英文单词来消除方块
+            </div>
+        </div>
+    </div>
+
+    <!-- 开始游戏界面 -->
+    <div id="startScreen" class="start-screen">
+        <div class="start-content">
+            <h1 class="game-title">
+                <span class="title-3d">单词消消乐</span>
+                <span class="title-sub">3D</span>
+            </h1>
+            <div class="book-info" id="bookInfo">
+                <span>📚</span>
+                <span id="bookNameDisplay">--</span>
+            </div>
+            <div class="word-preview" id="wordPreview">
+                <!-- 动态显示要练习的单词 -->
+            </div>
+            <button class="btn-start" onclick="startGame()">🎮 开始游戏</button>
+            <button class="btn-back-setup" onclick="location.href='word-parent.html'">← 返回设置</button>
+        </div>
+    </div>
+
+    <!-- 游戏结束弹窗 -->
+    <div id="gameOverModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="result-icon" id="resultIcon">🏆</div>
+            <h2 id="resultTitle">闯关成功！</h2>
+            <div class="result-stats">
+                <div class="stat-item">
+                    <span class="stat-label">最终得分</span>
+                    <span class="stat-value" id="finalScore">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">消除单词</span>
+                    <span class="stat-value" id="clearedWords">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">准确率</span>
+                    <span class="stat-value" id="accuracy">0%</span>
+                </div>
+            </div>
+            <div class="result-actions">
+                <button class="btn-primary" onclick="restartGame()">🔄 再玩一次</button>
+                <button class="btn-secondary" onclick="location.href='word-parent.html'">⚙️ 更换单词</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 暂停菜单 -->
+    <div id="pauseModal" class="modal hidden">
+        <div class="modal-content pause-content">
+            <h2>⏸️ 游戏暂停</h2>
+            <button class="btn-primary" onclick="resumeGame()">▶️ 继续游戏</button>
+            <button class="btn-secondary" onclick="exitGame()">🏠 退出游戏</button>
+        </div>
+    </div>
+
+    <!-- 连击提示 -->
+    <div id="comboDisplay" class="combo-display hidden">
+        <span class="combo-count" id="comboCount">2</span>
+        <span class="combo-text">连击!</span>
+    </div>
+
+    <script src="word-match.js"></script>
+</body>
+</html>

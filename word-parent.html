@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词消消乐 - 单词本管理</title>
+    <link rel="stylesheet" href="word-parent.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="btn-back" onclick="location.href='home.html'">← 返回首页</button>
+            <h1>📚 单词消消乐管理</h1>
+            <p class="subtitle">创建和管理孩子的单词本</p>
+        </header>
+
+        <div class="main-content">
+            <!-- 左侧：单词本列表 -->
+            <div class="sidebar">
+                <div class="section-title">
+                    <span>📖</span>
+                    <span>我的单词本</span>
+                </div>
+                <button class="btn-create" onclick="createNewBook()">
+                    <span>+</span>
+                    <span>新建单词本</span>
+                </button>
+                <div class="book-list" id="bookList">
+                    <!-- 动态生成单词本列表 -->
+                </div>
+            </div>
+
+            <!-- 右侧：单词本详情和编辑 -->
+            <div class="content-area">
+                <!-- 编辑单词本区域 -->
+                <div class="book-editor" id="bookEditor">
+                    <div class="editor-header">
+                        <input type="text" id="bookNameInput" class="book-name-input" placeholder="单词本名称">
+                        <div class="editor-actions">
+                            <button class="btn-save" onclick="saveCurrentBook()">💾 保存</button>
+                            <button class="btn-delete" onclick="deleteCurrentBook()">🗑️ 删除</button>
+                        </div>
+                    </div>
+
+                    <div class="word-section">
+                        <div class="section-header">
+                            <h3>📝 单词列表</h3>
+                            <button class="btn-add-word" onclick="addNewWord()">+ 添加单词</button>
+                        </div>
+                        <div class="word-list" id="wordList">
+                            <!-- 动态生成单词列表 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 空状态提示 -->
+                <div class="empty-state" id="emptyState">
+                    <div class="empty-icon">📚</div>
+                    <p>请选择或创建一个单词本</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 选择单词开始游戏区域 -->
+        <div class="game-setup-section" id="gameSetupSection">
+            <div class="setup-header">
+                <h2>🎮 开始游戏</h2>
+                <p>选择要练习的单词，开始消消乐挑战！</p>
+            </div>
+            <div class="setup-content">
+                <div class="difficulty-selector">
+                    <label>难度选择：</label>
+                    <select id="difficultySelect">
+                        <option value="easy">简单 - 单词下落慢</option>
+                        <option value="medium" selected>中等 - 单词下落正常</option>
+                        <option value="hard">困难 - 单词下落快</option>
+                    </select>
+                </div>
+                <button class="btn-start-game" onclick="startGame()" id="startGameBtn" disabled>
+                    🚀 开始消消乐
+                </button>
+            </div>
+            <div class="selected-words-preview" id="selectedWordsPreview">
+                <h4>已选择 <span id="selectedCount">0</span> 个单词</h4>
+                <div class="selected-tags" id="selectedTags"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑单词弹窗 -->
+    <div class="modal hidden" id="wordModal">
+        <div class="modal-content">
+            <h3 id="wordModalTitle">添加单词</h3>
+            <div class="form-group">
+                <label>英文单词</label>
+                <input type="text" id="englishInput" placeholder="例如：apple">
+            </div>
+            <div class="form-group">
+                <label>中文意思</label>
+                <input type="text" id="chineseInput" placeholder="例如：苹果">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="saveWord()">确定</button>
+                <button class="btn-secondary" onclick="closeWordModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认删除弹窗 -->
+    <div class="modal hidden" id="deleteModal">
+        <div class="modal-content">
+            <h3>确认删除</h3>
+            <p>确定要删除这个单词本吗？此操作不可撤销。</p>
+            <div class="modal-actions">
+                <button class="btn-danger" onclick="confirmDelete()">删除</button>
+                <button class="btn-secondary" onclick="closeDeleteModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="word-parent.js"></script>
+</body>
+</html>

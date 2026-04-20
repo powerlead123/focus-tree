@@ -1,0 +1,627 @@
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #8b5cf6;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --bg-dark: #0f172a;
+    --bg-card: rgba(30, 41, 59, 0.9);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 全局隐藏类 */
+.hidden {
+    display: none !important;
+}
+
+body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    overflow: hidden;
+    background: #000;
+}
+
+/* 3D 画布 */
+#gameCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* 游戏UI层 */
+.game-ui {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+    display: none;
+}
+
+.game-ui.active {
+    display: block;
+}
+
+.game-ui > * {
+    pointer-events: auto;
+}
+
+/* 顶部HUD */
+.top-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 15px 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-exit {
+    background: rgba(239, 68, 68, 0.8);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-exit:hover {
+    background: var(--danger);
+    transform: scale(1.05);
+}
+
+.game-info {
+    display: flex;
+    gap: 30px;
+}
+
+.info-item {
+    text-align: center;
+}
+
+.info-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.info-value {
+    display: block;
+    font-size: 28px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+.difficulty-badge {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    padding: 8px 16px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* 危险线 */
+.danger-line {
+    position: absolute;
+    bottom: 180px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--danger) 20%, 
+        var(--warning) 50%, 
+        var(--danger) 80%, 
+        transparent 100%
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    animation: dangerPulse 2s infinite;
+}
+
+.danger-line span {
+    background: var(--bg-card);
+    padding: 4px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--danger);
+    font-weight: 600;
+}
+
+@keyframes dangerPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+}
+
+/* 危险警告覆盖层 */
+.danger-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: radial-gradient(ellipse at center bottom, 
+        rgba(239, 68, 68, 0.6) 0%, 
+        rgba(245, 158, 11, 0.3) 30%, 
+        transparent 60%);
+}
+
+.danger-overlay.active {
+    opacity: 1;
+    animation: dangerFlash 0.4s infinite;
+}
+
+@keyframes dangerFlash {
+    0%, 100% { 
+        background: radial-gradient(ellipse at center bottom, 
+            rgba(239, 68, 68, 0.7) 0%, 
+            rgba(245, 158, 11, 0.4) 25%, 
+            transparent 55%);
+        box-shadow: inset 0 -100px 100px rgba(239, 68, 68, 0.3);
+    }
+    50% { 
+        background: radial-gradient(ellipse at center bottom, 
+            rgba(245, 158, 11, 0.7) 0%, 
+            rgba(239, 68, 68, 0.4) 25%, 
+            transparent 55%);
+        box-shadow: inset 0 -100px 100px rgba(245, 158, 11, 0.3);
+    }
+}
+
+/* 危险警告文字 */
+.danger-warning {
+    position: absolute;
+    bottom: 200px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(245, 158, 11, 0.9) 100%);
+    color: white;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 18px;
+    font-weight: bold;
+    z-index: 6;
+    opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+    animation: warningPulse 0.5s infinite;
+}
+
+.danger-warning.active {
+    opacity: 1;
+}
+
+@keyframes warningPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.05); }
+}
+
+/* 屏幕抖动效果 */
+@keyframes screenShake {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-3px); }
+    20% { transform: translateX(3px); }
+    30% { transform: translateX(-3px); }
+    40% { transform: translateX(3px); }
+    50% { transform: translateX(-2px); }
+    60% { transform: translateX(2px); }
+    70% { transform: translateX(-1px); }
+    80% { transform: translateX(1px); }
+    90% { transform: translateX(0); }
+}
+
+/* 底部控制区 - 确保在危险覆盖层之上 */
+.bottom-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.input-section {
+    display: flex;
+    gap: 10px;
+    max-width: 500px;
+    margin: 0 auto 10px;
+}
+
+.word-input {
+    flex: 1;
+    padding: 15px 25px;
+    font-size: 20px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 30px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    outline: none;
+    text-align: center;
+    text-transform: lowercase;
+    transition: all 0.3s;
+}
+
+.word-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+}
+
+.word-input.correct {
+    border-color: var(--success);
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+}
+
+.word-input.wrong {
+    border-color: var(--danger);
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+}
+
+.btn-submit {
+    width: 60px;
+    height: 60px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--success) 0%, #16a34a 100%);
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+}
+
+.btn-submit:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+}
+
+.input-hint {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* 开始游戏界面 */
+.start-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.start-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+}
+
+.game-title {
+    margin-bottom: 30px;
+}
+
+.title-3d {
+    display: block;
+    font-size: 3.5rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.title-sub {
+    display: inline-block;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-left: 10px;
+}
+
+.book-info {
+    background: var(--bg-card);
+    padding: 15px 25px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+.word-preview {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 40px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.preview-word {
+    background: rgba(255,255,255,0.1);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+}
+
+.preview-word .en {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.preview-word .cn {
+    color: var(--text-secondary);
+    margin-left: 5px;
+}
+
+.btn-start {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 15px;
+    padding: 18px 40px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+}
+
+.btn-start:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
+}
+
+.btn-back-setup {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--text-secondary);
+    padding: 12px 30px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-back-setup:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+/* 弹窗 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    padding: 40px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+    max-width: 450px;
+    width: 90%;
+    animation: modalPop 0.4s ease;
+}
+
+@keyframes modalPop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.result-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.modal-content h2 {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    color: white;
+}
+
+.result-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.stat-item {
+    background: rgba(0,0,0,0.3);
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.result-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 30px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.pause-content {
+    max-width: 300px;
+}
+
+.pause-content h2 {
+    margin-bottom: 30px;
+}
+
+.pause-content .btn-primary,
+.pause-content .btn-secondary {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+/* 连击显示 */
+.combo-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.combo-display.hidden {
+    display: none;
+}
+
+.combo-count {
+    display: block;
+    font-size: 5rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: comboPop 0.5s ease;
+}
+
+.combo-text {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--warning);
+    font-weight: 600;
+}
+
+@keyframes comboPop {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .title-3d {
+        font-size: 2.5rem;
+    }
+    
+    .game-info {
+        gap: 15px;
+    }
+    
+    .info-value {
+        font-size: 20px;
+    }
+    
+    .result-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .result-actions {
+        flex-direction: column;
+    }
+}
