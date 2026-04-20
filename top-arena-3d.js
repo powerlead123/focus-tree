@@ -2461,9 +2461,9 @@ function updatePhysics() {
                 let dy = target.y - t1.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
                 let speed = Math.sqrt(t1.vx*t1.vx + t1.vy*t1.vy);
-                // 强制将动能速度矢量无缝重指向最近的敌人，化身为不死不休的制导炮弹！
-                t1.vx = (dx / dist) * speed;
-                t1.vy = (dy / dist) * speed;
+                // 强制将动能速度矢量重指向最近的敌人，但速度降低为60%，让战斗更持久
+                t1.vx = (dx / dist) * speed * 0.6;
+                t1.vy = (dy / dist) * speed * 0.6;
             }
         }
         
