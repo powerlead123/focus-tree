@@ -336,113 +336,233 @@ function createCharacter() {
     
     const group = new THREE.Group();
     
-    // 身体 (使用圆柱体+球体组合代替胶囊体)
-    const bodyGroup = new THREE.Group();
-    
-    // 身体圆柱
-    const bodyCylinderGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16);
-    const bodyMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0xff6b6b,
-        emissive: 0xaa2222,
-        emissiveIntensity: 0.3
+    // 使用 PBR 材质让小人更有质感
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x3b82f6,
+        roughness: 0.4,
+        metalness: 0.1
     });
-    const bodyCylinder = new THREE.Mesh(bodyCylinderGeo, bodyMaterial);
-    bodyCylinder.castShadow = true;
-    bodyGroup.add(bodyCylinder);
     
-    // 身体上球
-    const bodyTopSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2),
-        bodyMaterial
-    );
-    bodyTopSphere.position.y = 0.4;
-    bodyGroup.add(bodyTopSphere);
+    const skinMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffdbac,
+        roughness: 0.6,
+        metalness: 0
+    });
     
-    // 身体下球
-    const bodyBottomSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
-        bodyMaterial
-    );
-    bodyBottomSphere.position.y = -0.4;
-    bodyGroup.add(bodyBottomSphere);
+    const pantsMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1e3a5f,
+        roughness: 0.7,
+        metalness: 0.1
+    });
     
-    bodyGroup.position.y = 0.8;
-    group.add(bodyGroup);
+    const shoesMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x8b4513,
+        roughness: 0.8,
+        metalness: 0
+    });
     
-    // 头
-    const headGeometry = new THREE.SphereGeometry(0.35, 16, 16);
-    const headMaterial = new THREE.MeshPhongMaterial({ color: 0xffccaa });
-    const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = 1.6;
+    // 身体 - 躯干（圆润的箱形）
+    const torsoGeo = new THREE.BoxGeometry(0.5, 0.7, 0.35);
+    // 让边缘圆润
+    const torsoModifier = new THREE.Mesh(torsoGeo, bodyMaterial);
+    torsoModifier.position.y = 0.95;
+    torsoModifier.castShadow = true;
+    group.add(torsoModifier);
+    
+    // 身体装饰 - 发光条纹
+    const stripeGeo = new THREE.BoxGeometry(0.52, 0.1, 0.36);
+    const stripeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x60a5fa,
+        emissive: 0x3b82f6,
+        emissiveIntensity: 0.5
+    });
+    const stripe = new THREE.Mesh(stripeGeo, stripeMaterial);
+    stripe.position.y = 1.0;
+    group.add(stripe);
+    
+    // 头 - 稍微椭圆的球体
+    const headGeo = new THREE.SphereGeometry(0.32, 32, 32);
+    // 稍微压扁一点更可爱
+    headGeo.scale(1, 1.1, 0.95);
+    const head = new THREE.Mesh(headGeo, skinMaterial);
+    head.position.y = 1.55;
     head.castShadow = true;
     group.add(head);
     
-    // 眼睛
-    const eyeGeometry = new THREE.SphereGeometry(0.08, 8, 8);
-    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    // 头发/头盔
+    const helmetGeo = new THREE.SphereGeometry(0.34, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2.5);
+    const helmetMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2563eb,
+        roughness: 0.3,
+        metalness: 0.3
+    });
+    const helmet = new THREE.Mesh(helmetGeo, helmetMaterial);
+    helmet.position.y = 1.55;
+    helmet.scale.set(1, 0.8, 1);
+    group.add(helmet);
     
-    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.12, 1.65, 0.3);
-    group.add(leftEye);
+    // 眼睛 - 更大更有神
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.1, 16, 16);
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     
-    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.12, 1.65, 0.3);
-    group.add(rightEye);
+    const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    leftEyeWhite.position.set(-0.12, 1.6, 0.28);
+    leftEyeWhite.scale.z = 0.5;
+    group.add(leftEyeWhite);
     
-    // 手臂 (使用圆柱体+球体)
-    const armMaterial = new THREE.MeshPhongMaterial({ color: 0xffccaa });
+    const rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    rightEyeWhite.position.set(0.12, 1.6, 0.28);
+    rightEyeWhite.scale.z = 0.5;
+    group.add(rightEyeWhite);
     
-    function createArm(x, rotZ) {
+    // 眼珠
+    const pupilGeo = new THREE.SphereGeometry(0.05, 16, 16);
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    
+    const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    leftPupil.position.set(-0.12, 1.6, 0.35);
+    group.add(leftPupil);
+    
+    const rightPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    rightPupil.position.set(0.12, 1.6, 0.35);
+    group.add(rightPupil);
+    
+    // 眼睛高光
+    const highlightGeo = new THREE.SphereGeometry(0.02, 8, 8);
+    const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    
+    const leftHighlight = new THREE.Mesh(highlightGeo, highlightMat);
+    leftHighlight.position.set(-0.1, 1.62, 0.37);
+    group.add(leftHighlight);
+    
+    const rightHighlight = new THREE.Mesh(highlightGeo, highlightMat);
+    rightHighlight.position.set(0.14, 1.62, 0.37);
+    group.add(rightHighlight);
+    
+    // 嘴巴 - 微笑
+    const mouthGeo = new THREE.TorusGeometry(0.08, 0.02, 8, 16, Math.PI);
+    const mouthMat = new THREE.MeshBasicMaterial({ color: 0xcc6666 });
+    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+    mouth.position.set(0, 1.45, 0.3);
+    mouth.rotation.x = Math.PI;
+    group.add(mouth);
+    
+    // 腮红
+    const cheekGeo = new THREE.CircleGeometry(0.06, 16);
+    const cheekMat = new THREE.MeshBasicMaterial({ 
+        color: 0xffaaaa, 
+        transparent: true, 
+        opacity: 0.5 
+    });
+    
+    const leftCheek = new THREE.Mesh(cheekGeo, cheekMat);
+    leftCheek.position.set(-0.2, 1.5, 0.3);
+    leftCheek.rotation.y = -0.3;
+    group.add(leftCheek);
+    
+    const rightCheek = new THREE.Mesh(cheekGeo, cheekMat);
+    rightCheek.position.set(0.2, 1.5, 0.3);
+    rightCheek.rotation.y = 0.3;
+    group.add(rightCheek);
+    
+    // 手臂 - 更自然的圆柱形
+    function createArm(x, isLeft) {
         const armGroup = new THREE.Group();
-        const armCyl = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8),
-            armMaterial
-        );
-        const armTop = new THREE.Mesh(
-            new THREE.SphereGeometry(0.1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
-            armMaterial
-        );
-        armTop.position.y = 0.25;
-        const armBottom = new THREE.Mesh(
-            new THREE.SphereGeometry(0.1, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
-            armMaterial
-        );
-        armBottom.position.y = -0.25;
-        armGroup.add(armCyl, armTop, armBottom);
-        armGroup.position.set(x, 1, 0);
-        armGroup.rotation.z = rotZ;
+        
+        // 上臂
+        const upperArmGeo = new THREE.CylinderGeometry(0.09, 0.08, 0.35, 12);
+        const upperArm = new THREE.Mesh(upperArmGeo, bodyMaterial);
+        upperArm.position.y = 0.175;
+        upperArm.castShadow = true;
+        armGroup.add(upperArm);
+        
+        // 肘部关节
+        const elbowGeo = new THREE.SphereGeometry(0.09, 12, 12);
+        const elbow = new THREE.Mesh(elbowGeo, bodyMaterial);
+        elbow.position.y = 0;
+        armGroup.add(elbow);
+        
+        // 前臂
+        const lowerArmGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.3, 12);
+        const lowerArm = new THREE.Mesh(lowerArmGeo, skinMaterial);
+        lowerArm.position.y = -0.22;
+        lowerArm.castShadow = true;
+        armGroup.add(lowerArm);
+        
+        // 手
+        const handGeo = new THREE.SphereGeometry(0.1, 12, 12);
+        const hand = new THREE.Mesh(handGeo, skinMaterial);
+        hand.position.y = -0.4;
+        hand.scale.y = 0.8;
+        armGroup.add(hand);
+        
+        // 位置
+        armGroup.position.set(x, 1.1, 0);
+        armGroup.rotation.z = isLeft ? Math.PI / 8 : -Math.PI / 8;
+        
         return armGroup;
     }
     
-    group.add(createArm(-0.5, Math.PI / 6));
-    group.add(createArm(0.5, -Math.PI / 6));
+    group.add(createArm(-0.35, true));
+    group.add(createArm(0.35, false));
     
-    // 腿 (使用圆柱体+球体)
-    const legMaterial = new THREE.MeshPhongMaterial({ color: 0x3344aa });
-    
+    // 腿 - 更完整的腿部结构
     function createLeg(x) {
         const legGroup = new THREE.Group();
-        const legCyl = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.12, 0.12, 0.5, 8),
-            legMaterial
-        );
-        const legTop = new THREE.Mesh(
-            new THREE.SphereGeometry(0.12, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
-            legMaterial
-        );
-        legTop.position.y = 0.25;
-        const legBottom = new THREE.Mesh(
-            new THREE.SphereGeometry(0.12, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
-            legMaterial
-        );
-        legBottom.position.y = -0.25;
-        legGroup.add(legCyl, legTop, legBottom);
-        legGroup.position.set(x, 0.3, 0);
+        
+        // 大腿
+        const thighGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.4, 12);
+        const thigh = new THREE.Mesh(thighGeo, pantsMaterial);
+        thigh.position.y = 0.2;
+        thigh.castShadow = true;
+        legGroup.add(thigh);
+        
+        // 膝盖
+        const kneeGeo = new THREE.SphereGeometry(0.11, 12, 12);
+        const knee = new THREE.Mesh(kneeGeo, pantsMaterial);
+        knee.position.y = 0;
+        legGroup.add(knee);
+        
+        // 小腿
+        const calfGeo = new THREE.CylinderGeometry(0.1, 0.08, 0.35, 12);
+        const calf = new THREE.Mesh(calfGeo, pantsMaterial);
+        calf.position.y = -0.22;
+        calf.castShadow = true;
+        legGroup.add(calf);
+        
+        // 鞋子
+        const shoeGeo = new THREE.BoxGeometry(0.15, 0.12, 0.25);
+        const shoe = new THREE.Mesh(shoeGeo, shoesMaterial);
+        shoe.position.set(0, -0.42, 0.05);
+        shoe.castShadow = true;
+        legGroup.add(shoe);
+        
+        // 鞋带细节
+        const laceGeo = new THREE.BoxGeometry(0.1, 0.02, 0.15);
+        const laceMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const lace = new THREE.Mesh(laceGeo, laceMat);
+        lace.position.set(0, -0.36, 0.08);
+        legGroup.add(lace);
+        
+        legGroup.position.set(x, 0.45, 0);
         return legGroup;
     }
     
-    group.add(createLeg(-0.2));
-    group.add(createLeg(0.2));
+    group.add(createLeg(-0.15));
+    group.add(createLeg(0.15));
+    
+    // 身体周围的发光光环
+    const glowGeo = new THREE.RingGeometry(0.6, 0.7, 32);
+    const glowMat = new THREE.MeshBasicMaterial({ 
+        color: 0x60a5fa,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    const glow = new THREE.Mesh(glowGeo, glowMat);
+    glow.rotation.x = Math.PI / 2;
+    glow.position.y = 0.1;
+    group.add(glow);
     
     character = group;
     scene.add(character);
