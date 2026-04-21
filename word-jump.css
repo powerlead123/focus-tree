@@ -1,0 +1,503 @@
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #8b5cf6;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --bg-dark: #0f172a;
+    --bg-card: rgba(30, 41, 59, 0.95);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --glass: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    overflow: hidden;
+    background: #000;
+}
+
+/* 3D 画布 */
+#gameCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* 游戏UI层 */
+.game-ui {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none;
+    display: none;
+}
+
+.game-ui.active {
+    display: block;
+}
+
+.game-ui > * {
+    pointer-events: auto;
+}
+
+/* 顶部HUD */
+.top-hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-exit {
+    background: rgba(239, 68, 68, 0.8);
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-exit:hover {
+    background: var(--danger);
+    transform: scale(1.05);
+}
+
+.level-progress {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: var(--bg-card);
+    padding: 10px 20px;
+    border-radius: 25px;
+}
+
+.progress-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.progress-bar {
+    width: 150px;
+    height: 10px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success) 0%, #10b981 100%);
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.progress-text {
+    font-weight: bold;
+    color: white;
+    font-size: 14px;
+}
+
+/* 单词显示区域 */
+.word-display {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    padding: 25px 50px;
+    border-radius: 20px;
+    text-align: center;
+    border: 2px solid rgba(255,255,255,0.2);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+}
+
+.word-hint {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.word-chinese {
+    font-size: 3rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* 底部控制区 */
+.bottom-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 30px;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+    z-index: 10;
+}
+
+.input-section {
+    display: flex;
+    gap: 15px;
+    max-width: 600px;
+    margin: 0 auto;
+    align-items: center;
+}
+
+.word-input {
+    flex: 1;
+    padding: 18px 30px;
+    font-size: 22px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 35px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    outline: none;
+    text-align: center;
+    text-transform: lowercase;
+    transition: all 0.3s;
+}
+
+.word-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+}
+
+.word-input.correct {
+    border-color: var(--success);
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.5);
+}
+
+.word-input.wrong {
+    border-color: var(--danger);
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+    20%, 40%, 60%, 80% { transform: translateX(10px); }
+}
+
+.btn-jump {
+    padding: 18px 35px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border: none;
+    border-radius: 35px;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    white-space: nowrap;
+}
+
+.btn-jump:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+}
+
+.btn-jump:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 开始游戏界面 */
+.start-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.start-content {
+    text-align: center;
+    padding: 40px;
+    max-width: 600px;
+}
+
+.game-title {
+    margin-bottom: 30px;
+}
+
+.title-main {
+    display: block;
+    font-size: 3.5rem;
+    font-weight: bold;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.title-3d {
+    display: inline-block;
+    font-size: 1.5rem;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-left: 10px;
+}
+
+.game-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.preview-item {
+    background: rgba(255,255,255,0.1);
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+}
+
+.word-list-preview {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 30px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.preview-word {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.preview-word:last-child {
+    border-bottom: none;
+}
+
+.preview-word .en {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.preview-word .cn {
+    color: var(--text-secondary);
+}
+
+.btn-start {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 15px;
+    padding: 18px 40px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    border: none;
+    border-radius: 30px;
+    color: white;
+    font-size: 1.3rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+}
+
+.btn-start:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 10px 30px rgba(245, 87, 108, 0.5);
+}
+
+.btn-back-setup {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: var(--text-secondary);
+    padding: 12px 30px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-back-setup:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+/* 弹窗 */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    padding: 50px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 450px;
+    width: 90%;
+    border: 1px solid rgba(255,255,255,0.1);
+    animation: modalPop 0.4s ease;
+}
+
+@keyframes modalPop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.result-icon {
+    font-size: 5rem;
+    margin-bottom: 20px;
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+.modal-content h2 {
+    font-size: 2rem;
+    margin-bottom: 15px;
+    color: white;
+}
+
+.result-desc {
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    font-size: 1.1rem;
+}
+
+.result-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 14px 35px;
+    border: none;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+/* 深渊警告 */
+.abyss-warning {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--danger) 0%, #991b1b 100%);
+    padding: 15px 40px;
+    border-radius: 30px;
+    z-index: 100;
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.8);
+    animation: abyssPulse 0.5s infinite;
+}
+
+.abyss-warning.hidden {
+    display: none;
+}
+
+.warning-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+@keyframes abyssPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.1); }
+}
+
+/* 全局隐藏类 */
+.hidden {
+    display: none !important;
+}
+
+/* 响应式 */
+@media (max-width: 600px) {
+    .title-main {
+        font-size: 2.5rem;
+    }
+    
+    .word-chinese {
+        font-size: 2rem;
+    }
+    
+    .input-section {
+        flex-direction: column;
+    }
+    
+    .btn-jump {
+        width: 100%;
+    }
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>单词惊险跳 3D</title>
+    <link rel="stylesheet" href="word-jump.css">
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <!-- 3D 游戏画布 -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 游戏UI层 -->
+    <div id="gameUI" class="game-ui">
+        <!-- 顶部信息栏 -->
+        <div class="top-hud">
+            <button class="btn-exit" onclick="exitGame()">← 退出</button>
+            <div class="level-progress">
+                <span class="progress-label">关卡进度</span>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <span class="progress-text" id="progressText">0/5</span>
+            </div>
+        </div>
+
+        <!-- 当前单词显示 -->
+        <div class="word-display" id="wordDisplay">
+            <div class="word-hint">请输入这个单词的英文：</div>
+            <div class="word-chinese" id="wordChinese">--</div>
+        </div>
+
+        <!-- 底部输入区 -->
+        <div class="bottom-controls">
+            <div class="input-section">
+                <input type="text" id="wordInput" class="word-input" 
+                       placeholder="输入英文单词..." autocomplete="off" spellcheck="false">
+                <button class="btn-jump" onclick="attemptJump()">🦘 跳跃</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 开始游戏界面 -->
+    <div id="startScreen" class="start-screen">
+        <div class="start-content">
+            <h1 class="game-title">
+                <span class="title-main">单词惊险跳</span>
+                <span class="title-3d">3D</span>
+            </h1>
+            <div class="game-preview">
+                <div class="preview-item">🤖 控制3D小人</div>
+                <div class="preview-item">🔮 跳过5个玻璃格子</div>
+                <div class="preview-item">⚠️ 输错会掉入深渊！</div>
+            </div>
+            <div class="word-list-preview" id="wordListPreview">
+                <!-- 动态显示单词 -->
+            </div>
+            <button class="btn-start" onclick="startGame()">🎮 开始挑战</button>
+            <button class="btn-back-setup" onclick="location.href='word-jump-parent.html'">← 返回设置</button>
+        </div>
+    </div>
+
+    <!-- 游戏结果弹窗 -->
+    <div id="resultModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="result-icon" id="resultIcon">🏆</div>
+            <h2 id="resultTitle">挑战成功！</h2>
+            <p class="result-desc" id="resultDesc">你成功到达了终点！</p>
+            <div class="result-actions">
+                <button class="btn-primary" onclick="restartGame()">🔄 再玩一次</button>
+                <button class="btn-secondary" onclick="location.href='word-jump-parent.html'">⚙️ 更换单词</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 深渊警告 -->
+    <div id="abyssWarning" class="abyss-warning hidden">
+        <div class="warning-text">💀 深渊</div>
+    </div>
+
+    <script src="word-jump.js"></script>
+</body>
+</html>

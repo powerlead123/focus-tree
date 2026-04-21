@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单词惊险跳 - 单词管理</title>
+    <link rel="stylesheet" href="word-jump-parent.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <button class="btn-back" onclick="location.href='home.html'">← 返回首页</button>
+            <h1>🎮 单词惊险跳</h1>
+            <p class="subtitle">选择5个单词，挑战惊险跳跃！</p>
+        </header>
+
+        <div class="main-content">
+            <!-- 单词录入区域 -->
+            <div class="word-editor">
+                <div class="section-title">
+                    <span>📝</span>
+                    <span>录入5个单词</span>
+                    <span class="word-counter" id="wordCounter">0/5</span>
+                </div>
+                
+                <div class="word-list" id="wordList">
+                    <!-- 5个单词输入框 -->
+                    <div class="word-input-row" data-index="0">
+                        <span class="row-number">1</span>
+                        <input type="text" class="word-input-en" placeholder="英文单词" maxlength="20">
+                        <input type="text" class="word-input-cn" placeholder="中文意思" maxlength="20">
+                    </div>
+                    <div class="word-input-row" data-index="1">
+                        <span class="row-number">2</span>
+                        <input type="text" class="word-input-en" placeholder="英文单词" maxlength="20">
+                        <input type="text" class="word-input-cn" placeholder="中文意思" maxlength="20">
+                    </div>
+                    <div class="word-input-row" data-index="2">
+                        <span class="row-number">3</span>
+                        <input type="text" class="word-input-en" placeholder="英文单词" maxlength="20">
+                        <input type="text" class="word-input-cn" placeholder="中文意思" maxlength="20">
+                    </div>
+                    <div class="word-input-row" data-index="3">
+                        <span class="row-number">4</span>
+                        <input type="text" class="word-input-en" placeholder="英文单词" maxlength="20">
+                        <input type="text" class="word-input-cn" placeholder="中文意思" maxlength="20">
+                    </div>
+                    <div class="word-input-row" data-index="4">
+                        <span class="row-number">5</span>
+                        <input type="text" class="word-input-en" placeholder="英文单词" maxlength="20">
+                        <input type="text" class="word-input-cn" placeholder="中文意思" maxlength="20">
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn-load" onclick="loadLastWords()">📂 载入上次单词</button>
+                    <button class="btn-clear" onclick="clearAllWords()">🗑️ 清空</button>
+                </div>
+            </div>
+
+            <!-- 游戏说明 -->
+            <div class="game-info">
+                <div class="info-card">
+                    <div class="info-icon">🎯</div>
+                    <h3>游戏目标</h3>
+                    <p>控制3D小人跳过5个玻璃格子到达终点</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">⌨️</div>
+                    <h3>操作方法</h3>
+                    <p>输入正确单词，小人安全跳跃；输错就会掉入深渊！</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">⚠️</div>
+                    <h3>注意事项</h3>
+                    <p>必须填满5个单词才能开始游戏</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 开始游戏按钮 -->
+        <div class="start-section">
+            <button class="btn-start" id="startBtn" onclick="startGame()" disabled>
+                🚀 开始惊险跳
+            </button>
+            <p class="start-hint" id="startHint">请先录入5个单词</p>
+        </div>
+    </div>
+
+    <script src="word-jump-parent.js"></script>
+</body>
+</html>
