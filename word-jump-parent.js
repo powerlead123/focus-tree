@@ -1,159 +1,212 @@
 // 单词惊险跳 - 管理页面逻辑
+// 与单词消消乐共用单词本
 
-const WORD_JUMP_KEY = 'focusTree_wordJump_v1';
+const WORD_BOOKS_KEY = 'focusTree_wordBooks_v1';
+
+// 状态
+let wordBooks = [];
+let currentBookId = null;
+let selectedWords = [];
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
-    loadSavedWords();
-    setupInputListeners();
-    checkAllFilled();
+    loadWordBooks();
+    renderBookList();
 });
 
-// 设置输入监听
-function setupInputListeners() {
-    const inputs = document.querySelectorAll('.word-input-en, .word-input-cn');
-    inputs.forEach(input => {
-        input.addEventListener('input', () => {
-            checkAllFilled();
-            updateRowStatus(input.closest('.word-input-row'));
-        });
-    });
-}
-
-// 更新行状态
-function updateRowStatus(row) {
-    const enInput = row.querySelector('.word-input-en');
-    const cnInput = row.querySelector('.word-input-cn');
-    
-    if (enInput.value.trim() && cnInput.value.trim()) {
-        row.classList.add('filled');
+// 加载单词本
+function loadWordBooks() {
+    const saved = localStorage.getItem(WORD_BOOKS_KEY);
+    if (saved) {
+        wordBooks = JSON.parse(saved);
     } else {
-        row.classList.remove('filled');
+        // 默认单词本
+        wordBooks = [
+            {
+                id: Date.now().toString(),
+                name: '三年级上册单词',
+                words: [
+                    { english: 'apple', chinese: '苹果' },
+                    { english: 'book', chinese: '书' },
+                    { english: 'cat', chinese: '猫' },
+                    { english: 'dog', chinese: '狗' },
+                    { english: 'elephant', chinese: '大象' },
+                    { english: 'fish', chinese: '鱼' },
+                    { english: 'grape', chinese: '葡萄' },
+                    { english: 'house', chinese: '房子' }
+                ]
+            }
+        ];
+        saveWordBooks();
     }
 }
 
-// 检查是否全部填满
-function checkAllFilled() {
-    const rows = document.querySelectorAll('.word-input-row');
-    let filledCount = 0;
-    const words = [];
+// 保存单词本
+function saveWordBooks() {
+    localStorage.setItem(WORD_BOOKS_KEY, JSON.stringify(wordBooks));
+}
+
+// 渲染单词本列表
+function renderBookList() {
+    const bookList = document.getElementById('bookList');
     
-    rows.forEach(row => {
-        const en = row.querySelector('.word-input-en').value.trim();
-        const cn = row.querySelector('.word-input-cn').value.trim();
-        
-        if (en && cn) {
-            filledCount++;
-            words.push({ english: en, chinese: cn });
+    if (wordBooks.length === 0) {
+        bookList.innerHTML = `
+            <div class="empty-state">
+                <p>暂无单词本</p>
+                <p style="font-size: 0.85rem; margin-top: 10px;">点击"管理单词本"创建</p>
+            </div>
+        `;
+        return;
+    }
+    
+    bookList.innerHTML = wordBooks.map(book => `
+        <div class="book-item ${book.id === currentBookId ? 'active' : ''}" 
+             onclick="selectBook('${book.id}')">
+            <span class="book-name">${escapeHtml(book.name)}</span>
+            <span class="word-count">${book.words.length} 词</span>
+        </div>
+    `).join('');
+}
+
+// 选择单词本
+function selectBook(bookId) {
+    currentBookId = bookId;
+    selectedWords = []; // 重置选择
+    
+    const book = wordBooks.find(b => b.id === bookId);
+    if (book) {
+        renderWordList(book.words);
+    }
+    
+    renderBookList();
+    updateCounter();
+}
+
+// 渲染单词列表
+function renderWordList(words) {
+    const container = document.getElementById('wordListSelect');
+    
+    if (words.length < 5) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⚠️</div>
+                <p>该单词本单词不足5个</p>
+                <p style="font-size: 0.85rem; margin-top: 10px;">请添加更多单词或选择其他单词本</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = words.map((word, index) => `
+        <div class="word-select-item" onclick="toggleWordSelection(${index}, '${escapeHtml(word.english)}', '${escapeHtml(word.chinese)}')">
+            <input type="checkbox" class="word-checkbox" 
+                   ${selectedWords.find(w => w.english === word.english) ? 'checked' : ''}
+                   onclick="event.stopPropagation()">
+            <div class="word-info">
+                <span class="word-en">${escapeHtml(word.english)}</span>
+                <span class="word-cn">${escapeHtml(word.chinese)}</span>
+            </div>
+            ${getWordOrder(word.english)}
+        </div>
+    `).join('');
+    
+    // 更新选中状态样式
+    updateSelectionStyles();
+}
+
+// 获取单词顺序标记
+function getWordOrder(english) {
+    const order = selectedWords.findIndex(w => w.english === english);
+    if (order !== -1) {
+        return `<span class="word-order">${order + 1}</span>`;
+    }
+    return '';
+}
+
+// 切换单词选择
+function toggleWordSelection(index, english, chinese) {
+    const existingIndex = selectedWords.findIndex(w => w.english === english);
+    
+    if (existingIndex !== -1) {
+        // 取消选择
+        selectedWords.splice(existingIndex, 1);
+    } else {
+        // 添加选择（最多5个）
+        if (selectedWords.length >= 5) {
+            showToast('最多只能选择5个单词');
+            return;
         }
-    });
+        selectedWords.push({ english, chinese });
+    }
     
-    // 更新计数器
-    const counter = document.getElementById('wordCounter');
-    counter.textContent = `${filledCount}/5`;
+    // 重新渲染以更新顺序
+    const book = wordBooks.find(b => b.id === currentBookId);
+    if (book) {
+        renderWordList(book.words);
+    }
     
-    if (filledCount === 5) {
+    updateCounter();
+}
+
+// 更新选择计数器
+function updateCounter() {
+    const counter = document.getElementById('selectCounter');
+    const startBtn = document.getElementById('startBtn');
+    const hint = document.getElementById('startHint');
+    
+    counter.textContent = `已选择: ${selectedWords.length}/5`;
+    
+    if (selectedWords.length === 5) {
         counter.classList.add('complete');
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('startHint').textContent = '✅ 准备就绪，点击开始游戏！';
-        document.getElementById('startHint').classList.add('ready');
+        startBtn.disabled = false;
+        hint.textContent = '✅ 已选择5个单词，可以开始游戏了！';
+        hint.classList.add('ready');
     } else {
         counter.classList.remove('complete');
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('startHint').textContent = `还需录入 ${5 - filledCount} 个单词`;
-        document.getElementById('startHint').classList.remove('ready');
+        startBtn.disabled = true;
+        hint.textContent = `还需选择 ${5 - selectedWords.length} 个单词`;
+        hint.classList.remove('ready');
     }
-    
-    return words;
 }
 
-// 载入上次单词
-function loadLastWords() {
-    try {
-        const saved = localStorage.getItem(WORD_JUMP_KEY);
-        if (saved) {
-            const words = JSON.parse(saved);
-            const rows = document.querySelectorAll('.word-input-row');
-            
-            rows.forEach((row, index) => {
-                if (words[index]) {
-                    row.querySelector('.word-input-en').value = words[index].english;
-                    row.querySelector('.word-input-cn').value = words[index].chinese;
-                    updateRowStatus(row);
-                }
-            });
-            
-            checkAllFilled();
-            showToast('已载入上次单词');
+// 更新选中样式
+function updateSelectionStyles() {
+    const items = document.querySelectorAll('.word-select-item');
+    const book = wordBooks.find(b => b.id === currentBookId);
+    if (!book) return;
+    
+    items.forEach((item, index) => {
+        const word = book.words[index];
+        const isSelected = selectedWords.find(w => w.english === word.english);
+        if (isSelected) {
+            item.classList.add('selected');
         } else {
-            showToast('没有保存的单词');
+            item.classList.remove('selected');
         }
-    } catch (e) {
-        console.error('载入失败:', e);
-        showToast('载入失败');
-    }
-}
-
-// 清空所有
-function clearAllWords() {
-    if (!confirm('确定要清空所有单词吗？')) return;
-    
-    const inputs = document.querySelectorAll('.word-input-en, .word-input-cn');
-    inputs.forEach(input => input.value = '');
-    
-    document.querySelectorAll('.word-input-row').forEach(row => {
-        row.classList.remove('filled');
     });
-    
-    checkAllFilled();
-    showToast('已清空');
 }
 
 // 开始游戏
 function startGame() {
-    const words = checkAllFilled();
-    
-    if (words.length !== 5) {
-        alert('请填满5个单词');
+    if (selectedWords.length !== 5) {
+        alert('请选择5个单词');
         return;
-    }
-    
-    // 保存到 localStorage
-    try {
-        localStorage.setItem(WORD_JUMP_KEY, JSON.stringify(words));
-    } catch (e) {
-        console.warn('保存失败:', e);
     }
     
     // 构建 URL 参数
     const params = new URLSearchParams();
-    params.set('words', JSON.stringify(words));
+    params.set('words', JSON.stringify(selectedWords));
     
     // 跳转到游戏页面
     location.href = 'word-jump.html?' + params.toString();
 }
 
-// 加载保存的单词
-function loadSavedWords() {
-    try {
-        const saved = localStorage.getItem(WORD_JUMP_KEY);
-        if (saved) {
-            const words = JSON.parse(saved);
-            const rows = document.querySelectorAll('.word-input-row');
-            
-            rows.forEach((row, index) => {
-                if (words[index]) {
-                    row.querySelector('.word-input-en').value = words[index].english || '';
-                    row.querySelector('.word-input-cn').value = words[index].chinese || '';
-                    updateRowStatus(row);
-                }
-            });
-            
-            checkAllFilled();
-        }
-    } catch (e) {
-        console.error('加载失败:', e);
-    }
+// HTML转义
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // 显示提示
@@ -165,13 +218,14 @@ function showToast(message) {
         position: fixed;
         top: 20px;
         right: 20px;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        background: linear-gradient(135deg, var(--warning) 0%, #f97316 100%);
         color: white;
         padding: 15px 25px;
         border-radius: 10px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         z-index: 2000;
         animation: slideIn 0.3s ease;
+        font-weight: 500;
     `;
     document.body.appendChild(toast);
     
