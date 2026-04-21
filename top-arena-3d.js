@@ -189,6 +189,19 @@ const SPECIAL_TOPS = [
         waterRange: 250,      // 水柱射程
         waterAngle: Math.PI / 4, // 水柱扇形角度（45度）
         waterInterval: 3000   // 喷水间隔3秒
+    },
+    {
+        id: 'huluwa6',
+        name: '六娃陀螺',
+        emoji: '👻',
+        hp: 50,
+        baseMass: 30,  // 对应LV10的基础质量
+        color: '#8b5cf6',  // 紫色，代表六娃（隐身娃）
+        tier: 10,
+        description: '葫芦娃六娃，隐身术！每3秒隐身1秒，隐身期间敌人无法造成伤害！',
+        ability: 'invisibility',  // 特殊能力：隐身
+        invisibilityInterval: 3000,  // 隐身间隔3秒
+        invisibilityDuration: 1000   // 隐身持续时间1秒
     }
 ];
 
@@ -987,6 +1000,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderHuluwa4(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'huluwa5') {
         renderHuluwa5(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'huluwa6') {
+        renderHuluwa6(top, cx, cy, r, specialTop);
     }
 }
 
@@ -1846,6 +1861,158 @@ function renderSpecialTopInfo(top, cx, cy, r, specialTop) {
     ctx.strokeRect(cx - barW/2, barY, barW, barH);
 }
 
+// 六娃陀螺渲染
+function renderHuluwa6(top, cx, cy, r, specialTop) {
+    const now = Date.now();
+
+    // 初始化隐身状态
+    if (!top.invisibilityState) {
+        top.invisibilityState = {
+            lastInvisibilityTime: 0,
+            isInvisible: false,
+            invisibilityStartTime: 0
+        };
+    }
+
+    // 检查是否应该进入隐身状态
+    const timeSinceLastInvisibility = now - top.invisibilityState.lastInvisibilityTime;
+
+    // 开始新的隐身周期
+    if (!top.invisibilityState.isInvisible && timeSinceLastInvisibility >= specialTop.invisibilityInterval) {
+        top.invisibilityState.isInvisible = true;
+        top.invisibilityState.invisibilityStartTime = now;
+        top.invisibilityState.lastInvisibilityTime = now;
+    }
+
+    // 计算隐身持续时间
+    if (top.invisibilityState.isInvisible) {
+        const invisibilityDuration = now - top.invisibilityState.invisibilityStartTime;
+        if (invisibilityDuration > specialTop.invisibilityDuration) {
+            top.invisibilityState.isInvisible = false;
+        }
+    }
+
+    // 保存隐身状态到top对象，供碰撞检测使用
+    top.isInvisible = top.invisibilityState.isInvisible;
+
+    // 渲染六娃陀螺
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const hRatio = 0.55;
+    const color = specialTop.color;
+
+    // 隐身期间只显示轮廓
+    if (top.isInvisible) {
+        // 绘制轮廓外形 - 虚线轮廓
+        ctx.strokeStyle = 'rgba(139, 92, 246, 0.6)'; // 紫色轮廓
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.25, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 隐身文字提示
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.8)';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('隐身中', 0, -r * 0.8);
+
+        ctx.restore();
+
+        // 显示名称和血条（也变成半透明）
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        renderSpecialTopInfo(top, cx, cy, r, specialTop);
+        ctx.restore();
+        return;
+    }
+
+    // 正常状态下的渲染
+    // 特殊光效 - 六娃的紫色光环
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#8b5cf6';
+
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 六娃陀螺外形 - 隐身葫芦形状
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 葫芦上部小圆
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.3, -r * 0.2, r * 0.6, r * 0.4);
+
+    // 葫芦顶部
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.65, r * 0.25, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 隐身装饰环
+    ctx.strokeStyle = '#8b5cf6';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.95, r * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 旋转的光环效果 - 紫色光环
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 2);
+    ctx.strokeStyle = 'rgba(139, 92, 246, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 特殊标记 - 六娃表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👻', 0, -r * 0.1);
+
+    ctx.restore();
+
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
 // 取色微调器 (生成 3D 阴影用)
 function shadeColor(color, percent) {
     if (!color) return '#000000';
@@ -2518,17 +2685,22 @@ function updatePhysics() {
                         // 伤害系数30，让碰撞伤害更温和
                         let dmgToT2 = (relVel * m1) / 30;
                         let dmgToT1 = (relVel * m2) / 30;
-                        
+
                         // 特殊陀螺能力：大娃变大时伤害加倍
                         dmgToT2 = getSpecialDamageBonus(t1, dmgToT2);
                         dmgToT1 = getSpecialDamageBonus(t2, dmgToT1);
-                        
+
                         // 特殊陀螺能力：三娃防护罩减伤
                         const shieldResult1 = applyShieldDamage(t1, dmgToT1);
                         const shieldResult2 = applyShieldDamage(t2, dmgToT2);
-                        
-                        t1.hp -= shieldResult1.actualDamage;
-                        t2.hp -= shieldResult2.actualDamage;
+
+                        // 特殊陀螺能力：六娃隐身期间免疫伤害
+                        if (!t1.isInvisible) {
+                            t1.hp -= shieldResult1.actualDamage;
+                        }
+                        if (!t2.isInvisible) {
+                            t2.hp -= shieldResult2.actualDamage;
+                        }
                     }
                 }
             }
