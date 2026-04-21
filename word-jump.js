@@ -214,17 +214,121 @@ function createParticles() {
     particles.push(particleSystem);
 }
 
+// 桥的支撑柱数组
+let bridgeSupports = [];
+
 function createPlatforms() {
-    // 清除旧平台
+    // 清除旧平台和桥
     platforms.forEach(p => scene.remove(p.mesh));
+    bridgeSupports.forEach(s => scene.remove(s));
     platforms = [];
+    bridgeSupports = [];
     
     for (let i = 0; i < PLATFORM_COUNT; i++) {
         const platform = createGlassPlatform(i);
         platform.mesh.position.set(i * PLATFORM_GAP, 0, 0);
         scene.add(platform.mesh);
         platforms.push(platform);
+        
+        // 创建桥的支撑柱
+        if (i < PLATFORM_COUNT) {
+            createBridgeSupport(i * PLATFORM_GAP);
+        }
     }
+    
+    // 创建终点岸
+    createFinishShore();
+}
+
+// 创建桥的支撑柱
+function createBridgeSupport(x) {
+    // 主支柱
+    const pillarGeo = new THREE.CylinderGeometry(0.15, 0.2, 15, 8);
+    const pillarMat = new THREE.MeshStandardMaterial({
+        color: 0x4a5568,
+        roughness: 0.8,
+        metalness: 0.3
+    });
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    pillar.position.set(x, -7.5, 0);
+    scene.add(pillar);
+    bridgeSupports.push(pillar);
+    
+    // 支柱发光环
+    const ringGeo = new THREE.TorusGeometry(0.25, 0.05, 8, 16);
+    const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        transparent: true,
+        opacity: 0.6
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(x, 0, 0);
+    scene.add(ring);
+    bridgeSupports.push(ring);
+    
+    // 连接横梁
+    if (x > 0) {
+        const beamGeo = new THREE.BoxGeometry(PLATFORM_GAP, 0.1, 0.3);
+        const beamMat = new THREE.MeshStandardMaterial({
+            color: 0x2d3748,
+            roughness: 0.7
+        });
+        const beam = new THREE.Mesh(beamGeo, beamMat);
+        beam.position.set(x - PLATFORM_GAP / 2, -0.3, 0);
+        scene.add(beam);
+        bridgeSupports.push(beam);
+    }
+}
+
+// 创建终点岸
+function createFinishShore() {
+    const shoreX = PLATFORM_COUNT * PLATFORM_GAP;
+    
+    // 岸边平台
+    const shoreGeo = new THREE.BoxGeometry(4, 1, 4);
+    const shoreMat = new THREE.MeshStandardMaterial({
+        color: 0x22c55e,
+        roughness: 0.8
+    });
+    const shore = new THREE.Mesh(shoreGeo, shoreMat);
+    shore.position.set(shoreX, -0.25, 0);
+    shore.receiveShadow = true;
+    scene.add(shore);
+    bridgeSupports.push(shore);
+    
+    // 草地装饰
+    for (let i = 0; i < 10; i++) {
+        const grassGeo = new THREE.ConeGeometry(0.1, 0.3, 4);
+        const grassMat = new THREE.MeshStandardMaterial({ color: 0x16a34a });
+        const grass = new THREE.Mesh(grassGeo, grassMat);
+        grass.position.set(
+            shoreX + (Math.random() - 0.5) * 3,
+            0.15,
+            (Math.random() - 0.5) * 3
+        );
+        scene.add(grass);
+        bridgeSupports.push(grass);
+    }
+    
+    // 终点标志
+    const flagPoleGeo = new THREE.CylinderGeometry(0.05, 0.05, 3, 8);
+    const flagPoleMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+    const flagPole = new THREE.Mesh(flagPoleGeo, flagPoleMat);
+    flagPole.position.set(shoreX, 1, 0);
+    scene.add(flagPole);
+    bridgeSupports.push(flagPole);
+    
+    // 旗帜
+    const flagGeo = new THREE.PlaneGeometry(0.8, 0.5);
+    const flagMat = new THREE.MeshBasicMaterial({ 
+        color: 0xffd700,
+        side: THREE.DoubleSide
+    });
+    const flag = new THREE.Mesh(flagGeo, flagMat);
+    flag.position.set(shoreX + 0.4, 2.2, 0);
+    scene.add(flag);
+    bridgeSupports.push(flag);
 }
 
 function createGlassPlatform(index) {
@@ -639,6 +743,11 @@ function setupInputHandlers() {
     input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') attemptJump();
     });
+    
+    // 监听输入更新提示框
+    input.addEventListener('input', (e) => {
+        updateHintBoxes(e.target.value);
+    });
 }
 
 function startGame() {
@@ -667,8 +776,55 @@ function startGame() {
 
 function updateWordDisplay() {
     if (gameState.currentIndex < gameState.words.length) {
-        document.getElementById('wordChinese').textContent = 
-            gameState.words[gameState.currentIndex].chinese;
+        const word = gameState.words[gameState.currentIndex];
+        document.getElementById('wordChinese').textContent = word.chinese;
+        
+        // 更新单词长度提示
+        updateWordHint(word.english);
+    }
+}
+
+// 更新单词长度提示显示
+function updateWordHint(english) {
+    const hintDisplay = document.getElementById('wordHintDisplay');
+    const length = english.length;
+    
+    let html = '';
+    for (let i = 0; i < length; i++) {
+        html += `<div class="hint-box" id="hintBox${i}"></div>`;
+    }
+    hintDisplay.innerHTML = html;
+}
+
+// 更新输入时的提示显示
+function updateHintBoxes(input) {
+    const currentWord = gameState.words[gameState.currentIndex]?.english.toLowerCase() || '';
+    const inputLower = input.toLowerCase();
+    
+    for (let i = 0; i < currentWord.length; i++) {
+        const box = document.getElementById(`hintBox${i}`);
+        if (box) {
+            if (i < inputLower.length) {
+                box.textContent = input[i] || '';
+                box.classList.add('filled');
+                if (inputLower[i] === currentWord[i]) {
+                    box.style.borderColor = '#22c55e';
+                } else {
+                    box.style.borderColor = '#ef4444';
+                }
+            } else {
+                box.textContent = '';
+                box.classList.remove('filled');
+                box.style.borderColor = '';
+            }
+            
+            // 当前输入位置高亮
+            if (i === input.length) {
+                box.classList.add('current');
+            } else {
+                box.classList.remove('current');
+            }
+        }
     }
 }
 
@@ -704,12 +860,16 @@ function attemptJump() {
 function performJump() {
     gameState.isJumping = true;
     
+    const isLastJump = gameState.currentIndex === PLATFORM_COUNT - 1;
     const startPos = character.position.clone();
     const endPos = new THREE.Vector3(
         (gameState.currentIndex + 1) * PLATFORM_GAP,
         0,
         0
     );
+    
+    // 激活平台特效
+    activatePlatformEffect(gameState.currentIndex);
     
     const startTime = Date.now();
     
@@ -744,7 +904,8 @@ function performJump() {
             
             // 检查是否通关
             if (gameState.currentIndex >= PLATFORM_COUNT) {
-                setTimeout(gameWin, 300);
+                // 最后跳到岸上庆祝
+                performVictoryJump();
             } else {
                 updateWordDisplay();
                 document.getElementById('wordInput').focus();
@@ -753,6 +914,252 @@ function performJump() {
     }
     
     jumpAnimate();
+}
+
+// 平台成功特效
+function activatePlatformEffect(index) {
+    if (index >= platforms.length) return;
+    
+    const platform = platforms[index];
+    if (!platform) return;
+    
+    // 平台发光变亮
+    const platformMesh = platform.mesh.children[0];
+    if (platformMesh) {
+        // 改变颜色为绿色
+        platformMesh.material.color.setHex(0x22c55e);
+        platformMesh.material.emissive.setHex(0x11aa44);
+        platformMesh.material.emissiveIntensity = 0.8;
+        
+        // 升起动画
+        const startY = 0;
+        const endY = 0.5;
+        const startTime = Date.now();
+        const duration = 300;
+        
+        function riseAnimate() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const y = startY + (endY - startY) * Math.sin(progress * Math.PI);
+            platform.mesh.position.y = y;
+            
+            if (progress < 1) {
+                requestAnimationFrame(riseAnimate);
+            }
+        }
+        
+        riseAnimate();
+    }
+    
+    // 创建成功粒子
+    createSuccessParticles(platform.mesh.position);
+}
+
+// 创建成功粒子
+function createSuccessParticles(position) {
+    const particleCount = 15;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    
+    for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = position.x;
+        positions[i * 3 + 1] = position.y + 1;
+        positions[i * 3 + 2] = position.z;
+        
+        velocities.push({
+            x: (Math.random() - 0.5) * 0.3,
+            y: Math.random() * 0.3,
+            z: (Math.random() - 0.5) * 0.3
+        });
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const material = new THREE.PointsMaterial({
+        color: 0x22c55e,
+        size: 0.2,
+        transparent: true,
+        opacity: 1
+    });
+    
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+    
+    // 动画
+    let life = 1.0;
+    function animateParticles() {
+        life -= 0.02;
+        
+        const positions = particleSystem.geometry.attributes.position.array;
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] += velocities[i].x;
+            positions[i * 3 + 1] += velocities[i].y;
+            positions[i * 3 + 2] += velocities[i].z;
+            velocities[i].y -= 0.01; // 重力
+        }
+        particleSystem.geometry.attributes.position.needsUpdate = true;
+        particleSystem.material.opacity = life;
+        
+        if (life > 0) {
+            requestAnimationFrame(animateParticles);
+        } else {
+            scene.remove(particleSystem);
+        }
+    }
+    
+    animateParticles();
+}
+
+// 胜利跳跃到岸上
+function performVictoryJump() {
+    gameState.isJumping = true;
+    
+    const startPos = character.position.clone();
+    const shoreX = PLATFORM_COUNT * PLATFORM_GAP;
+    const endPos = new THREE.Vector3(shoreX, 0.5, 0);
+    
+    const startTime = Date.now();
+    const duration = 1000;
+    
+    function victoryAnimate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // 更高的抛物线
+        const x = startPos.x + (endPos.x - startPos.x) * progress;
+        const height = Math.sin(progress * Math.PI) * (JUMP_HEIGHT + 2);
+        const y = startPos.y + height;
+        
+        character.position.set(x, y, 0);
+        
+        // 旋转庆祝
+        character.rotation.y += 0.2;
+        
+        if (progress < 1) {
+            requestAnimationFrame(victoryAnimate);
+        } else {
+            // 着陆
+            character.position.copy(endPos);
+            character.rotation.y = 0;
+            gameState.isJumping = false;
+            
+            // 庆祝动画
+            performCelebration();
+        }
+    }
+    
+    victoryAnimate();
+}
+
+// 庆祝动画
+function performCelebration() {
+    // 创建庆祝烟花
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            createFirework(
+                PLATFORM_COUNT * PLATFORM_GAP + (Math.random() - 0.5) * 2,
+                3 + Math.random() * 2,
+                (Math.random() - 0.5) * 2
+            );
+        }, i * 300);
+    }
+    
+    // 小人跳跃庆祝
+    let jumpCount = 0;
+    function celebrationJump() {
+        if (jumpCount >= 3) {
+            // 显示胜利弹窗
+            setTimeout(gameWin, 500);
+            return;
+        }
+        
+        const startY = character.position.y;
+        const jumpHeight = 1;
+        const startTime = Date.now();
+        
+        function singleJump() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / 300, 1);
+            
+            const y = startY + Math.sin(progress * Math.PI) * jumpHeight;
+            character.position.y = y;
+            
+            if (progress < 1) {
+                requestAnimationFrame(singleJump);
+            } else {
+                character.position.y = startY;
+                jumpCount++;
+                setTimeout(celebrationJump, 200);
+            }
+        }
+        
+        singleJump();
+    }
+    
+    celebrationJump();
+}
+
+// 创建烟花
+function createFirework(x, y, z) {
+    const particleCount = 30;
+    const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    
+    for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = x;
+        positions[i * 3 + 1] = y;
+        positions[i * 3 + 2] = z;
+        
+        const angle = (Math.PI * 2 * i) / particleCount;
+        const speed = 0.1 + Math.random() * 0.1;
+        velocities.push({
+            x: Math.cos(angle) * speed,
+            y: Math.sin(angle) * speed,
+            z: (Math.random() - 0.5) * speed
+        });
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const material = new THREE.PointsMaterial({
+        color: color,
+        size: 0.15,
+        transparent: true,
+        opacity: 1
+    });
+    
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+    
+    // 动画
+    let life = 1.0;
+    function animateFirework() {
+        life -= 0.015;
+        
+        const positions = particleSystem.geometry.attributes.position.array;
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] += velocities[i].x;
+            positions[i * 3 + 1] += velocities[i].y;
+            positions[i * 3 + 2] += velocities[i].z;
+            velocities[i].y -= 0.005; // 重力
+        }
+        particleSystem.geometry.attributes.position.needsUpdate = true;
+        particleSystem.material.opacity = life;
+        
+        if (life > 0) {
+            requestAnimationFrame(animateFirework);
+        } else {
+            scene.remove(particleSystem);
+        }
+    }
+    
+    animateFirework();
 }
 
 // 玻璃碎片数组
