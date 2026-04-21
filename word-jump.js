@@ -755,14 +755,152 @@ function performJump() {
     jumpAnimate();
 }
 
+// 玻璃碎片数组
+let glassShards = [];
+
+// 破碎当前平台
+function breakCurrentPlatform() {
+    const platformIndex = gameState.currentIndex;
+    if (platformIndex >= platforms.length) return;
+    
+    const platform = platforms[platformIndex];
+    if (!platform) return;
+    
+    // 获取平台位置
+    const platformPos = platform.mesh.position.clone();
+    
+    // 创建玻璃破碎音效
+    playGlassBreakSound();
+    
+    // 创建碎片
+    createGlassShards(platformPos);
+    
+    // 隐藏原平台
+    platform.mesh.visible = false;
+}
+
+// 播放玻璃破碎音效
+function playGlassBreakSound() {
+    if (!initAudio()) return;
+    
+    // 创建多个振荡器模拟破碎声
+    const now = audioContext.currentTime;
+    
+    for (let i = 0; i < 5; i++) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        const startTime = now + i * 0.02;
+        oscillator.frequency.setValueAtTime(800 + Math.random() * 400, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(100, startTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.2, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
+        
+        oscillator.type = 'sawtooth';
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.15);
+    }
+}
+
+// 创建玻璃碎片
+function createGlassShards(position) {
+    const shardCount = 20;
+    const shardGeometry = new THREE.TetrahedronGeometry(0.15, 0);
+    const shardMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x88ccff,
+        metalness: 0.1,
+        roughness: 0.1,
+        transmission: 0.6,
+        transparent: true,
+        opacity: 0.8
+    });
+    
+    for (let i = 0; i < shardCount; i++) {
+        const shard = new THREE.Mesh(shardGeometry, shardMaterial);
+        
+        // 随机位置在平台范围内
+        shard.position.set(
+            position.x + (Math.random() - 0.5) * PLATFORM_SIZE,
+            position.y,
+            position.z + (Math.random() - 0.5) * PLATFORM_SIZE
+        );
+        
+        // 随机旋转
+        shard.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+        
+        // 随机速度
+        const velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 0.15,
+            Math.random() * 0.2,
+            (Math.random() - 0.5) * 0.15
+        );
+        
+        scene.add(shard);
+        glassShards.push({
+            mesh: shard,
+            velocity: velocity,
+            rotationSpeed: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2,
+                (Math.random() - 0.5) * 0.2
+            )
+        });
+    }
+}
+
+// 更新玻璃碎片动画
+function updateGlassShards() {
+    for (let i = glassShards.length - 1; i >= 0; i--) {
+        const shard = glassShards[i];
+        
+        // 更新位置
+        shard.mesh.position.add(shard.velocity);
+        
+        // 重力
+        shard.velocity.y -= 0.01;
+        
+        // 旋转
+        shard.mesh.rotation.x += shard.rotationSpeed.x;
+        shard.mesh.rotation.y += shard.rotationSpeed.y;
+        shard.mesh.rotation.z += shard.rotationSpeed.z;
+        
+        // 淡出
+        if (shard.mesh.position.y < -10) {
+            scene.remove(shard.mesh);
+            glassShards.splice(i, 1);
+        }
+    }
+}
+
 function performFall() {
     gameState.isFalling = true;
     document.getElementById('abyssWarning').classList.remove('hidden');
     
+    // 第一阶段：玻璃破碎
+    breakCurrentPlatform();
+    
+    // 延迟后开始掉落
+    setTimeout(() => {
+        performCharacterFall();
+    }, 600);
+}
+
+function performCharacterFall() {
     const startTime = Date.now();
     const startY = character.position.y;
     
     function fallAnimate() {
+        // 更新碎片
+        updateGlassShards();
+        
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / FALL_DURATION, 1);
         
@@ -774,7 +912,7 @@ function performFall() {
         character.rotation.x += 0.1;
         character.rotation.z += 0.05;
         
-        if (progress < 1) {
+        if (progress < 1 || glassShards.length > 0) {
             requestAnimationFrame(fallAnimate);
         } else {
             gameOver();
@@ -814,7 +952,12 @@ function restartGame() {
     gameState.isJumping = false;
     gameState.isFalling = false;
     
+    // 清理玻璃碎片
+    glassShards.forEach(shard => scene.remove(shard.mesh));
+    glassShards = [];
+    
     // 重新创建场景
+    createPlatforms();
     createCharacter();
     character.position.set(0, 0, 0);
     camera.position.set(0, 5, 15);
