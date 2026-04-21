@@ -336,17 +336,38 @@ function createCharacter() {
     
     const group = new THREE.Group();
     
-    // 身体
-    const bodyGeometry = new THREE.CapsuleGeometry(0.4, 0.8, 4, 8);
+    // 身体 (使用圆柱体+球体组合代替胶囊体)
+    const bodyGroup = new THREE.Group();
+    
+    // 身体圆柱
+    const bodyCylinderGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16);
     const bodyMaterial = new THREE.MeshPhongMaterial({ 
         color: 0xff6b6b,
         emissive: 0xaa2222,
         emissiveIntensity: 0.3
     });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 0.8;
-    body.castShadow = true;
-    group.add(body);
+    const bodyCylinder = new THREE.Mesh(bodyCylinderGeo, bodyMaterial);
+    bodyCylinder.castShadow = true;
+    bodyGroup.add(bodyCylinder);
+    
+    // 身体上球
+    const bodyTopSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        bodyMaterial
+    );
+    bodyTopSphere.position.y = 0.4;
+    bodyGroup.add(bodyTopSphere);
+    
+    // 身体下球
+    const bodyBottomSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+        bodyMaterial
+    );
+    bodyBottomSphere.position.y = -0.4;
+    bodyGroup.add(bodyBottomSphere);
+    
+    bodyGroup.position.y = 0.8;
+    group.add(bodyGroup);
     
     // 头
     const headGeometry = new THREE.SphereGeometry(0.35, 16, 16);
@@ -368,31 +389,60 @@ function createCharacter() {
     rightEye.position.set(0.12, 1.65, 0.3);
     group.add(rightEye);
     
-    // 手臂
-    const armGeometry = new THREE.CapsuleGeometry(0.1, 0.5, 4, 8);
+    // 手臂 (使用圆柱体+球体)
     const armMaterial = new THREE.MeshPhongMaterial({ color: 0xffccaa });
     
-    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
-    leftArm.position.set(-0.5, 1, 0);
-    leftArm.rotation.z = Math.PI / 6;
-    group.add(leftArm);
+    function createArm(x, rotZ) {
+        const armGroup = new THREE.Group();
+        const armCyl = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.1, 0.1, 0.5, 8),
+            armMaterial
+        );
+        const armTop = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
+            armMaterial
+        );
+        armTop.position.y = 0.25;
+        const armBottom = new THREE.Mesh(
+            new THREE.SphereGeometry(0.1, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+            armMaterial
+        );
+        armBottom.position.y = -0.25;
+        armGroup.add(armCyl, armTop, armBottom);
+        armGroup.position.set(x, 1, 0);
+        armGroup.rotation.z = rotZ;
+        return armGroup;
+    }
     
-    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
-    rightArm.position.set(0.5, 1, 0);
-    rightArm.rotation.z = -Math.PI / 6;
-    group.add(rightArm);
+    group.add(createArm(-0.5, Math.PI / 6));
+    group.add(createArm(0.5, -Math.PI / 6));
     
-    // 腿
-    const legGeometry = new THREE.CapsuleGeometry(0.12, 0.5, 4, 8);
+    // 腿 (使用圆柱体+球体)
     const legMaterial = new THREE.MeshPhongMaterial({ color: 0x3344aa });
     
-    const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
-    leftLeg.position.set(-0.2, 0.3, 0);
-    group.add(leftLeg);
+    function createLeg(x) {
+        const legGroup = new THREE.Group();
+        const legCyl = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.12, 0.12, 0.5, 8),
+            legMaterial
+        );
+        const legTop = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
+            legMaterial
+        );
+        legTop.position.y = 0.25;
+        const legBottom = new THREE.Mesh(
+            new THREE.SphereGeometry(0.12, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+            legMaterial
+        );
+        legBottom.position.y = -0.25;
+        legGroup.add(legCyl, legTop, legBottom);
+        legGroup.position.set(x, 0.3, 0);
+        return legGroup;
+    }
     
-    const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
-    rightLeg.position.set(0.2, 0.3, 0);
-    group.add(rightLeg);
+    group.add(createLeg(-0.2));
+    group.add(createLeg(0.2));
     
     character = group;
     scene.add(character);
