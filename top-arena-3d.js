@@ -202,6 +202,21 @@ const SPECIAL_TOPS = [
         ability: 'invisibility',  // 特殊能力：隐身
         invisibilityInterval: 3000,  // 隐身间隔3秒
         invisibilityDuration: 1000   // 隐身持续时间1秒
+    },
+    {
+        id: 'snakeSpirit',
+        name: '蛇精陀螺',
+        emoji: '🐍',
+        hp: 50,
+        baseMass: 30,  // 对应LV10的基础质量
+        color: '#10b981',  // 青绿色，代表蛇精
+        tier: 10,
+        description: '蛇精陀螺，妖风四起！每3秒释放龙卷风，被卷到的敌人会被冰冻3秒！',
+        ability: 'tornado',  // 特殊能力：龙卷风
+        tornadoInterval: 3000,  // 龙卷风释放间隔3秒
+        tornadoSpeed: 5,        // 龙卷风移动速度
+        tornadoRadius: 40,      // 龙卷风半径
+        freezeDuration: 3000    // 冰冻持续时间3秒
     }
 ];
 
@@ -230,6 +245,9 @@ let topsOnBoard = []; // 存活在网格或场上的所有陀螺
 let particles = [];
 let animFrame = null;
 let gameState = 'setup'; // setup, playing, ended
+
+// 龙卷风状态管理
+let tornadoes = []; // 存储所有活跃的龙卷风
 
 // 玻璃破裂效果状态
 let glassCrackState = {
@@ -514,10 +532,15 @@ function renderLoop() {
 
     // 渲染激光和声波效果
     renderSpecialAttacks();
-    
+
+    // 更新和渲染龙卷风
+    if (gameState === 'playing') {
+        updateAndRenderTornadoes();
+    }
+
     // 渲染玻璃破裂效果
     renderGlassCracks();
-    
+
     // 渲染粒子与主光影实体
     renderParticles();
     renderTops();
@@ -1002,6 +1025,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderHuluwa5(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'huluwa6') {
         renderHuluwa6(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'snakeSpirit') {
+        renderSnakeSpirit(top, cx, cy, r, specialTop);
     }
 }
 
@@ -2013,6 +2038,223 @@ function renderHuluwa6(top, cx, cy, r, specialTop) {
     renderSpecialTopInfo(top, cx, cy, r, specialTop);
 }
 
+// 蛇精陀螺渲染
+function renderSnakeSpirit(top, cx, cy, r, specialTop) {
+    const now = Date.now();
+
+    // 初始化龙卷风释放状态
+    if (!top.tornadoState) {
+        top.tornadoState = {
+            lastTornadoTime: 0
+        };
+    }
+
+    // 检查是否应该释放龙卷风
+    const timeSinceLastTornado = now - top.tornadoState.lastTornadoTime;
+    if (gameState === 'playing' && timeSinceLastTornado >= specialTop.tornadoInterval) {
+        // 释放新的龙卷风
+        spawnTornado(top, specialTop);
+        top.tornadoState.lastTornadoTime = now;
+    }
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const hRatio = 0.55;
+    const color = specialTop.color;
+
+    // 特殊光效 - 蛇精的青绿色光环
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#10b981';
+
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 蛇精陀螺外形 - 蛇形葫芦
+    // 底部大圆
+    const gradBase = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBase.addColorStop(0, shadeColor(color, -30));
+    gradBase.addColorStop(0.5, color);
+    gradBase.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = gradBase;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 葫芦上部小圆
+    ctx.fillStyle = shadeColor(color, 20);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.4, r * 0.6, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 葫芦腰部连接
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.fillRect(-r * 0.3, -r * 0.2, r * 0.6, r * 0.4);
+
+    // 葫芦顶部
+    ctx.fillStyle = shadeColor(color, 40);
+    ctx.beginPath();
+    ctx.ellipse(0, -r * 0.65, r * 0.25, r * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 蛇鳞装饰环
+    ctx.strokeStyle = '#059669';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0, r * 0.3, r * 0.95, r * 0.38, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 旋转的妖气光环
+    ctx.save();
+    ctx.translate(0, 0);
+    ctx.rotate(top.angle * 2);
+    ctx.strokeStyle = 'rgba(16, 185, 129, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 特殊标记 - 蛇精表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐍', 0, -r * 0.1);
+
+    ctx.restore();
+
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 生成龙卷风
+function spawnTornado(top, specialTop) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = specialTop.tornadoSpeed;
+
+    tornadoes.push({
+        x: top.x,
+        y: top.y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: specialTop.tornadoRadius,
+        owner: top,
+        spawnTime: Date.now()
+    });
+}
+
+// 更新和渲染龙卷风
+function updateAndRenderTornadoes() {
+    const now = Date.now();
+
+    for (let i = tornadoes.length - 1; i >= 0; i--) {
+        const tornado = tornadoes[i];
+
+        // 移动龙卷风
+        tornado.x += tornado.vx;
+        tornado.y += tornado.vy;
+
+        // 检查是否离开屏幕
+        if (tornado.x < -100 || tornado.x > w + 100 ||
+            tornado.y < -100 || tornado.y > h + 100) {
+            tornadoes.splice(i, 1);
+            continue;
+        }
+
+        // 渲染龙卷风
+        renderTornado(tornado);
+
+        // 检测碰撞并冰冻敌人
+        checkTornadoCollision(tornado);
+    }
+}
+
+// 渲染龙卷风
+function renderTornado(tornado) {
+    const now = Date.now();
+    const age = now - tornado.spawnTime;
+
+    ctx.save();
+    ctx.translate(tornado.x, tornado.y);
+
+    // 旋转的龙卷风效果
+    ctx.rotate(age * 0.01);
+
+    // 龙卷风主体 - 螺旋形
+    for (let i = 0; i < 3; i++) {
+        const offset = (age * 0.005 + i * Math.PI * 2 / 3) % (Math.PI * 2);
+        const alpha = 0.8 - i * 0.2;
+
+        ctx.strokeStyle = `rgba(100, 200, 255, ${alpha})`;
+        ctx.lineWidth = 4 - i;
+        ctx.beginPath();
+
+        for (let j = 0; j < 20; j++) {
+            const angle = offset + j * 0.3;
+            const radius = tornado.radius * (0.3 + j * 0.035);
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius * 0.6; // 压扁效果
+
+            if (j === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+    }
+
+    // 龙卷风中心
+    ctx.fillStyle = 'rgba(150, 220, 255, 0.9)';
+    ctx.beginPath();
+    ctx.arc(0, 0, tornado.radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// 检测龙卷风碰撞
+function checkTornadoCollision(tornado) {
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'snakeSpirit');
+    if (!specialTop) return;
+
+    topsOnBoard.forEach(top => {
+        // 跳过同阵营和已死亡的陀螺
+        if (top.isEnemy === tornado.owner.isEnemy || top.hp <= 0) return;
+
+        // 检测碰撞
+        const dx = top.x - tornado.x;
+        const dy = top.y - tornado.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < tornado.radius + top.radius) {
+            // 冰冻敌人
+            top.isFrozen = true;
+            top.freezeEndTime = Date.now() + specialTop.freezeDuration;
+
+            // 创建冰冻特效
+            createParticles(top.x, top.y, '#a5f3fc');
+            createParticles(top.x, top.y, '#67e8f9');
+        }
+    });
+}
+
 // 取色微调器 (生成 3D 阴影用)
 function shadeColor(color, percent) {
     if (!color) return '#000000';
@@ -2301,6 +2543,67 @@ function renderBurningEffect(cx, cy, r) {
     ctx.restore();
 }
 
+// 渲染冰冻效果 - 方形冰块罩住陀螺
+function renderFrozenEffect(cx, cy, r) {
+    const now = Date.now();
+
+    ctx.save();
+
+    // 绘制方形冰块外框
+    const size = r * 2.2;
+    ctx.strokeStyle = 'rgba(165, 243, 252, 0.9)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 3]);
+    ctx.strokeRect(cx - size/2, cy - size/2, size, size);
+    ctx.setLineDash([]);
+
+    // 绘制冰块填充（半透明冰蓝色）
+    ctx.fillStyle = 'rgba(165, 243, 252, 0.3)';
+    ctx.fillRect(cx - size/2, cy - size/2, size, size);
+
+    // 绘制冰块内部线条（模拟冰晶）
+    ctx.strokeStyle = 'rgba(103, 232, 249, 0.6)';
+    ctx.lineWidth = 1;
+
+    // 对角线
+    ctx.beginPath();
+    ctx.moveTo(cx - size/2, cy - size/2);
+    ctx.lineTo(cx + size/2, cy + size/2);
+    ctx.moveTo(cx + size/2, cy - size/2);
+    ctx.lineTo(cx - size/2, cy + size/2);
+    ctx.stroke();
+
+    // 中心十字
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - size/2);
+    ctx.lineTo(cx, cy + size/2);
+    ctx.moveTo(cx - size/2, cy);
+    ctx.lineTo(cx + size/2, cy);
+    ctx.stroke();
+
+    // 闪烁的冰晶粒子
+    for (let i = 0; i < 6; i++) {
+        const angle = (now * 0.002) + (i * Math.PI * 2 / 6);
+        const dist = r * (0.6 + Math.sin(now * 0.005 + i) * 0.2);
+        const px = cx + Math.cos(angle) * dist;
+        const py = cy + Math.sin(angle) * dist;
+        const pSize = 2 + Math.sin(now * 0.01 + i) * 1;
+
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + Math.sin(now * 0.01 + i) * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(px, py, pSize, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // "冰冻中"文字
+    ctx.fillStyle = '#67e8f9';
+    ctx.font = 'bold 12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('冰冻中', cx, cy - size/2 - 8);
+
+    ctx.restore();
+}
+
 // ==== 全新设计：真 3D 圆柱叠加科技渲染引擎 ====
 function renderTops() {
     topsOnBoard.forEach(top => {
@@ -2350,6 +2653,15 @@ function renderTops() {
         // 渲染燃烧效果（一旦点燃就一直燃烧直到被消灭）
         if (top.isBurning) {
             renderBurningEffect(cx, cy, r);
+        }
+
+        // 检查并渲染冰冻效果
+        if (top.isFrozen) {
+            if (Date.now() > top.freezeEndTime) {
+                top.isFrozen = false;
+            } else {
+                renderFrozenEffect(cx, cy, r);
+            }
         }
 
         // 特殊陀螺使用独立渲染
@@ -2586,10 +2898,16 @@ function renderTops() {
 function updatePhysics() {
     // 处理特殊陀螺攻击（二娃的激光和声波）
     processSpecialTopAttacks();
-    
+
     for (let i = 0; i < topsOnBoard.length; i++) {
         let t1 = topsOnBoard[i];
-        
+
+        // 如果被冰冻，陀螺不能移动，只能旋转
+        if (t1.isFrozen) {
+            t1.angle += t1.rSpeed;
+            continue;
+        }
+
         // 移动
         t1.x += t1.vx;
         t1.y += t1.vy;
