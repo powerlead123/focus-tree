@@ -3642,8 +3642,8 @@ function spawnEnemies() {
     if (myPower < 60) myPower = 60;
 
     // 2. 情绪调节系统 - "过山车式挑战曲线"
-    // 越往后关卡压力越大，但初始更友好
-    let difficultyFactor = 0.4 + (arenaData.currentLevel * 0.06); 
+    // 越往后关卡压力越大，但初始更友好（提高基础难度）
+    let difficultyFactor = 0.7 + (arenaData.currentLevel * 0.08); 
     
     // 挫败感护城河：如果在当前关卡惨遭滑铁卢，每失败 1 次，下次派来的敌军总体削弱 30%
     // 让孩子更容易在连败后获得胜利，建立信心
@@ -3667,8 +3667,8 @@ function spawnEnemies() {
             myMaxTier = t.tier;
         }
     });
-    // 敌方最高等级只比我方高1级（限制公平性）
-    let maxEnemyTier = Math.min(50, myMaxTier + 1); 
+    // 敌方最高等级可以比我方高3级（增加挑战性）
+    let maxEnemyTier = Math.min(50, myMaxTier + 3); 
     
     let safeLoops = 0;
     // 不断招募机神填满目标战力池（增加敌人数量上限到30）
@@ -3697,6 +3697,9 @@ function spawnEnemies() {
         let enemyX = Math.random() * (maxX - minX) + minX;
         let enemyY = Math.random() * (maxY - minY) + minY;
 
+        // 敌方陀螺血量增加50%，更耐打
+        let enemyHp = Math.floor(typeObj.hp * 1.5);
+
         topsOnBoard.push({
             typeId: typeObj.id,
             isEnemy: true,
@@ -3708,7 +3711,7 @@ function spawnEnemies() {
             radius: 35,
             mass: mass,
             color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
-            hp: typeObj.hp
+            hp: enemyHp
         });
     }
 }
