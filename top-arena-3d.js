@@ -3671,8 +3671,8 @@ function spawnEnemies() {
     let maxEnemyTier = Math.min(50, myMaxTier + 1); 
     
     let safeLoops = 0;
-    // 不断招募机神填满目标战力池
-    while (spawnedPower < targetEnemyPower && safeLoops < 15) {
+    // 不断招募机神填满目标战力池（增加敌人数量上限到30）
+    while (spawnedPower < targetEnemyPower && safeLoops < 30) {
         safeLoops++;
         
         // 允许随机刷出下水道杂兵或者罕见的高阶主力
