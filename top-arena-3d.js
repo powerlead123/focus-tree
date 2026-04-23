@@ -217,6 +217,20 @@ const SPECIAL_TOPS = [
         tornadoSpeed: 5,        // 龙卷风移动速度
         tornadoRadius: 40,      // 龙卷风半径
         freezeDuration: 3000    // 冰冻持续时间3秒
+    },
+    {
+        id: 'scorpion',
+        name: '蝎子陀螺',
+        emoji: '🦂',
+        hp: 55,
+        baseMass: 35,  // 对应LV11的基础质量
+        color: '#dc2626',  // 深红色，代表蝎子精
+        tier: 11,
+        description: '蝎子精陀螺，毒钩夺命！用尾巴钩住范围内敌人，被钩住的陀螺会随蝎子移动并持续失血！',
+        ability: 'hook',  // 特殊能力：钩子
+        hookRange: 150,       // 钩子攻击范围（圆形半径）
+        hookDamage: 2,        // 每秒失血伤害
+        hookPullSpeed: 0.3    // 被钩住陀螺跟随移动的速度系数
     }
 ];
 
@@ -243,6 +257,7 @@ const ctx = canvas.getContext('2d');
 let w, h;
 let topsOnBoard = []; // 存活在网格或场上的所有陀螺
 let particles = [];
+let floatingTexts = []; // 浮动文字效果（伤害数字等）
 let animFrame = null;
 let gameState = 'setup'; // setup, playing, ended
 
@@ -543,6 +558,7 @@ function renderLoop() {
 
     // 渲染粒子与主光影实体
     renderParticles();
+    renderFloatingTexts();
     renderTops();
     
     animFrame = requestAnimationFrame(renderLoop);
@@ -883,6 +899,114 @@ function processSpecialTopAttacks() {
     // 这个函数保留用于兼容性
 }
 
+// 处理蝎子陀螺的钩子逻辑
+function processScorpionHooks() {
+    if (gameState !== 'playing') return;
+
+    const now = Date.now();
+
+    // 遍历所有陀螺，找到蝎子陀螺
+    topsOnBoard.forEach(scorpion => {
+        if (!scorpion.isSpecial) return;
+
+        const specialTop = SPECIAL_TOPS.find(st => st.id === scorpion.specialId);
+        if (!specialTop || specialTop.ability !== 'hook') return;
+
+        // 初始化钩子状态
+        if (!scorpion.hookState) {
+            scorpion.hookState = {
+                hookedTarget: null,
+                hookStartTime: 0,
+                lastDamageTime: 0
+            };
+        }
+
+        const hookState = scorpion.hookState;
+
+        // 检查当前钩住的目标是否还存在（被消灭或飞出屏幕）
+        if (hookState.hookedTarget) {
+            const target = hookState.hookedTarget;
+            const targetIndex = topsOnBoard.indexOf(target);
+
+            // 如果目标已被消灭，清空钩子
+            if (targetIndex === -1 || target.hp <= 0 || target.isDying) {
+                hookState.hookedTarget = null;
+                hookState.hookStartTime = 0;
+            }
+        }
+
+        // 如果没有钩住目标，寻找范围内的敌人
+        if (!hookState.hookedTarget) {
+            let closestEnemy = null;
+            let closestDist = Infinity;
+
+            topsOnBoard.forEach(enemy => {
+                // 只钩敌方陀螺
+                if (enemy.isEnemy === scorpion.isEnemy) return;
+                if (enemy.hp <= 0 || enemy.isDying) return;
+
+                const dx = enemy.x - scorpion.x;
+                const dy = enemy.y - scorpion.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // 在攻击范围内且最近的敌人
+                if (dist <= specialTop.hookRange && dist < closestDist) {
+                    closestDist = dist;
+                    closestEnemy = enemy;
+                }
+            });
+
+            // 钩住最近的敌人
+            if (closestEnemy) {
+                hookState.hookedTarget = closestEnemy;
+                hookState.hookStartTime = now;
+                hookState.lastDamageTime = now;
+            }
+        }
+
+        // 处理被钩住的陀螺
+        if (hookState.hookedTarget) {
+            const target = hookState.hookedTarget;
+
+            // 被钩住的陀螺跟随蝎子陀螺移动
+            // 计算目标位置（在蝎子后方一定距离）
+            const hookDistance = scorpion.radius + target.radius + 10;
+            const angle = Math.atan2(scorpion.vy, scorpion.vx);
+
+            // 目标位置在蝎子的反方向（被拖着走）
+            const targetX = scorpion.x - Math.cos(angle) * hookDistance;
+            const targetY = scorpion.y - Math.sin(angle) * hookDistance;
+
+            // 平滑移动到目标位置
+            const pullSpeed = specialTop.hookPullSpeed || 0.3;
+            target.x += (targetX - target.x) * pullSpeed;
+            target.y += (targetY - target.y) * pullSpeed;
+
+            // 被钩住的陀螺速度跟随蝎子（减弱版）
+            target.vx = scorpion.vx * 0.5;
+            target.vy = scorpion.vy * 0.5;
+
+            // 持续失血（每秒一次伤害）
+            if (now - hookState.lastDamageTime >= 1000) {
+                target.hp -= specialTop.hookDamage;
+                hookState.lastDamageTime = now;
+
+                // 显示伤害数字
+                createFloatingText(target.x, target.y - target.radius, `-${specialTop.hookDamage}`, '#dc2626');
+
+                // 创建粒子效果
+                createParticles(target.x, target.y, '#dc2626', 3);
+
+                // 检查是否被消灭
+                if (target.hp <= 0) {
+                    hookState.hookedTarget = null;
+                    hookState.hookStartTime = 0;
+                }
+            }
+        }
+    });
+}
+
 // 计算点到线段的距离
 function pointToLineDistance(px, py, x1, y1, x2, y2) {
     const A = px - x1;
@@ -1027,6 +1151,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderHuluwa6(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'snakeSpirit') {
         renderSnakeSpirit(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'scorpion') {
+        renderScorpion(top, cx, cy, r, specialTop);
     }
 }
 
@@ -2159,6 +2285,167 @@ function spawnTornado(top, specialTop) {
     });
 }
 
+// 蝎子陀螺渲染
+function renderScorpion(top, cx, cy, r, specialTop) {
+    const now = Date.now();
+
+    // 初始化钩子状态
+    if (!top.hookState) {
+        top.hookState = {
+            hookedTarget: null,  // 当前钩住的陀螺
+            hookStartTime: 0,    // 开始钩住的时间
+            hookAngle: 0         // 钩子角度
+        };
+    }
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const hRatio = 0.55;
+    const color = specialTop.color;
+
+    // 绘制攻击范围圈（半透明）
+    ctx.strokeStyle = 'rgba(220, 38, 38, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.arc(0, 0, specialTop.hookRange, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 特殊光效 - 蝎子的深红色光环
+    ctx.shadowBlur = 25;
+    ctx.shadowColor = '#dc2626';
+
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = top.isEnemy ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = top.isEnemy ? '#ef4444' : '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 蝎子陀螺主体 - 椭圆身形
+    const gradBody = ctx.createLinearGradient(-r, 0, r, 0);
+    gradBody.addColorStop(0, shadeColor(color, -30));
+    gradBody.addColorStop(0.5, color);
+    gradBody.addColorStop(1, shadeColor(color, -40));
+
+    ctx.fillStyle = gradBody;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.9, r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 蝎子尾巴（钩子）- 动态摆动
+    const tailAngle = Math.sin(now * 0.003) * 0.3;
+    ctx.save();
+    ctx.rotate(tailAngle);
+
+    // 尾巴根部
+    ctx.fillStyle = shadeColor(color, -20);
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.7, -r * 0.3, r * 0.25, r * 0.15, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 尾巴中段
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.9, -r * 0.6, r * 0.2, r * 0.12, -0.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 尾巴尖端（毒钩）
+    ctx.fillStyle = '#7f1d1d';  // 深红色毒钩
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.95, -r * 0.75);
+    ctx.lineTo(-r * 1.1, -r * 0.9);
+    ctx.lineTo(-r * 0.85, -r * 0.85);
+    ctx.closePath();
+    ctx.fill();
+
+    // 钩子发光效果
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ef4444';
+    ctx.strokeStyle = '#fca5a5';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+
+    // 蝎子钳子（左右各一个）
+    ctx.fillStyle = shadeColor(color, -10);
+
+    // 左钳子
+    ctx.save();
+    ctx.translate(r * 0.5, -r * 0.2);
+    ctx.rotate(0.3);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.3, r * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 右钳子
+    ctx.save();
+    ctx.translate(r * 0.5, r * 0.2);
+    ctx.rotate(-0.3);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.3, r * 0.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // 旋转的妖气光环
+    ctx.save();
+    ctx.rotate(top.angle * 1.5);
+    ctx.strokeStyle = 'rgba(220, 38, 38, 0.5)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 特殊标记 - 蝎子表情
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🦂', 0, 0);
+
+    ctx.restore();
+
+    // 如果有钩住的陀螺，绘制连接线
+    if (top.hookState.hookedTarget && topsOnBoard.includes(top.hookState.hookedTarget)) {
+        const target = top.hookState.hookedTarget;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(220, 38, 38, 0.8)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([8, 4]);
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(target.x, target.y);
+        ctx.stroke();
+        ctx.restore();
+
+        // 显示"钩住中"文字
+        ctx.fillStyle = '#dc2626';
+        ctx.font = 'bold 11px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('毒钩缠绕', cx, cy - r - 15);
+    }
+
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
 // 更新和渲染龙卷风
 function updateAndRenderTornadoes() {
     const now = Date.now();
@@ -2899,6 +3186,9 @@ function updatePhysics() {
     // 处理特殊陀螺攻击（二娃的激光和声波）
     processSpecialTopAttacks();
 
+    // 处理蝎子陀螺的钩子逻辑
+    processScorpionHooks();
+
     for (let i = 0; i < topsOnBoard.length; i++) {
         let t1 = topsOnBoard[i];
 
@@ -3077,8 +3367,8 @@ function triggerShake() {
     setTimeout(() => { flash.style.opacity = '0'; }, 50);
 }
 
-function createParticles(x, y, color) {
-    for (let i = 0; i < 5; i++) {
+function createParticles(x, y, color, count = 5) {
+    for (let i = 0; i < count; i++) {
         particles.push({
             x: x, y: y,
             vx: (Math.random() - 0.5) * 10,
@@ -3086,6 +3376,44 @@ function createParticles(x, y, color) {
             life: 1.0,
             color: color
         });
+    }
+}
+
+// 创建浮动文字效果（伤害数字等）
+function createFloatingText(x, y, text, color = '#ffffff') {
+    floatingTexts.push({
+        x: x,
+        y: y,
+        text: text,
+        color: color,
+        life: 1.0,
+        vy: -1.5,  // 向上飘动
+        scale: 1.0
+    });
+}
+
+// 渲染浮动文字
+function renderFloatingTexts() {
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        let ft = floatingTexts[i];
+        ft.life -= 0.02;
+        ft.y += ft.vy;
+        ft.scale = 1.0 + (1.0 - ft.life) * 0.5;  // 逐渐变大
+
+        if (ft.life <= 0) {
+            floatingTexts.splice(i, 1);
+            continue;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = ft.life;
+        ctx.fillStyle = ft.color;
+        ctx.font = `bold ${Math.floor(16 * ft.scale)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.fillText(ft.text, ft.x, ft.y);
+        ctx.restore();
     }
 }
 
