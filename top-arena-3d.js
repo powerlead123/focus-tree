@@ -1009,12 +1009,12 @@ function renderDragonGodAttacks() {
         }
 
         // 渲染喷火效果（从神龙到目标的方向）
-        if (state.lastFireTime && now - state.lastFireTime < 500) {
-            const fireProgress = (now - state.lastFireTime) / 500;
+        if (state.lastFireTime && now - state.lastFireTime < 800) {
+            const fireProgress = (now - state.lastFireTime) / 800;
 
-            // 寻找最近的敌方陀螺作为喷火目标
-            let target = null;
-            let closestDist = specialTop.fireRange;
+            // 寻找最近的敌方陀螺作为喷火目标方向
+            let targetAngle = top.angle; // 默认使用陀螺朝向
+            let targetDist = specialTop.fireRange;
 
             topsOnBoard.forEach(enemy => {
                 if (enemy.isEnemy === top.isEnemy) return;
@@ -1024,46 +1024,63 @@ function renderDragonGodAttacks() {
                 const dy = enemy.y - top.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist <= closestDist) {
-                    closestDist = dist;
-                    target = enemy;
+                if (dist <= specialTop.fireRange && dist < targetDist) {
+                    targetDist = dist;
+                    targetAngle = Math.atan2(dy, dx);
                 }
             });
 
-            if (target) {
-                const angle = Math.atan2(target.y - top.y, target.x - top.x);
+            const flameLength = targetDist;
 
-                ctx.save();
-                ctx.translate(top.x, top.y);
-                ctx.rotate(angle);
+            ctx.save();
+            ctx.translate(top.x, top.y);
+            ctx.rotate(targetAngle);
 
-                // 火焰喷射效果
-                for (let i = 0; i < 8; i++) {
-                    const flameLength = closestDist * (0.5 + Math.random() * 0.5);
-                    const flameWidth = 10 + Math.random() * 15;
-                    const flameX = 30 + i * (flameLength / 8);
+            // 火焰喷射效果 - 多层火焰
+            for (let layer = 0; layer < 3; layer++) {
+                for (let i = 0; i < 10; i++) {
+                    const flameX = 25 + i * (flameLength / 10) + (Math.random() - 0.5) * 10;
+                    const flameY = (Math.random() - 0.5) * 20 * (1 - fireProgress);
+                    const flameWidth = 15 + Math.random() * 10;
+                    const flameHeight = flameWidth * 0.8;
 
-                    const grad = ctx.createRadialGradient(flameX, 0, 0, flameX, 0, flameWidth);
-                    grad.addColorStop(0, `rgba(255, 200, 50, ${1 - fireProgress})`);
-                    grad.addColorStop(0.5, `rgba(255, 100, 0, ${0.8 - fireProgress * 0.5})`);
+                    const grad = ctx.createRadialGradient(flameX, flameY, 0, flameX, flameY, flameWidth);
+                    grad.addColorStop(0, `rgba(255, 255, 100, ${1 - fireProgress})`);
+                    grad.addColorStop(0.3, `rgba(255, 200, 50, ${0.9 - fireProgress * 0.4})`);
+                    grad.addColorStop(0.6, `rgba(255, 100, 0, ${0.7 - fireProgress * 0.3})`);
                     grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
 
                     ctx.fillStyle = grad;
                     ctx.beginPath();
-                    ctx.ellipse(flameX, 0, flameWidth, flameWidth * 0.6, 0, 0, Math.PI * 2);
+                    ctx.ellipse(flameX, flameY, flameWidth, flameHeight, 0, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                ctx.restore();
+            }
+
+            // 火焰核心
+            ctx.fillStyle = `rgba(255, 255, 200, ${0.9 - fireProgress * 0.5})`;
+            ctx.beginPath();
+            ctx.ellipse(15, 0, 20, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // 显示"喷火"文字提示
+            if (fireProgress < 0.3) {
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🔥喷火!', top.x, top.y - top.radius - 25);
             }
         }
 
         // 渲染喷水效果
-        if (state.lastWaterTime && now - state.lastWaterTime < 600) {
-            const waterProgress = (now - state.lastWaterTime) / 600;
+        if (state.lastWaterTime && now - state.lastWaterTime < 1000) {
+            const waterProgress = (now - state.lastWaterTime) / 1000;
 
-            // 寻找最近的敌方陀螺作为喷水目标
-            let target = null;
-            let closestDist = specialTop.waterRange;
+            // 寻找最近的敌方陀螺作为喷水目标方向
+            let targetAngle = top.angle;
+            let targetDist = specialTop.waterRange;
 
             topsOnBoard.forEach(enemy => {
                 if (enemy.isEnemy === top.isEnemy) return;
@@ -1073,32 +1090,53 @@ function renderDragonGodAttacks() {
                 const dy = enemy.y - top.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist <= closestDist) {
-                    closestDist = dist;
-                    target = enemy;
+                if (dist <= specialTop.waterRange && dist < targetDist) {
+                    targetDist = dist;
+                    targetAngle = Math.atan2(dy, dx);
                 }
             });
 
-            if (target) {
-                const angle = Math.atan2(target.y - top.y, target.x - top.x);
+            const waterLength = targetDist;
 
-                ctx.save();
-                ctx.translate(top.x, top.y);
-                ctx.rotate(angle);
+            ctx.save();
+            ctx.translate(top.x, top.y);
+            ctx.rotate(targetAngle);
 
-                // 水流喷射效果
-                for (let i = 0; i < 12; i++) {
-                    const waterLength = closestDist;
-                    const waterX = 25 + i * (waterLength / 12);
-                    const waterY = (Math.random() - 0.5) * 20 * (1 - waterProgress);
-                    const size = 8 + Math.random() * 6;
+            // 水流喷射效果
+            for (let i = 0; i < 15; i++) {
+                const waterX = 20 + i * (waterLength / 15);
+                const waterY = (Math.random() - 0.5) * 25 * (1 - waterProgress * 0.5);
+                const size = 10 + Math.random() * 8;
 
-                    ctx.fillStyle = `rgba(59, 130, 246, ${0.8 - waterProgress * 0.5})`;
-                    ctx.beginPath();
-                    ctx.arc(waterX, waterY, size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                ctx.restore();
+                // 水滴渐变
+                const grad = ctx.createRadialGradient(waterX, waterY, 0, waterX, waterY, size);
+                grad.addColorStop(0, `rgba(147, 197, 253, ${0.9 - waterProgress * 0.4})`);
+                grad.addColorStop(0.5, `rgba(59, 130, 246, ${0.7 - waterProgress * 0.3})`);
+                grad.addColorStop(1, 'rgba(37, 99, 235, 0)');
+
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(waterX, waterY, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 水柱核心
+            ctx.strokeStyle = `rgba(147, 197, 253, ${0.8 - waterProgress * 0.4})`;
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(15, 0);
+            ctx.lineTo(waterLength * 0.8, 0);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // 显示"喷水"文字提示
+            if (waterProgress < 0.3) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('💧喷水!', top.x, top.y - top.radius - 25);
             }
         }
     });
