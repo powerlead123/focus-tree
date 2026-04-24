@@ -231,6 +231,37 @@ const SPECIAL_TOPS = [
         hookRange: 150,       // 钩子攻击范围（圆形半径）
         hookDamage: 2,        // 每秒失血伤害
         hookPullSpeed: 0.3    // 被钩住陀螺跟随移动的速度系数
+    },
+    {
+        id: 'dragonGod',
+        name: '神龙陀螺',
+        emoji: '🐲',
+        hp: 90,
+        baseMass: 55,  // 对应LV18的基础质量
+        color: '#fbbf24',  // 金黄色，代表神龙
+        tier: 18,
+        description: '神龙降临，万法归一！拥有喷火、喷水、声波攻击和护盾，护盾破碎召唤9个LV10陀螺，碰撞后产生4个分身！',
+        ability: 'dragon',  // 特殊能力：神龙综合
+        // 喷火配置（四娃）
+        fireInterval: 1500,    // 喷火间隔1.5秒
+        fireDuration: 3000,    // 火焰持续时间3秒
+        fireDamage: 1,         // 每秒燃烧伤害
+        fireRange: 200,        // 喷火范围
+        // 喷水配置（五娃）
+        waterInterval: 4000,   // 喷水间隔4秒
+        waterRange: 250,       // 喷水范围
+        // 声波配置（二娃）
+        sonicInterval: 2000,   // 声波间隔2秒
+        sonicRange: 300,       // 声波范围
+        // 护盾配置（三娃）
+        shieldMaxHits: 5,      // 护盾可抵挡5次攻击
+        // 分身配置
+        cloneCount: 4,         // 碰撞产生4个分身
+        cloneTier: 10,         // 分身等级相当于LV10
+        canClone: true,        // 主陀螺可以分身
+        // 召唤配置
+        summonCount: 9,        // 护盾破碎召唤9个陀螺
+        summonTier: 10         // 召唤的陀螺等级为LV10
     }
 ];
 
@@ -460,6 +491,13 @@ function renderLoop() {
                 let deadTop = topsOnBoard[i];
                 deadTop.isDying = true; // 标记为正在死亡动画中
                 deadTop.deathTime = Date.now();
+
+                // 如果是神龙陀螺主陀螺死亡，清除所有分身
+                if (deadTop.isSpecial && deadTop.specialId === 'dragonGod') {
+                    if (deadTop.dragonState && !deadTop.dragonState.isClone) {
+                        clearDragonClones(deadTop);
+                    }
+                }
                 
                 // 计算飞出方向 - 随机角度，主要向屏幕边缘飞
                 const centerX = w / 2;
@@ -1083,34 +1121,246 @@ function getSpecialDamageBonus(top, baseDamage) {
     return baseDamage * damageBonus;
 }
 
-// ===== 三娃防护罩伤害减免 =====
+// ===== 防护罩伤害减免 =====
 function applyShieldDamage(top, incomingDamage) {
-    // 检查是否是三娃陀螺
-    if (!top.isSpecial || top.specialId !== 'huluwa3') {
+    // 检查是否是三娃陀螺或神龙陀螺
+    if (!top.isSpecial || (top.specialId !== 'huluwa3' && top.specialId !== 'dragonGod')) {
         return { actualDamage: incomingDamage, shieldHit: false };
     }
-    
-    const specialTop = SPECIAL_TOPS.find(st => st.id === 'huluwa3');
+
+    const specialTop = SPECIAL_TOPS.find(st => st.id === top.specialId);
     if (!specialTop) return { actualDamage: incomingDamage, shieldHit: false };
-    
-    // 初始化防护罩状态
-    if (top.shieldHits === undefined) {
-        top.shieldHits = 0;
+
+    // 三娃陀螺护盾处理
+    if (top.specialId === 'huluwa3') {
+        // 初始化防护罩状态
+        if (top.shieldHits === undefined) {
+            top.shieldHits = 0;
+        }
+
+        // 检查防护罩是否还存在
+        if (top.shieldHits >= specialTop.shieldMaxHits) {
+            return { actualDamage: incomingDamage, shieldHit: false };
+        }
+
+        // 防护罩抵挡伤害
+        top.shieldHits++;
+
+        // 创建防护罩受击特效
+        createShieldHitEffect(top.x, top.y);
+
+        // 防护罩完全抵挡伤害
+        return { actualDamage: 0, shieldHit: true };
     }
-    
-    // 检查防护罩是否还存在
-    if (top.shieldHits >= specialTop.shieldMaxHits) {
-        return { actualDamage: incomingDamage, shieldHit: false };
+
+    // 神龙陀螺护盾处理
+    if (top.specialId === 'dragonGod') {
+        // 初始化神龙状态
+        if (!top.dragonState) {
+            top.dragonState = {
+                shieldHits: 0,
+                shieldBroken: false,
+                summoned: false
+            };
+        }
+
+        const state = top.dragonState;
+
+        // 检查是否是分身（分身没有护盾）
+        if (state.isClone) {
+            return { actualDamage: incomingDamage, shieldHit: false };
+        }
+
+        // 检查护盾是否已破碎
+        if (state.shieldBroken) {
+            return { actualDamage: incomingDamage, shieldHit: false };
+        }
+
+        // 护盾抵挡伤害
+        state.shieldHits++;
+
+        // 创建护盾受击特效
+        createShieldHitEffect(top.x, top.y);
+
+        // 检查护盾是否破碎
+        if (state.shieldHits >= specialTop.shieldMaxHits) {
+            state.shieldBroken = true;
+            // 护盾破碎，召唤9个LV10普通陀螺
+            if (!state.summoned) {
+                summonDragonTroops(top, specialTop);
+                state.summoned = true;
+            }
+        }
+
+        // 护盾完全抵挡伤害
+        return { actualDamage: 0, shieldHit: true };
     }
-    
-    // 防护罩抵挡伤害
-    top.shieldHits++;
-    
-    // 创建防护罩受击特效
-    createShieldHitEffect(top.x, top.y);
-    
-    // 防护罩完全抵挡伤害
-    return { actualDamage: 0, shieldHit: true };
+
+    return { actualDamage: incomingDamage, shieldHit: false };
+}
+
+// 清除神龙陀螺的所有分身
+function clearDragonClones(parentTop) {
+    let clearedCount = 0;
+
+    for (let i = topsOnBoard.length - 1; i >= 0; i--) {
+        const top = topsOnBoard[i];
+        if (top.isSpecial && top.specialId === 'dragonGod' && top.dragonState) {
+            // 检查是否是该主陀螺的分身
+            if (top.dragonState.isClone && top.dragonState.cloneParent === parentTop) {
+                // 标记分身也死亡
+                top.hp = 0;
+                top.isDying = true;
+                top.deathTime = Date.now();
+
+                // 设置飞出速度
+                const angle = Math.random() * Math.PI * 2;
+                const flySpeed = 10 + Math.random() * 8;
+                top.vx = Math.cos(angle) * flySpeed;
+                top.vy = Math.sin(angle) * flySpeed;
+                top.rSpeed = (Math.random() - 0.5) * 1.5;
+
+                clearedCount++;
+            }
+        }
+    }
+
+    if (clearedCount > 0) {
+        createFloatingText(parentTop.x, parentTop.y - parentTop.radius - 40, `分身消散!`, '#ef4444');
+        for (let i = 0; i < 10; i++) {
+            createParticles(parentTop.x, parentTop.y, '#fbbf24', 4);
+        }
+    }
+}
+
+// 处理神龙陀螺分身逻辑
+function processDragonGodClone(top) {
+    // 检查是否是神龙陀螺
+    if (!top.isSpecial || top.specialId !== 'dragonGod') return;
+
+    const specialTop = SPECIAL_TOPS.find(st => st.id === 'dragonGod');
+    if (!specialTop) return;
+
+    // 初始化神龙状态
+    if (!top.dragonState) {
+        top.dragonState = {
+            shieldHits: 0,
+            shieldBroken: false,
+            summoned: false,
+            isClone: false,
+            cloneParent: null,
+            hasCloned: false
+        };
+    }
+
+    const state = top.dragonState;
+
+    // 只有主陀螺可以分身，分身不能再分身
+    if (state.isClone) return;
+    if (state.hasCloned) return;
+
+    // 创建4个分身
+    state.hasCloned = true;
+    createDragonClones(top, specialTop);
+}
+
+// 创建神龙陀螺分身
+function createDragonClones(parentTop, specialTop) {
+    const cloneCount = specialTop.cloneCount || 4;
+    const cloneTier = specialTop.cloneTier || 10;
+
+    // 显示分身效果
+    createFloatingText(parentTop.x, parentTop.y - parentTop.radius - 20, '神龙分身!', '#fbbf24');
+    for (let i = 0; i < 15; i++) {
+        createParticles(parentTop.x, parentTop.y, '#fbbf24', 4);
+    }
+
+    // 创建4个分身
+    for (let i = 0; i < cloneCount; i++) {
+        const angle = (i * Math.PI * 2 / cloneCount);
+        const distance = 60;
+        const spawnX = parentTop.x + Math.cos(angle) * distance;
+        const spawnY = parentTop.y + Math.sin(angle) * distance;
+
+        // 确保在画布范围内
+        const finalX = Math.max(50, Math.min(w - 50, spawnX));
+        const finalY = Math.max(50, Math.min(h - 50, spawnY));
+
+        const cloneTop = {
+            typeId: parentTop.typeId,
+            isEnemy: parentTop.isEnemy,
+            tier: cloneTier,  // 分身等级为10
+            name: specialTop.name + '(分身)',
+            x: finalX,
+            y: finalY,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() - 0.5) * 6,
+            rSpeed: (Math.random() - 0.5) * 0.3,
+            angle: Math.random() * Math.PI * 2,
+            radius: 35,
+            mass: 10 + cloneTier * 2,  // LV10的质量
+            color: specialTop.color,
+            hp: 50,  // LV10的血量
+            isSpecial: true,
+            specialId: 'dragonGod',
+            dragonState: {
+                shieldHits: 0,
+                shieldBroken: true,  // 分身没有护盾
+                summoned: true,
+                isClone: true,       // 标记为分身
+                cloneParent: parentTop,  // 记录主陀螺
+                hasCloned: true      // 分身不能再分身
+            }
+        };
+
+        topsOnBoard.push(cloneTop);
+    }
+}
+
+// 神龙陀螺召唤9个普通陀螺
+function summonDragonTroops(dragonTop, specialTop) {
+    const summonCount = specialTop.summonCount || 9;
+    const summonTier = specialTop.summonTier || 10;
+    const typeObj = TOP_TYPES.find(t => t.tier === summonTier);
+
+    if (!typeObj) return;
+
+    // 在神龙陀螺周围召唤9个陀螺
+    for (let i = 0; i < summonCount; i++) {
+        const angle = (i * Math.PI * 2 / summonCount);
+        const distance = 80 + Math.random() * 40;
+        const spawnX = dragonTop.x + Math.cos(angle) * distance;
+        const spawnY = dragonTop.y + Math.sin(angle) * distance;
+
+        // 确保在画布范围内
+        const finalX = Math.max(50, Math.min(w - 50, spawnX));
+        const finalY = Math.max(50, Math.min(h - 50, spawnY));
+
+        topsOnBoard.push({
+            typeId: typeObj.id,
+            isEnemy: dragonTop.isEnemy,
+            tier: typeObj.tier,
+            name: typeObj.name,
+            x: finalX,
+            y: finalY,
+            vx: (Math.random() - 0.5) * 4,
+            vy: (Math.random() - 0.5) * 4,
+            rSpeed: (Math.random() - 0.5) * 0.2,
+            angle: Math.random() * Math.PI * 2,
+            radius: 35,
+            mass: 10 + typeObj.tier * 2,
+            color: typeObj.color,
+            hp: typeObj.hp,
+            isSummoned: true,  // 标记为召唤的陀螺
+            summonOwner: dragonTop  // 记录召唤者
+        });
+    }
+
+    // 显示召唤效果
+    createFloatingText(dragonTop.x, dragonTop.y - dragonTop.radius - 30, '召唤9个援军!', '#fbbf24');
+    for (let i = 0; i < 20; i++) {
+        createParticles(dragonTop.x, dragonTop.y, '#fbbf24', 5);
+    }
 }
 
 // 防护罩受击特效
@@ -1153,6 +1403,8 @@ function renderSpecialTopOnBoard(top, cx, cy, r) {
         renderSnakeSpirit(top, cx, cy, r, specialTop);
     } else if (specialTop.id === 'scorpion') {
         renderScorpion(top, cx, cy, r, specialTop);
+    } else if (specialTop.id === 'dragonGod') {
+        renderDragonGod(top, cx, cy, r, specialTop);
     }
 }
 
@@ -2446,6 +2698,295 @@ function renderScorpion(top, cx, cy, r, specialTop) {
     renderSpecialTopInfo(top, cx, cy, r, specialTop);
 }
 
+// 神龙陀螺渲染
+function renderDragonGod(top, cx, cy, r, specialTop) {
+    const now = Date.now();
+
+    // 初始化神龙状态
+    if (!top.dragonState) {
+        top.dragonState = {
+            shieldHits: 0,              // 护盾已受击次数
+            shieldBroken: false,        // 护盾是否已破碎
+            summoned: false,            // 是否已召唤
+            lastFireTime: 0,            // 上次喷火时间
+            lastWaterTime: 0,           // 上次喷水时间
+            lastSonicTime: 0,           // 上次声波时间
+            fireTarget: null,           // 喷火目标
+            waterTarget: null,          // 喷水目标
+            isClone: false,             // 是否为分身
+            cloneParent: null,          // 主陀螺引用（如果是分身）
+            hasCloned: false            // 是否已经分过身
+        };
+    }
+
+    const state = top.dragonState;
+
+    // 只有主陀螺或非分身的陀螺才能进行攻击
+    if (!state.isClone && gameState === 'playing') {
+        // 喷火攻击
+        if (now - state.lastFireTime >= specialTop.fireInterval) {
+            performDragonFire(top, specialTop);
+            state.lastFireTime = now;
+        }
+
+        // 喷水攻击
+        if (now - state.lastWaterTime >= specialTop.waterInterval) {
+            performDragonWater(top, specialTop);
+            state.lastWaterTime = now;
+        }
+
+        // 声波攻击
+        if (now - state.lastSonicTime >= specialTop.sonicInterval) {
+            performDragonSonic(top, specialTop);
+            state.lastSonicTime = now;
+        }
+    }
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const hRatio = 0.55;
+    const color = specialTop.color;
+
+    // 护盾效果（未破碎时）
+    if (!state.shieldBroken && !state.isClone) {
+        const shieldOpacity = 1 - (state.shieldHits / specialTop.shieldMaxHits) * 0.5;
+
+        // 护盾外圈
+        ctx.strokeStyle = `rgba(56, 189, 248, ${shieldOpacity})`;
+        ctx.lineWidth = 4;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 护盾填充
+        ctx.fillStyle = `rgba(56, 189, 248, ${shieldOpacity * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 护盾裂纹（根据受击次数）
+        if (state.shieldHits > 0) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < state.shieldHits; i++) {
+                const crackAngle = (i * Math.PI * 2 / specialTop.shieldMaxHits) + (now * 0.001);
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(crackAngle) * r * 1.2, Math.sin(crackAngle) * r * 1.2);
+                ctx.lineTo(Math.cos(crackAngle) * r * 1.5, Math.sin(crackAngle) * r * 1.5);
+                ctx.stroke();
+            }
+        }
+    }
+
+    // 分身标识
+    if (state.isClone) {
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    // 特殊光效 - 神龙的金黄色光环
+    ctx.shadowBlur = 30;
+    ctx.shadowColor = state.isClone ? '#f59e0b' : '#fbbf24';
+
+    // 底部阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, r * hRatio + 8, r, r * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 阵营底圈
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = top.isEnemy ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(0, 5, r * 1.3, r * 1.3 * hRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = top.isEnemy ? '#ef4444' : '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 神龙陀螺主体 - 龙形
+    const gradBody = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+    gradBody.addColorStop(0, shadeColor(color, 30));
+    gradBody.addColorStop(0.5, color);
+    gradBody.addColorStop(1, shadeColor(color, -30));
+
+    ctx.fillStyle = gradBody;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.85, r * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 龙鳞装饰
+    ctx.strokeStyle = shadeColor(color, -40);
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI / 3) + (now * 0.002);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * (0.3 + i * 0.1), angle, angle + Math.PI / 6);
+        ctx.stroke();
+    }
+
+    // 龙角
+    ctx.fillStyle = shadeColor(color, -20);
+    // 左角
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.3, -r * 0.5);
+    ctx.lineTo(-r * 0.5, -r * 1.2);
+    ctx.lineTo(-r * 0.1, -r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    // 右角
+    ctx.beginPath();
+    ctx.moveTo(r * 0.3, -r * 0.5);
+    ctx.lineTo(r * 0.5, -r * 1.2);
+    ctx.lineTo(r * 0.1, -r * 0.5);
+    ctx.closePath();
+    ctx.fill();
+
+    // 旋转的神龙光环
+    ctx.save();
+    ctx.rotate(top.angle * 0.8);
+    ctx.strokeStyle = state.isClone ? 'rgba(245, 158, 11, 0.5)' : 'rgba(251, 191, 36, 0.6)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([8, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 内部旋转环
+    ctx.save();
+    ctx.rotate(-top.angle * 1.2);
+    ctx.strokeStyle = state.isClone ? 'rgba(245, 158, 11, 0.3)' : 'rgba(251, 191, 36, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 8]);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 特殊标记 - 龙表情或分身标识
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${r * 0.6}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(state.isClone ? '🐉' : '🐲', 0, -r * 0.1);
+
+    // 分身标识文字
+    if (state.isClone) {
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText('分身', 0, r * 0.7);
+    }
+
+    ctx.restore();
+
+    // 显示"护盾破碎"或"召唤完成"状态
+    if (state.shieldBroken && !state.isClone) {
+        ctx.fillStyle = '#ef4444';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('护盾已碎', cx, cy - r - 20);
+    }
+
+    // 显示名称和血条
+    renderSpecialTopInfo(top, cx, cy, r, specialTop);
+}
+
+// 神龙陀螺喷火攻击
+function performDragonFire(top, specialTop) {
+    // 寻找范围内的敌方陀螺
+    let target = null;
+    let closestDist = specialTop.fireRange;
+
+    topsOnBoard.forEach(enemy => {
+        if (enemy.isEnemy === top.isEnemy) return;
+        if (enemy.hp <= 0 || enemy.isDying) return;
+
+        const dx = enemy.x - top.x;
+        const dy = enemy.y - top.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= closestDist) {
+            closestDist = dist;
+            target = enemy;
+        }
+    });
+
+    if (target) {
+        // 点燃目标
+        target.isBurning = true;
+        target.burnEndTime = Date.now() + specialTop.fireDuration;
+        target.burnDamage = specialTop.fireDamage;
+        target.fireAttacker = top;
+
+        // 创建火焰粒子效果
+        for (let i = 0; i < 10; i++) {
+            createParticles(target.x, target.y, '#ef4444', 3);
+        }
+    }
+}
+
+// 神龙陀螺喷水攻击
+function performDragonWater(top, specialTop) {
+    // 寻找范围内的敌方陀螺
+    let target = null;
+    let closestDist = specialTop.waterRange;
+
+    topsOnBoard.forEach(enemy => {
+        if (enemy.isEnemy === top.isEnemy) return;
+        if (enemy.hp <= 0 || enemy.isDying) return;
+
+        const dx = enemy.x - top.x;
+        const dy = enemy.y - top.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= closestDist) {
+            closestDist = dist;
+            target = enemy;
+        }
+    });
+
+    if (target) {
+        // 降级效果
+        if (target.tier > 1) {
+            target.tier -= 1;
+            target.typeId = target.tier;
+            const newType = TOP_TYPES.find(t => t.id === target.typeId);
+            if (newType) {
+                target.name = newType.name;
+                target.color = newType.color;
+            }
+
+            // 创建降级效果
+            createFloatingText(target.x, target.y - target.radius - 10, '降级!', '#3b82f6');
+            createParticles(target.x, target.y, '#3b82f6', 5);
+        }
+    }
+}
+
+// 神龙陀螺声波攻击
+function performDragonSonic(top, specialTop) {
+    // 创建声波效果
+    if (!top.sonicWaves) top.sonicWaves = [];
+
+    top.sonicWaves.push({
+        x: top.x,
+        y: top.y,
+        radius: 10,
+        maxRadius: specialTop.sonicRange,
+        spawnTime: Date.now(),
+        owner: top
+    });
+}
+
 // 更新和渲染龙卷风
 function updateAndRenderTornadoes() {
     const now = Date.now();
@@ -3309,6 +3850,10 @@ function updatePhysics() {
                         if (!t2.isInvisible) {
                             t2.hp -= shieldResult2.actualDamage;
                         }
+
+                        // 特殊陀螺能力：神龙陀螺碰撞后产生分身
+                        processDragonGodClone(t1);
+                        processDragonGodClone(t2);
                     }
                 }
             }
