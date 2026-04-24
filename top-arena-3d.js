@@ -2926,22 +2926,25 @@ function renderDragonGod(top, cx, cy, r, specialTop) {
 
     const state = top.dragonState;
 
-    // 只有主陀螺或非分身的陀螺才能进行攻击
-    if (!state.isClone && gameState === 'playing') {
-        // 喷火攻击
-        if (now - state.lastFireTime >= specialTop.fireInterval) {
+    // 主陀螺和分身都能进行攻击
+    if (gameState === 'playing') {
+        // 喷火攻击（分身攻击间隔更长）
+        const fireInterval = state.isClone ? specialTop.fireInterval * 1.5 : specialTop.fireInterval;
+        if (now - state.lastFireTime >= fireInterval) {
             performDragonFire(top, specialTop);
             state.lastFireTime = now;
         }
 
-        // 喷水攻击
-        if (now - state.lastWaterTime >= specialTop.waterInterval) {
+        // 喷水攻击（分身攻击间隔更长）
+        const waterInterval = state.isClone ? specialTop.waterInterval * 1.5 : specialTop.waterInterval;
+        if (now - state.lastWaterTime >= waterInterval) {
             performDragonWater(top, specialTop);
             state.lastWaterTime = now;
         }
 
-        // 声波攻击
-        if (now - state.lastSonicTime >= specialTop.sonicInterval) {
+        // 声波攻击（分身攻击间隔更长）
+        const sonicInterval = state.isClone ? specialTop.sonicInterval * 1.5 : specialTop.sonicInterval;
+        if (now - state.lastSonicTime >= sonicInterval) {
             performDragonSonic(top, specialTop);
             state.lastSonicTime = now;
         }
