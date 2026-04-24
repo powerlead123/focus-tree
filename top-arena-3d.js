@@ -1514,7 +1514,11 @@ function createDragonClones(parentTop, specialTop) {
                 summoned: true,
                 isClone: true,       // 标记为分身
                 cloneParent: parentTop,  // 记录主陀螺
-                hasCloned: true      // 分身不能再分身
+                hasCloned: true,     // 分身不能再分身
+                lastFireTime: Date.now() + Math.random() * 1000,  // 随机初始化，避免所有分身同时攻击
+                lastWaterTime: Date.now() + Math.random() * 2000,
+                lastSonicTime: Date.now() + Math.random() * 1500,
+                sonicWaves: []        // 分身的声波数组
             }
         };
 
