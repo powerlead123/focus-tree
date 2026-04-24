@@ -586,6 +586,11 @@ function renderLoop() {
     // 渲染激光和声波效果
     renderSpecialAttacks();
 
+    // 更新和渲染神龙陀螺攻击效果（声波、喷火、喷水）
+    if (gameState === 'playing') {
+        renderDragonGodAttacks();
+    }
+
     // 更新和渲染龙卷风
     if (gameState === 'playing') {
         updateAndRenderTornadoes();
@@ -935,6 +940,168 @@ function getDynamicMass(top) {
 function processSpecialTopAttacks() {
     // 伤害检测已合并到渲染函数中，确保视觉和伤害同步
     // 这个函数保留用于兼容性
+}
+
+// ===== 渲染神龙陀螺攻击效果（声波、喷火、喷水）=====
+function renderDragonGodAttacks() {
+    const now = Date.now();
+
+    topsOnBoard.forEach(top => {
+        if (!top.isSpecial || top.specialId !== 'dragonGod') return;
+
+        const specialTop = SPECIAL_TOPS.find(st => st.id === 'dragonGod');
+        if (!specialTop) return;
+
+        if (!top.dragonState) return;
+        const state = top.dragonState;
+
+        // 渲染声波效果
+        if (top.sonicWaves && top.sonicWaves.length > 0) {
+            for (let i = top.sonicWaves.length - 1; i >= 0; i--) {
+                const wave = top.sonicWaves[i];
+                const age = now - wave.spawnTime;
+                const duration = 1000; // 声波持续1秒
+
+                if (age > duration) {
+                    top.sonicWaves.splice(i, 1);
+                    continue;
+                }
+
+                const progress = age / duration;
+                const radius = wave.radius + (wave.maxRadius - wave.radius) * progress;
+                const alpha = 1 - progress;
+
+                ctx.save();
+                ctx.strokeStyle = `rgba(251, 191, 36, ${alpha * 0.8})`;
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 5]);
+                ctx.beginPath();
+                ctx.arc(wave.x, wave.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 内圈
+                ctx.strokeStyle = `rgba(251, 191, 36, ${alpha * 0.4})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(wave.x, wave.y, radius * 0.7, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                // 声波伤害检测
+                topsOnBoard.forEach(enemy => {
+                    if (enemy.isEnemy === top.isEnemy) return;
+                    if (enemy.hp <= 0 || enemy.isDying) return;
+
+                    const dx = enemy.x - wave.x;
+                    const dy = enemy.y - wave.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    // 声波圆环边缘伤害检测
+                    if (Math.abs(dist - radius) < 15) {
+                        if (!enemy.sonicHitTime || now - enemy.sonicHitTime > 500) {
+                            enemy.hp -= specialTop.sonicDamage || 1;
+                            enemy.sonicHitTime = now;
+                            createFloatingText(enemy.x, enemy.y - enemy.radius - 5, '-1', '#fbbf24');
+                        }
+                    }
+                });
+            }
+        }
+
+        // 渲染喷火效果（从神龙到目标的方向）
+        if (state.lastFireTime && now - state.lastFireTime < 500) {
+            const fireProgress = (now - state.lastFireTime) / 500;
+
+            // 寻找最近的敌方陀螺作为喷火目标
+            let target = null;
+            let closestDist = specialTop.fireRange;
+
+            topsOnBoard.forEach(enemy => {
+                if (enemy.isEnemy === top.isEnemy) return;
+                if (enemy.hp <= 0 || enemy.isDying) return;
+
+                const dx = enemy.x - top.x;
+                const dy = enemy.y - top.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist <= closestDist) {
+                    closestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            if (target) {
+                const angle = Math.atan2(target.y - top.y, target.x - top.x);
+
+                ctx.save();
+                ctx.translate(top.x, top.y);
+                ctx.rotate(angle);
+
+                // 火焰喷射效果
+                for (let i = 0; i < 8; i++) {
+                    const flameLength = closestDist * (0.5 + Math.random() * 0.5);
+                    const flameWidth = 10 + Math.random() * 15;
+                    const flameX = 30 + i * (flameLength / 8);
+
+                    const grad = ctx.createRadialGradient(flameX, 0, 0, flameX, 0, flameWidth);
+                    grad.addColorStop(0, `rgba(255, 200, 50, ${1 - fireProgress})`);
+                    grad.addColorStop(0.5, `rgba(255, 100, 0, ${0.8 - fireProgress * 0.5})`);
+                    grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.ellipse(flameX, 0, flameWidth, flameWidth * 0.6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+
+        // 渲染喷水效果
+        if (state.lastWaterTime && now - state.lastWaterTime < 600) {
+            const waterProgress = (now - state.lastWaterTime) / 600;
+
+            // 寻找最近的敌方陀螺作为喷水目标
+            let target = null;
+            let closestDist = specialTop.waterRange;
+
+            topsOnBoard.forEach(enemy => {
+                if (enemy.isEnemy === top.isEnemy) return;
+                if (enemy.hp <= 0 || enemy.isDying) return;
+
+                const dx = enemy.x - top.x;
+                const dy = enemy.y - top.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist <= closestDist) {
+                    closestDist = dist;
+                    target = enemy;
+                }
+            });
+
+            if (target) {
+                const angle = Math.atan2(target.y - top.y, target.x - top.x);
+
+                ctx.save();
+                ctx.translate(top.x, top.y);
+                ctx.rotate(angle);
+
+                // 水流喷射效果
+                for (let i = 0; i < 12; i++) {
+                    const waterLength = closestDist;
+                    const waterX = 25 + i * (waterLength / 12);
+                    const waterY = (Math.random() - 0.5) * 20 * (1 - waterProgress);
+                    const size = 8 + Math.random() * 6;
+
+                    ctx.fillStyle = `rgba(59, 130, 246, ${0.8 - waterProgress * 0.5})`;
+                    ctx.beginPath();
+                    ctx.arc(waterX, waterY, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+    });
 }
 
 // 处理蝎子陀螺的钩子逻辑
