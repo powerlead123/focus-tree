@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>勇士战斗演示</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* 战斗场地 */
+        .battlefield {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background: 
+                radial-gradient(ellipse at center, rgba(255,255,255,0.05) 0%, transparent 50%),
+                linear-gradient(to bottom, #1a1a2e 0%, #0f3460 100%);
+        }
+
+        /* 地面 */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 30%;
+            background: linear-gradient(to bottom, #2d4a22 0%, #1a2e15 100%);
+            border-top: 3px solid #4a7c36;
+        }
+
+        /* 战斗区域标记 */
+        .battle-zone {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 300px;
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+
+        .battle-zone-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+        }
+
+        /* 勇士容器 */
+        .warrior {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            transition: transform 0.1s linear;
+        }
+
+        .warrior canvas {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        /* 队伍标识 */
+        .warrior.team1 {
+            filter: drop-shadow(0 0 10px rgba(52, 152, 219, 0.5));
+        }
+
+        .warrior.team2 {
+            filter: drop-shadow(0 0 10px rgba(231, 76, 60, 0.5));
+        }
+
+        /* 血条 */
+        .health-bar {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #555;
+        }
+
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+            transition: width 0.3s;
+        }
+
+        .health-fill.high {
+            background: linear-gradient(90deg, #27ae60, #2ecc71);
+        }
+
+        .health-fill.medium {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .health-text {
+            position: absolute;
+            top: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        /* 伤害数字 */
+        .damage-number {
+            position: absolute;
+            font-size: 20px;
+            font-weight: bold;
+            color: #e74c3c;
+            text-shadow: 2px 2px 4px #000;
+            animation: damageFloat 1s ease-out forwards;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        @keyframes damageFloat {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.5);
+            }
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.6);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-reset:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 状态显示 */
+        .status-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 1000;
+        }
+
+        .team-status {
+            background: rgba(0,0,0,0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid;
+        }
+
+        .team-status.team1 {
+            border-color: #3498db;
+        }
+
+        .team-status.team2 {
+            border-color: #e74c3c;
+        }
+
+        .team-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .team-count {
+            font-size: 24px;
+            color: #f39c12;
+        }
+
+        /* 战斗特效 */
+        .hit-effect {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: hitFlash 0.3s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes hitFlash {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        /* 标题 */
+        .title {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        /* 战斗结果 */
+        .result-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .result-overlay.show {
+            display: flex;
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            border: 3px solid #f39c12;
+            box-shadow: 0 0 50px rgba(243, 156, 18, 0.5);
+        }
+
+        .result-title {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #f39c12;
+        }
+
+        .result-desc {
+            font-size: 18px;
+            color: #ccc;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">⚔️ 勇士对决 ⚔️</div>
+
+    <div class="battlefield" id="battlefield">
+        <div class="ground"></div>
+        <div class="battle-zone">
+            <div class="battle-zone-label">战斗区域</div>
+        </div>
+    </div>
+
+    <div class="status-panel">
+        <div class="team-status team1">
+            <div class="team-name" style="color: #3498db;">🔵 初级勇士</div>
+            <div class="team-count">存活: <span id="team1Count">5</span></div>
+        </div>
+        <div class="team-status team2">
+            <div class="team-name" style="color: #e74c3c;">🔴 进阶骑士</div>
+            <div class="team-count">存活: <span id="team2Count">5</span></div>
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <button class="btn btn-start" id="startBtn" onclick="startBattle()">开始战斗</button>
+        <button class="btn btn-reset" id="resetBtn" onclick="resetBattle()">重置</button>
+    </div>
+
+    <div class="result-overlay" id="resultOverlay">
+        <div class="result-box">
+            <div class="result-title" id="resultTitle">战斗结束</div>
+            <div class="result-desc" id="resultDesc"></div>
+            <button class="btn btn-start" onclick="resetBattle()">再来一局</button>
+        </div>
+    </div>
+
+    <script>
+        // 战斗配置
+        const BATTLE_CONFIG = {
+            team1Size: 5,      // 队伍1人数
+            team2Size: 5,      // 队伍2人数
+            warrior1Hp: 100,   // 勇士1血量
+            warrior2Hp: 120,   // 勇士2血量
+            moveSpeed: 3,      // 移动速度（奔跑）
+            attackRange: 80,   // 攻击范围
+            attackDamage: 20,  // 基础伤害
+        };
+
+        // 精灵图配置
+        const SPRITE_CONFIG = {
+            warrior1: {
+                path: 'warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_1/',
+                animations: {
+                    idle: { file: 'Idle.png', frameCount: 6 },
+                    walk: { file: 'Walk.png', frameCount: 8 },
+                    run: { file: 'Run.png', frameCount: 6 },
+                    attack: { file: 'Attack_1.png', frameCount: 6 },
+                    hurt: { file: 'Hurt.png', frameCount: 2 },
+                    dead: { file: 'Dead.png', frameCount: 4 }
+                }
+            },
+            warrior2: {
+                path: 'warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_2/',
+                animations: {
+                    idle: { file: 'Idle.png', frameCount: 5 },
+                    walk: { file: 'Walk.png', frameCount: 8 },
+                    run: { file: 'Run.png', frameCount: 6 },
+                    attack: { file: 'Attack_1.png', frameCount: 5 },
+                    hurt: { file: 'Hurt.png', frameCount: 3 },
+                    dead: { file: 'Dead.png', frameCount: 4 }
+                }
+            }
+        };
+
+        // 游戏状态
+        let warriors = [];
+        let battleStarted = false;
+        let animationId = null;
+        let spriteCache = {};
+
+        // 勇士类
+        class Warrior {
+            constructor(id, team, x, y) {
+                this.id = id;
+                this.team = team;
+                this.x = x;
+                this.y = y;
+                this.hp = team === 1 ? BATTLE_CONFIG.warrior1Hp : BATTLE_CONFIG.warrior2Hp;
+                this.maxHp = this.hp;
+                this.state = 'idle'; // idle, walk, attack, hurt, dead
+                this.target = null;
+                this.currentFrame = 0;
+                this.frameTime = 0;
+                this.facing = team === 1 ? 1 : -1; // 1=右, -1=左
+                this.idleAnimationId = null; // 待机动画ID
+                
+                this.element = this.createElement();
+                this.updateHealthBar();
+                this.startIdleAnimation(); // 开始待机动画
+            }
+
+            startIdleAnimation() {
+                let lastTime = performance.now();
+                
+                const animate = (currentTime) => {
+                    if (battleStarted) return; // 战斗开始后停止待机动画
+                    
+                    const dt = currentTime - lastTime;
+                    lastTime = currentTime;
+                    
+                    this.updateAnimation(dt);
+                    this.render();
+                    
+                    this.idleAnimationId = requestAnimationFrame(animate);
+                };
+                
+                this.idleAnimationId = requestAnimationFrame(animate);
+            }
+
+            stopIdleAnimation() {
+                if (this.idleAnimationId) {
+                    cancelAnimationFrame(this.idleAnimationId);
+                    this.idleAnimationId = null;
+                }
+            }
+
+            createElement() {
+                const el = document.createElement('div');
+                el.className = `warrior team${this.team}`;
+                el.style.left = this.x + 'px';
+                el.style.top = this.y + 'px';
+                
+                // 创建canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 80;
+                canvas.height = 80;
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                
+                // 血条
+                const healthBar = document.createElement('div');
+                healthBar.className = 'health-bar';
+                healthBar.innerHTML = '<div class="health-fill" style="width: 100%"></div>';
+                this.healthBar = healthBar.querySelector('.health-fill');
+                
+                // 血量文字
+                const healthText = document.createElement('div');
+                healthText.className = 'health-text';
+                healthText.textContent = this.hp;
+                this.healthText = healthText;
+                
+                el.appendChild(healthText);
+                el.appendChild(healthBar);
+                el.appendChild(canvas);
+                
+                document.getElementById('battlefield').appendChild(el);
+                return el;
+            }
+
+            updateHealthBar() {
+                const percent = (this.hp / this.maxHp) * 100;
+                this.healthBar.style.width = percent + '%';
+                this.healthText.textContent = Math.ceil(this.hp);
+                
+                this.healthBar.classList.remove('high', 'medium');
+                if (percent > 60) {
+                    this.healthBar.classList.add('high');
+                } else if (percent > 30) {
+                    this.healthBar.classList.add('medium');
+                }
+            }
+
+            takeDamage(damage) {
+                if (this.state === 'dead') return;
+                
+                this.hp -= damage;
+                this.updateHealthBar();
+                
+                // 显示伤害数字
+                showDamageNumber(this.x + 40, this.y, damage);
+                
+                // 显示受击特效
+                showHitEffect(this.x + 40, this.y + 40);
+                
+                if (this.hp <= 0) {
+                    this.die();
+                } else {
+                    this.setState('hurt');
+                    setTimeout(() => {
+                        if (this.state !== 'dead') {
+                            this.setState('idle');
+                        }
+                    }, 300);
+                }
+            }
+
+            die() {
+                this.hp = 0;
+                this.state = 'dead';
+                this.currentFrame = 0;  // 重置帧
+                this.frameTime = 0;     // 重置时间
+                this.updateHealthBar();
+                updateTeamCount();
+            }
+
+            setState(newState) {
+                if (this.state === 'dead' && newState !== 'dead') return;
+                this.state = newState;
+                this.currentFrame = 0;
+                this.frameTime = 0;
+            }
+
+            findTarget() {
+                // 找最近的敌方
+                let nearest = null;
+                let minDist = Infinity;
+                
+                warriors.forEach(w => {
+                    if (w.team !== this.team && w.state !== 'dead') {
+                        const dist = Math.abs(w.x - this.x);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearest = w;
+                        }
+                    }
+                });
+                
+                this.target = nearest;
+                return nearest;
+            }
+
+            update(dt) {
+                // 死亡状态：只更新动画和渲染，不进行其他行动
+                if (this.state === 'dead') {
+                    this.updateAnimation(dt);
+                    this.render();
+                    return;
+                }
+
+                // 找目标
+                if (!this.target || this.target.state === 'dead') {
+                    this.findTarget();
+                }
+
+                if (!this.target) return;
+
+                const dist = Math.abs(this.target.x - this.x);
+
+                // 判断行动
+                if (dist > BATTLE_CONFIG.attackRange) {
+                    // 移动 - 使用奔跑动画
+                    this.setState('run');
+                    const dir = this.target.x > this.x ? 1 : -1;
+                    this.x += dir * BATTLE_CONFIG.moveSpeed;
+                    this.element.style.left = this.x + 'px';
+                } else {
+                    // 攻击
+                    if (this.state !== 'attack') {
+                        this.setState('attack');
+                        // 造成伤害
+                        setTimeout(() => {
+                            if (this.target && this.state === 'attack') {
+                                this.target.takeDamage(BATTLE_CONFIG.attackDamage);
+                            }
+                        }, 200);
+                        
+                        // 攻击后恢复
+                        setTimeout(() => {
+                            if (this.state !== 'dead') {
+                                this.setState('idle');
+                            }
+                        }, 500);
+                    }
+                }
+
+                // 更新动画帧
+                this.updateAnimation(dt);
+                // 每帧都渲染
+                this.render();
+            }
+
+            updateAnimation(dt) {
+                this.frameTime += dt;
+                const animConfig = this.getAnimConfig();
+                const frameDuration = 80; // 每帧80ms（加快动画）
+                
+                if (this.frameTime >= frameDuration) {
+                    this.frameTime = 0;
+                    this.currentFrame++;
+                    
+                    if (this.state === 'dead') {
+                        if (this.currentFrame >= animConfig.frameCount) {
+                            this.currentFrame = animConfig.frameCount - 1; // 停在最后一帧
+                        }
+                    } else {
+                        // 循环动画
+                        this.currentFrame = this.currentFrame % animConfig.frameCount;
+                    }
+                }
+            }
+
+            getAnimConfig() {
+                const config = this.team === 1 ? SPRITE_CONFIG.warrior1 : SPRITE_CONFIG.warrior2;
+                return config.animations[this.state] || config.animations.idle;
+            }
+
+            render() {
+                const config = this.team === 1 ? SPRITE_CONFIG.warrior1 : SPRITE_CONFIG.warrior2;
+                const anim = config.animations[this.state] || config.animations.idle;
+                const sprite = spriteCache[this.team === 1 ? 'warrior1' : 'warrior2'][this.state];
+                
+                if (!sprite) return;
+
+                const frameWidth = sprite.width / anim.frameCount;
+                const frameHeight = sprite.height;
+                const sx = this.currentFrame * frameWidth;
+
+                this.ctx.clearRect(0, 0, 80, 80);
+                
+                // 计算缩放以适应80x80画布
+                const scale = Math.min(80 / frameWidth, 80 / frameHeight);
+                const destW = frameWidth * scale;
+                const destH = frameHeight * scale;
+                const destX = (80 - destW) / 2;
+                const destY = (80 - destH) / 2;
+
+                // 如果是队伍2，水平翻转
+                if (this.team === 2) {
+                    this.ctx.save();
+                    this.ctx.scale(-1, 1);
+                    this.ctx.translate(-80, 0);
+                }
+
+                this.ctx.drawImage(
+                    sprite,
+                    sx, 0, frameWidth, frameHeight,
+                    destX, destY, destW, destH
+                );
+
+                if (this.team === 2) {
+                    this.ctx.restore();
+                }
+            }
+        }
+
+        // 显示伤害数字
+        function showDamageNumber(x, y, damage) {
+            const el = document.createElement('div');
+            el.className = 'damage-number';
+            el.textContent = '-' + damage;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            document.getElementById('battlefield').appendChild(el);
+            
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        // 显示受击特效
+        function showHitEffect(x, y) {
+            const el = document.createElement('div');
+            el.className = 'hit-effect';
+            el.style.left = (x - 30) + 'px';
+            el.style.top = (y - 30) + 'px';
+            document.getElementById('battlefield').appendChild(el);
+            
+            setTimeout(() => el.remove(), 300);
+        }
+
+        // 预加载精灵图
+        async function loadSprites() {
+            const loadPromises = [];
+            
+            ['warrior1', 'warrior2'].forEach(type => {
+                spriteCache[type] = {};
+                const config = SPRITE_CONFIG[type];
+                
+                Object.keys(config.animations).forEach(animName => {
+                    const anim = config.animations[animName];
+                    const path = config.path + anim.file;
+                    
+                    const promise = new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            spriteCache[type][animName] = img;
+                            resolve();
+                        };
+                        img.onerror = reject;
+                        img.src = path;
+                    });
+                    
+                    loadPromises.push(promise);
+                });
+            });
+            
+            await Promise.all(loadPromises);
+            console.log('所有精灵图加载完成');
+        }
+
+        // 初始化战斗
+        function initBattle() {
+            // 清空战场
+            document.querySelectorAll('.warrior').forEach(el => el.remove());
+            warriors = [];
+            
+            const battlefield = document.getElementById('battlefield');
+            const width = battlefield.offsetWidth;
+            const height = battlefield.offsetHeight;
+            const groundY = height * 0.55; // 地面位置
+            
+            // 创建队伍1（左边）
+            for (let i = 0; i < BATTLE_CONFIG.team1Size; i++) {
+                const x = 50 + Math.random() * 100;
+                const y = groundY + (i - 2) * 60;
+                warriors.push(new Warrior(i, 1, x, y));
+            }
+            
+            // 创建队伍2（右边）
+            for (let i = 0; i < BATTLE_CONFIG.team2Size; i++) {
+                const x = width - 130 - Math.random() * 100;
+                const y = groundY + (i - 2) * 60;
+                warriors.push(new Warrior(i + BATTLE_CONFIG.team1Size, 2, x, y));
+            }
+            
+            // 等待一帧后渲染初始状态
+            setTimeout(() => {
+                warriors.forEach(w => w.render());
+            }, 100);
+            
+            updateTeamCount();
+        }
+
+        // 更新队伍人数显示
+        function updateTeamCount() {
+            const team1Alive = warriors.filter(w => w.team === 1 && w.state !== 'dead').length;
+            const team2Alive = warriors.filter(w => w.team === 2 && w.state !== 'dead').length;
+            
+            document.getElementById('team1Count').textContent = team1Alive;
+            document.getElementById('team2Count').textContent = team2Alive;
+            
+            // 检查战斗结束
+            if (battleStarted && (team1Alive === 0 || team2Alive === 0)) {
+                endBattle(team1Alive > 0 ? 1 : 2);
+            }
+        }
+
+        // 开始战斗
+        function startBattle() {
+            if (battleStarted) return;
+            
+            battleStarted = true;
+            document.getElementById('startBtn').disabled = true;
+            
+            // 停止所有待机动画
+            warriors.forEach(w => w.stopIdleAnimation());
+            
+            let lastTime = performance.now();
+            
+            function gameLoop(currentTime) {
+                if (!battleStarted) return;
+                
+                const dt = currentTime - lastTime;
+                lastTime = currentTime;
+                
+                // 更新并渲染所有勇士
+                warriors.forEach(w => w.update(dt));
+                
+                animationId = requestAnimationFrame(gameLoop);
+            }
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // 结束战斗
+        function endBattle(winner) {
+            battleStarted = false;
+            cancelAnimationFrame(animationId);
+            
+            const resultOverlay = document.getElementById('resultOverlay');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultDesc = document.getElementById('resultDesc');
+            
+            if (winner === 1) {
+                resultTitle.textContent = '🎉 初级勇士胜利！';
+                resultTitle.style.color = '#3498db';
+                resultDesc.textContent = '初级勇士以弱胜强，展现了惊人的战斗力！';
+            } else {
+                resultTitle.textContent = '🏆 进阶骑士胜利！';
+                resultTitle.style.color = '#e74c3c';
+                resultDesc.textContent = '进阶骑士凭借更强的装备和技巧获得胜利！';
+            }
+            
+            resultOverlay.classList.add('show');
+        }
+
+        // 重置战斗
+        function resetBattle() {
+            battleStarted = false;
+            cancelAnimationFrame(animationId);
+            
+            // 停止所有待机动画
+            warriors.forEach(w => w.stopIdleAnimation());
+            
+            document.getElementById('resultOverlay').classList.remove('show');
+            document.getElementById('startBtn').disabled = false;
+            
+            initBattle();
+        }
+
+        // 初始化
+        window.onload = async () => {
+            await loadSprites();
+            initBattle();
+        };
+    </script>
+</body>
+</html>

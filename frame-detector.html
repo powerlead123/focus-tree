@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精灵图帧数检测工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .test-item {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        .test-item h3 {
+            margin-bottom: 10px;
+            color: #f39c12;
+        }
+        canvas {
+            border: 2px solid #444;
+            background: #000;
+        }
+        .info {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h1>精灵图帧数自动检测</h1>
+    <p>打开浏览器的开发者工具(F12)，查看控制台输出</p>
+
+    <div class="test-item">
+        <h3>Warrior_1 - Idle</h3>
+        <canvas id="canvas1" width="400" height="100"></canvas>
+        <div class="info" id="info1"></div>
+    </div>
+
+    <div class="test-item">
+        <h3>Warrior_1 - Walk</h3>
+        <canvas id="canvas2" width="400" height="100"></canvas>
+        <div class="info" id="info2"></div>
+    </div>
+
+    <div class="test-item">
+        <h3>Warrior_1 - Run</h3>
+        <canvas id="canvas3" width="400" height="100"></canvas>
+        <div class="info" id="info3"></div>
+    </div>
+
+    <div class="test-item">
+        <h3>Warrior_1 - Hurt</h3>
+        <canvas id="canvas4" width="400" height="100"></canvas>
+        <div class="info" id="info4"></div>
+    </div>
+
+    <div class="test-item">
+        <h3>Warrior_2 - Idle</h3>
+        <canvas id="canvas5" width="400" height="100"></canvas>
+        <div class="info" id="info5"></div>
+    </div>
+
+    <div class="test-item">
+        <h3>Warrior_3 - Idle</h3>
+        <canvas id="canvas6" width="400" height="100"></canvas>
+        <div class="info" id="info6"></div>
+    </div>
+
+    <script>
+        function detectFrames(imgPath, canvasId, infoId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const infoEl = document.getElementById(infoId);
+
+            const img = new Image();
+            img.onload = () => {
+                // 绘制完整图片
+                ctx.drawImage(img, 0, 0);
+                
+                const totalWidth = img.width;
+                const height = img.height;
+                
+                // 尝试找到能被整除的帧数
+                // 常见帧数：2,3,4,5,6,7,8,9,10
+                let bestFrameCount = 1;
+                let bestFrameWidth = totalWidth;
+                
+                for (let frameCount = 2; frameCount <= 10; frameCount++) {
+                    if (totalWidth % frameCount === 0) {
+                        const frameWidth = totalWidth / frameCount;
+                        // 检查这个帧宽是否合理（大于10像素）
+                        if (frameWidth > 10 && frameWidth < 200) {
+                            bestFrameCount = frameCount;
+                            bestFrameWidth = frameWidth;
+                            // 优先找接近80的
+                            if (Math.abs(frameWidth - 80) < Math.abs(bestFrameWidth - 80)) {
+                                bestFrameWidth = frameWidth;
+                            }
+                        }
+                    }
+                }
+                
+                // 如果还是找不到，用穷举法
+                if (bestFrameCount === 1) {
+                    for (let frameCount = 2; frameCount <= 20; frameCount++) {
+                        const frameWidth = totalWidth / frameCount;
+                        if (frameWidth > 10 && frameWidth < 200) {
+                            bestFrameCount = frameCount;
+                            bestFrameWidth = frameWidth;
+                            break;
+                        }
+                    }
+                }
+                
+                console.log(`${imgPath}: 总宽=${totalWidth}, 高度=${height}, 帧数=${bestFrameCount}, 帧宽=${bestFrameWidth}`);
+                infoEl.textContent = `总宽: ${totalWidth}px, 高度: ${height}px, 检测到帧数: ${bestFrameCount}, 每帧: ${bestFrameWidth}px`;
+            };
+            img.src = imgPath;
+        }
+
+        // 检测所有动画
+        detectFrames('warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_1/Idle.png', 'canvas1', 'info1');
+        detectFrames('warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_1/Walk.png', 'canvas2', 'info2');
+        detectFrames('warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_1/Run.png', 'canvas3', 'info3');
+        detectFrames('warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_1/Hurt.png', 'canvas4', 'info4');
+        detectFrames('warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_2/Idle.png', 'canvas5', 'info5');
+        detectFrames('warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_3/Idle.png', 'canvas6', 'info6');
+    </script>
+</body>
+</html>
