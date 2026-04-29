@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦘 体感跳高游戏 - 专注养小树</title>
+    <!-- MediaPipe 姿态检测库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(180deg, #87CEEB 0%, #E0F6FF 50%, #90EE90 100%);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            color: #fff;
+            font-size: 1.5em;
+        }
+
+        .header .score {
+            color: #FFD700;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.3s;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 主游戏区域 */
+        .game-container {
+            display: flex;
+            height: 100vh;
+            padding-top: 60px;
+        }
+
+        /* 左侧摄像头区域 */
+        .camera-section {
+            width: 320px;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .camera-title {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            text-align: center;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 280px;
+            height: 210px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid #00FF88;
+            box-shadow: 0 0 20px rgba(0,255,136,0.3);
+        }
+
+        .camera-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .camera-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1);
+        }
+
+        /* 摄像头状态指示器 */
+        .camera-status {
+            margin-top: 15px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: #fff;
+            text-align: center;
+        }
+
+        .camera-status.detecting {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 1.5s infinite;
+        }
+
+        .camera-status.ready {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .camera-status.jumping {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            animation: jump-pulse 0.3s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes jump-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* 跳跃高度指示器 */
+        .jump-indicator {
+            margin-top: 20px;
+            width: 280px;
+        }
+
+        .jump-label {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .jump-bar-container {
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .jump-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00FF88 0%, #00CC6A 50%, #FFD700 100%);
+            border-radius: 15px;
+            transition: width 0.1s ease-out;
+        }
+
+        .jump-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* 使用说明 */
+        .instructions {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #ccc;
+            font-size: 0.85em;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            color: #00FF88;
+            margin-bottom: 10px;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        /* 右侧游戏区域 */
+        .game-section {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 游戏状态覆盖层 */
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.7);
+            z-index: 100;
+        }
+
+        .game-overlay.hidden {
+            display: none;
+        }
+
+        .start-screen {
+            text-align: center;
+            color: #fff;
+        }
+
+        .start-screen h2 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #f093fb, #f5576c, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .start-screen p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+
+        .start-btn {
+            padding: 20px 60px;
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(102,126,234,0.4);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102,126,234,0.6);
+        }
+
+        .game-over-screen {
+            text-align: center;
+            color: #fff;
+        }
+
+        .game-over-screen h2 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+
+        .final-score {
+            font-size: 2em;
+            margin-bottom: 30px;
+        }
+
+        .final-score span {
+            color: #FFD700;
+            font-size: 1.5em;
+        }
+
+        .restart-btn {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 游戏内UI */
+        .game-ui {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .ui-item {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 1.2em;
+        }
+
+        .ui-item .label {
+            color: #aaa;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }
+
+        .ui-item .value {
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        /* 连击显示 */
+        .combo-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .combo-display.show {
+            animation: combo-animation 1s ease-out forwards;
+        }
+
+        @keyframes combo-animation {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            30% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -80%) scale(1);
+            }
+        }
+
+        /* 全屏按钮 */
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #fff;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s;
+            z-index: 50;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="header">
+        <button class="back-btn" onclick="window.location.href='home.html'">← 返回首页</button>
+        <h1>🦘 体感跳高游戏</h1>
+        <div class="score">得分: <span id="scoreDisplay">0</span></div>
+    </div>
+
+    <div class="game-container">
+        <!-- 左侧摄像头区域 -->
+        <div class="camera-section">
+            <div class="camera-title">📷 摄像头检测</div>
+            <div class="camera-container">
+                <video class="camera-video" id="cameraVideo" playsinline></video>
+                <canvas class="camera-canvas" id="cameraCanvas"></canvas>
+            </div>
+            <div class="camera-status detecting" id="cameraStatus">正在初始化摄像头...</div>
+            
+            <!-- 跳跃高度指示器 -->
+            <div class="jump-indicator">
+                <div class="jump-label">跳跃力度</div>
+                <div class="jump-bar-container">
+                    <div class="jump-bar" id="jumpBar"></div>
+                    <div class="jump-value" id="jumpValue">0%</div>
+                </div>
+            </div>
+
+            <!-- 使用说明 -->
+            <div class="instructions">
+                <h3>🎮 游戏说明</h3>
+                <ol>
+                    <li>允许摄像头权限</li>
+                    <li>站在摄像头前，让全身入镜</li>
+                    <li>原地跳跃，控制游戏角色</li>
+                    <li>跳起顶碎空中的物品得分</li>
+                    <li>连续命中获得连击加分！</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- 右侧游戏区域 -->
+        <div class="game-section">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- 游戏内UI -->
+            <div class="game-ui">
+                <div class="ui-item">
+                    <span class="label">连击</span>
+                    <span class="value" id="comboDisplay">0</span>
+                </div>
+                <div class="ui-item">
+                    <span class="label">高度</span>
+                    <span class="value" id="heightDisplay">0m</span>
+                </div>
+            </div>
+
+            <!-- 连击动画 -->
+            <div class="combo-display" id="comboAnimation"></div>
+
+            <!-- 全屏按钮 -->
+            <button class="fullscreen-btn" id="fullscreenBtn">⛶</button>
+
+            <!-- 游戏覆盖层 -->
+            <div class="game-overlay" id="gameOverlay">
+                <div class="start-screen" id="startScreen">
+                    <h2>🦘 体感跳高游戏</h2>
+                    <p>通过摄像头检测你的跳跃动作<br>跳起来顶碎空中的物品，获得高分！</p>
+                    <button class="start-btn" id="startBtn">开始游戏</button>
+                </div>
+                <div class="game-over-screen hidden" id="gameOverScreen">
+                    <h2>游戏结束</h2>
+                    <div class="final-score">最终得分: <span id="finalScore">0</span></div>
+                    <button class="restart-btn" id="restartBtn">再来一局</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 游戏配置 ====================
+        const GAME_CONFIG = {
+            gravity: 0.6,
+            jumpForce: -15,
+            groundY: 0,  // 动态计算
+            playerX: 100,
+            playerWidth: 50,
+            playerHeight: 60,
+            spawnRate: 120,  // 每多少帧生成一个物品
+            itemTypes: ['mushroom', 'coin', 'star', 'box'],
+            colors: {
+                mushroom: '#FF6B6B',
+                coin: '#FFD700',
+                star: '#FFA500',
+                box: '#8B4513'
+            }
+        };
+
+        // ==================== 全局状态 ====================
+        let gameState = {
+            isPlaying: false,
+            score: 0,
+            combo: 0,
+            maxCombo: 0,
+            items: [],
+            particles: [],
+            cameraReady: false,
+            isJumping: false,
+            jumpHeight: 0,
+            baselineY: null  // 基准线（站立时的臀部位置）
+        };
+
+        // ==================== Canvas 设置 ====================
+        const gameCanvas = document.getElementById('gameCanvas');
+        const gameCtx = gameCanvas.getContext('2d');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const cameraCanvas = document.getElementById('cameraCanvas');
+        const cameraCtx = cameraCanvas.getContext('2d');
+
+        // 设置画布大小
+        function resizeCanvas() {
+            gameCanvas.width = gameCanvas.parentElement.clientWidth;
+            gameCanvas.height = gameCanvas.parentElement.clientHeight;
+            GAME_CONFIG.groundY = gameCanvas.height - 100;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // 摄像头画布大小
+        cameraCanvas.width = 280;
+        cameraCanvas.height = 210;
+
+        // ==================== 游戏角色类 ====================
+        class Player {
+            constructor() {
+                this.x = GAME_CONFIG.playerX;
+                this.y = GAME_CONFIG.groundY - GAME_CONFIG.playerHeight;
+                this.width = GAME_CONFIG.playerWidth;
+                this.height = GAME_CONFIG.playerHeight;
+                this.vy = 0;
+                this.isJumping = false;
+                this.jumpCount = 0;
+                this.maxJumpCount = 2;  // 可二段跳
+                this.color = '#4ECDC4';
+                this.animationFrame = 0;
+            }
+
+            update() {
+                // 重力
+                this.vy += GAME_CONFIG.gravity;
+                this.y += this.vy;
+
+                // 地面碰撞
+                if (this.y >= GAME_CONFIG.groundY - this.height) {
+                    this.y = GAME_CONFIG.groundY - this.height;
+                    this.vy = 0;
+                    this.isJumping = false;
+                    this.jumpCount = 0;
+                }
+
+                this.animationFrame++;
+            }
+
+            jump(force = 1) {
+                if (this.jumpCount < this.maxJumpCount) {
+                    this.vy = GAME_CONFIG.jumpForce * force;
+                    this.isJumping = true;
+                    this.jumpCount++;
+                    
+                    // 创建跳跃粒子效果
+                    createParticles(this.x + this.width/2, this.y + this.height, '#fff', 5);
+                }
+            }
+
+            draw() {
+                // 绘制身体
+                gameCtx.fillStyle = this.color;
+                gameCtx.fillRect(this.x, this.y, this.width, this.height);
+
+                // 绘制眼睛
+                gameCtx.fillStyle = '#fff';
+                gameCtx.fillRect(this.x + 30, this.y + 10, 10, 10);
+                gameCtx.fillStyle = '#000';
+                gameCtx.fillRect(this.x + 35, this.y + 12, 4, 4);
+
+                // 跳跃时的拖尾效果
+                if (this.isJumping && this.vy < 0) {
+                    for (let i = 1; i <= 3; i++) {
+                        gameCtx.fillStyle = `rgba(78, 205, 196, ${0.3 / i})`;
+                        gameCtx.fillRect(this.x, this.y + this.height + i * 10, this.width, 5);
+                    }
+                }
+            }
+
+            getBounds() {
+                return {
+                    left: this.x,
+                    right: this.x + this.width,
+                    top: this.y,
+                    bottom: this.y + this.height
+                };
+            }
+        }
+
+        // ==================== 物品类 ====================
+        class Item {
+            constructor() {
+                this.type = GAME_CONFIG.itemTypes[Math.floor(Math.random() * GAME_CONFIG.itemTypes.length)];
+                this.width = 40;
+                this.height = 40;
+                this.x = gameCanvas.width + this.width;
+                // 随机高度：低、中、高三个层次
+                const heights = [0.3, 0.5, 0.7, 0.85];
+                const heightRatio = heights[Math.floor(Math.random() * heights.length)];
+                this.y = GAME_CONFIG.groundY - (GAME_CONFIG.groundY * heightRatio) - this.height;
+                this.speed = 3 + Math.random() * 2;
+                this.rotation = 0;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                this.bobOffset = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.x -= this.speed;
+                this.rotation += this.rotationSpeed;
+                this.bobOffset += 0.05;
+            }
+
+            draw() {
+                const bobY = Math.sin(this.bobOffset) * 5;
+                
+                gameCtx.save();
+                gameCtx.translate(this.x + this.width/2, this.y + this.height/2 + bobY);
+                gameCtx.rotate(this.rotation);
+                
+                // 根据类型绘制不同形状
+                switch(this.type) {
+                    case 'mushroom':
+                        // 蘑菇
+                        gameCtx.fillStyle = GAME_CONFIG.colors.mushroom;
+                        gameCtx.beginPath();
+                        gameCtx.arc(0, -5, 15, 0, Math.PI, true);
+                        gameCtx.fill();
+                        gameCtx.fillStyle = '#fff';
+                        gameCtx.fillRect(-8, -5, 6, 6);
+                        gameCtx.fillRect(5, -10, 5, 5);
+                        gameCtx.fillStyle = '#FFE4B5';
+                        gameCtx.fillRect(-6, 0, 12, 15);
+                        break;
+                        
+                    case 'coin':
+                        // 金币
+                        gameCtx.fillStyle = GAME_CONFIG.colors.coin;
+                        gameCtx.beginPath();
+                        gameCtx.arc(0, 0, 15, 0, Math.PI * 2);
+                        gameCtx.fill();
+                        gameCtx.strokeStyle = '#FFA500';
+                        gameCtx.lineWidth = 2;
+                        gameCtx.stroke();
+                        gameCtx.fillStyle = '#FFA500';
+                        gameCtx.font = 'bold 16px Arial';
+                        gameCtx.textAlign = 'center';
+                        gameCtx.fillText('$', 0, 5);
+                        break;
+                        
+                    case 'star':
+                        // 星星
+                        gameCtx.fillStyle = GAME_CONFIG.colors.star;
+                        gameCtx.beginPath();
+                        for (let i = 0; i < 5; i++) {
+                            const angle = (i * 2 * Math.PI / 5) - Math.PI/2;
+                            const x = Math.cos(angle) * 15;
+                            const y = Math.sin(angle) * 15;
+                            if (i === 0) gameCtx.moveTo(x, y);
+                            else gameCtx.lineTo(x, y);
+                            
+                            const innerAngle = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI/2;
+                            const ix = Math.cos(innerAngle) * 7;
+                            const iy = Math.sin(innerAngle) * 7;
+                            gameCtx.lineTo(ix, iy);
+                        }
+                        gameCtx.closePath();
+                        gameCtx.fill();
+                        break;
+                        
+                    case 'box':
+                        // 砖块
+                        gameCtx.fillStyle = GAME_CONFIG.colors.box;
+                        gameCtx.fillRect(-15, -15, 30, 30);
+                        gameCtx.strokeStyle = '#5D3A1A';
+                        gameCtx.lineWidth = 2;
+                        gameCtx.strokeRect(-15, -15, 30, 30);
+                        gameCtx.beginPath();
+                        gameCtx.moveTo(-15, 0);
+                        gameCtx.lineTo(15, 0);
+                        gameCtx.moveTo(0, -15);
+                        gameCtx.lineTo(0, 15);
+                        gameCtx.stroke();
+                        // 问号
+                        gameCtx.fillStyle = '#FFD700';
+                        gameCtx.font = 'bold 20px Arial';
+                        gameCtx.textAlign = 'center';
+                        gameCtx.fillText('?', 0, 6);
+                        break;
+                }
+                
+                gameCtx.restore();
+            }
+
+            getBounds() {
+                const bobY = Math.sin(this.bobOffset) * 5;
+                return {
+                    left: this.x,
+                    right: this.x + this.width,
+                    top: this.y + bobY,
+                    bottom: this.y + this.height + bobY
+                };
+            }
+        }
+
+        // ==================== 粒子类 ====================
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8 - 2;
+                this.life = 1;
+                this.decay = 0.02 + Math.random() * 0.02;
+                this.color = color;
+                this.size = 5 + Math.random() * 5;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.2;  // 重力
+                this.life -= this.decay;
+            }
+
+            draw() {
+                gameCtx.save();
+                gameCtx.globalAlpha = this.life;
+                gameCtx.fillStyle = this.color;
+                gameCtx.fillRect(this.x, this.y, this.size, this.size);
+                gameCtx.restore();
+            }
+        }
+
+        // ==================== 粒子效果 ====================
+        function createParticles(x, y, color, count = 10) {
+            for (let i = 0; i < count; i++) {
+                gameState.particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // ==================== MediaPipe 姿态检测 ====================
+        let pose;
+        let camera;
+
+        function initPoseDetection() {
+            pose = new Pose({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+                }
+            });
+
+            pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: false,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            pose.onResults(onPoseResults);
+
+            // 初始化摄像头
+            camera = new Camera(cameraVideo, {
+                onFrame: async () => {
+                    await pose.send({image: cameraVideo});
+                },
+                width: 320,
+                height: 240
+            });
+
+            camera.start()
+                .then(() => {
+                    document.getElementById('cameraStatus').textContent = '摄像头就绪 - 请站在画面中';
+                    document.getElementById('cameraStatus').className = 'camera-status ready';
+                    gameState.cameraReady = true;
+                })
+                .catch(err => {
+                    console.error('摄像头启动失败:', err);
+                    document.getElementById('cameraStatus').textContent = '摄像头启动失败，请检查权限';
+                });
+        }
+
+        // 姿态检测结果处理
+        function onPoseResults(results) {
+            // 清空画布
+            cameraCtx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+
+            if (results.poseLandmarks) {
+                // 绘制关键点
+                drawConnectors(cameraCtx, results.poseLandmarks, POSE_CONNECTIONS, {
+                    color: '#00FF88',
+                    lineWidth: 2
+                });
+                drawLandmarks(cameraCtx, results.poseLandmarks, {
+                    color: '#FF0000',
+                    lineWidth: 1,
+                    radius: 3
+                });
+
+                // 检测跳跃
+                detectJump(results.poseLandmarks);
+            }
+        }
+
+        // 跳跃检测算法
+        let lastHipY = null;
+        let jumpStartTime = 0;
+        let jumpThreshold = 0.08;  // 跳跃阈值（相对于画面高度的比例）
+        let smoothingWindow = [];
+        const SMOOTHING_FRAMES = 5;
+
+        function detectJump(landmarks) {
+            // 获取左右臀部关键点（23和24）
+            const leftHip = landmarks[23];
+            const rightHip = landmarks[24];
+            
+            if (!leftHip || !rightHip) return;
+
+            // 计算平均臀部位置
+            const hipY = (leftHip.y + rightHip.y) / 2;
+
+            // 平滑处理
+            smoothingWindow.push(hipY);
+            if (smoothingWindow.length > SMOOTHING_FRAMES) {
+                smoothingWindow.shift();
+            }
+            const smoothedHipY = smoothingWindow.reduce((a, b) => a + b, 0) / smoothingWindow.length;
+
+            // 初始化基准线
+            if (gameState.baselineY === null) {
+                gameState.baselineY = smoothedHipY;
+                return;
+            }
+
+            // 计算相对于基准线的位移（向上跳时y值减小）
+            const displacement = gameState.baselineY - smoothedHipY;
+            const jumpPercentage = Math.max(0, Math.min(100, (displacement / jumpThreshold) * 100));
+            
+            // 更新跳跃指示器
+            updateJumpIndicator(jumpPercentage);
+
+            // 检测跳跃动作
+            if (displacement > jumpThreshold && !gameState.isJumping) {
+                // 开始跳跃
+                gameState.isJumping = true;
+                jumpStartTime = Date.now();
+                
+                // 根据位移大小计算跳跃力度
+                const jumpForce = Math.min(1.5, 0.8 + displacement * 2);
+                
+                // 触发游戏跳跃
+                if (gameState.isPlaying && player) {
+                    player.jump(jumpForce);
+                }
+                
+                // 更新状态显示
+                document.getElementById('cameraStatus').textContent = '检测到跳跃！';
+                document.getElementById('cameraStatus').className = 'camera-status jumping';
+                
+                // 更新高度显示
+                const jumpHeight = Math.round(displacement * 100);
+                document.getElementById('heightDisplay').textContent = jumpHeight + 'cm';
+            } else if (displacement < jumpThreshold * 0.3 && gameState.isJumping) {
+                // 跳跃结束（回到基准线附近）
+                gameState.isJumping = false;
+                document.getElementById('cameraStatus').textContent = '准备就绪 - 请跳跃';
+                document.getElementById('cameraStatus').className = 'camera-status ready';
+            }
+
+            lastHipY = smoothedHipY;
+        }
+
+        // 更新跳跃指示器
+        function updateJumpIndicator(percentage) {
+            const jumpBar = document.getElementById('jumpBar');
+            const jumpValue = document.getElementById('jumpValue');
+            
+            jumpBar.style.width = percentage + '%';
+            jumpValue.textContent = Math.round(percentage) + '%';
+            
+            // 根据力度改变颜色
+            if (percentage > 80) {
+                jumpBar.style.background = 'linear-gradient(90deg, #FFD700 0%, #FF6B6B 100%)';
+            } else if (percentage > 50) {
+                jumpBar.style.background = 'linear-gradient(90deg, #00CC6A 0%, #FFD700 100%)';
+            } else {
+                jumpBar.style.background = 'linear-gradient(90deg, #00FF88 0%, #00CC6A 100%)';
+            }
+        }
+
+        // ==================== 游戏主循环 ====================
+        let player;
+        let frameCount = 0;
+        let animationId;
+
+        function initGame() {
+            player = new Player();
+            gameState.score = 0;
+            gameState.combo = 0;
+            gameState.maxCombo = 0;
+            gameState.items = [];
+            gameState.particles = [];
+            gameState.isPlaying = true;
+            frameCount = 0;
+
+            updateScore();
+            document.getElementById('comboDisplay').textContent = '0';
+        }
+
+        function gameLoop() {
+            if (!gameState.isPlaying) return;
+
+            // 清空画布
+            gameCtx.fillStyle = '#87CEEB';
+            gameCtx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+
+            // 绘制背景云朵
+            drawClouds();
+
+            // 绘制地面
+            drawGround();
+
+            // 生成物品
+            frameCount++;
+            if (frameCount % GAME_CONFIG.spawnRate === 0) {
+                gameState.items.push(new Item());
+                // 随着分数增加，生成速度加快
+                if (gameState.score > 500) GAME_CONFIG.spawnRate = Math.max(60, 120 - Math.floor(gameState.score / 100));
+            }
+
+            // 更新和绘制物品
+            for (let i = gameState.items.length - 1; i >= 0; i--) {
+                const item = gameState.items[i];
+                item.update();
+                item.draw();
+
+                // 碰撞检测
+                if (checkCollision(player, item)) {
+                    // 碰撞成功
+                    handleCollision(item);
+                    gameState.items.splice(i, 1);
+                } else if (item.x + item.width < 0) {
+                    // 物品离开屏幕，连击中断
+                    if (gameState.combo > gameState.maxCombo) {
+                        gameState.maxCombo = gameState.combo;
+                    }
+                    gameState.combo = 0;
+                    document.getElementById('comboDisplay').textContent = '0';
+                    gameState.items.splice(i, 1);
+                }
+            }
+
+            // 更新和绘制玩家
+            player.update();
+            player.draw();
+
+            // 更新和绘制粒子
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const particle = gameState.particles[i];
+                particle.update();
+                particle.draw();
+                if (particle.life <= 0) {
+                    gameState.particles.splice(i, 1);
+                }
+            }
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // 绘制云朵背景
+        let clouds = [];
+        for (let i = 0; i < 5; i++) {
+            clouds.push({
+                x: Math.random() * window.innerWidth,
+                y: 50 + Math.random() * 150,
+                speed: 0.5 + Math.random() * 0.5,
+                size: 30 + Math.random() * 40
+            });
+        }
+
+        function drawClouds() {
+            gameCtx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            clouds.forEach(cloud => {
+                cloud.x -= cloud.speed;
+                if (cloud.x < -cloud.size * 2) cloud.x = gameCanvas.width + cloud.size;
+                
+                gameCtx.beginPath();
+                gameCtx.arc(cloud.x, cloud.y, cloud.size, 0, Math.PI * 2);
+                gameCtx.arc(cloud.x + cloud.size * 0.8, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                gameCtx.arc(cloud.x - cloud.size * 0.8, cloud.y, cloud.size * 0.8, 0, Math.PI * 2);
+                gameCtx.fill();
+            });
+        }
+
+        // 绘制地面
+        function drawGround() {
+            // 草地
+            gameCtx.fillStyle = '#4CAF50';
+            gameCtx.fillRect(0, GAME_CONFIG.groundY, gameCanvas.width, gameCanvas.height - GAME_CONFIG.groundY);
+            
+            // 草地纹理
+            gameCtx.fillStyle = '#45a049';
+            for (let i = 0; i < gameCanvas.width; i += 20) {
+                gameCtx.fillRect(i, GAME_CONFIG.groundY, 10, 5);
+            }
+            
+            // 土壤
+            gameCtx.fillStyle = '#8B4513';
+            gameCtx.fillRect(0, GAME_CONFIG.groundY + 20, gameCanvas.width, gameCanvas.height - GAME_CONFIG.groundY - 20);
+        }
+
+        // 碰撞检测
+        function checkCollision(player, item) {
+            const pBounds = player.getBounds();
+            const iBounds = item.getBounds();
+            
+            // 只有当玩家在上升状态（跳跃中）才能顶碎物品
+            if (player.vy >= 0) return false;
+            
+            // 只有当玩家头顶碰到物品底部才算
+            const headCollision = pBounds.top <= iBounds.bottom && 
+                                 pBounds.top >= iBounds.top &&
+                                 pBounds.right > iBounds.left && 
+                                 pBounds.left < iBounds.right;
+            
+            return headCollision;
+        }
+
+        // 处理碰撞
+        function handleCollision(item) {
+            // 基础分数
+            let points = 10;
+            switch(item.type) {
+                case 'coin': points = 20; break;
+                case 'star': points = 50; break;
+                case 'box': points = 30; break;
+                case 'mushroom': points = 15; break;
+            }
+            
+            // 连击加成
+            gameState.combo++;
+            const comboMultiplier = 1 + (gameState.combo * 0.1);
+            points = Math.floor(points * comboMultiplier);
+            
+            gameState.score += points;
+            updateScore();
+            
+            // 显示连击
+            document.getElementById('comboDisplay').textContent = gameState.combo;
+            
+            // 连击动画
+            if (gameState.combo > 1 && gameState.combo % 5 === 0) {
+                showComboAnimation(gameState.combo + '连击!');
+            }
+            
+            // 粒子效果
+            createParticles(item.x + item.width/2, item.y + item.height/2, GAME_CONFIG.colors[item.type], 15);
+        }
+
+        // 显示连击动画
+        function showComboAnimation(text) {
+            const comboEl = document.getElementById('comboAnimation');
+            comboEl.textContent = text;
+            comboEl.classList.remove('show');
+            void comboEl.offsetWidth;  // 触发重排
+            comboEl.classList.add('show');
+        }
+
+        // 更新分数显示
+        function updateScore() {
+            document.getElementById('scoreDisplay').textContent = gameState.score;
+        }
+
+        // ==================== 游戏控制 ====================
+        function startGame() {
+            document.getElementById('gameOverlay').classList.add('hidden');
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            
+            initGame();
+            gameLoop();
+            
+            // 游戏计时器（60秒）
+            setTimeout(endGame, 60000);
+        }
+
+        function endGame() {
+            gameState.isPlaying = false;
+            cancelAnimationFrame(animationId);
+            
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('gameOverlay').classList.remove('hidden');
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        // ==================== 事件监听 ====================
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        // 键盘控制（备用）
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameState.isPlaying) {
+                player.jump();
+            }
+        });
+
+        // 全屏按钮
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // ==================== 初始化 ====================
+        window.addEventListener('load', () => {
+            initPoseDetection();
+        });
+    </script>
+</body>
+</html>
