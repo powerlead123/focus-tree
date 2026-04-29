@@ -137,6 +137,56 @@
             animation: jump-pulse 0.3s;
         }
 
+        .camera-status.off {
+            background: linear-gradient(135deg, #666 0%, #999 100%);
+        }
+
+        /* 摄像头控制按钮 */
+        .camera-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .camera-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .camera-btn.start {
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+        }
+
+        .camera-btn.start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,184,148,0.4);
+        }
+
+        .camera-btn.stop {
+            background: linear-gradient(135deg, #e74c3c 0%, #e84393 100%);
+            color: white;
+        }
+
+        .camera-btn.stop:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231,76,60,0.4);
+        }
+
+        .camera-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -418,6 +468,16 @@
                 <canvas class="camera-canvas" id="cameraCanvas"></canvas>
             </div>
             <div class="camera-status detecting" id="cameraStatus">正在初始化摄像头...</div>
+            
+            <!-- 摄像头控制按钮 -->
+            <div class="camera-controls">
+                <button class="camera-btn start" id="startCameraBtn" onclick="startCamera()">
+                    📹 启动摄像头
+                </button>
+                <button class="camera-btn stop" id="stopCameraBtn" onclick="stopCamera()" disabled>
+                    ⏹️ 关闭摄像头
+                </button>
+            </div>
             
             <!-- 跳跃高度指示器 -->
             <div class="jump-indicator">
@@ -758,6 +818,7 @@
         // ==================== MediaPipe 姿态检测 ====================
         let pose;
         let camera;
+        let mediaStream = null;
 
         function initPoseDetection() {
             pose = new Pose({
@@ -790,12 +851,139 @@
                     document.getElementById('cameraStatus').textContent = '摄像头就绪 - 请站在画面中';
                     document.getElementById('cameraStatus').className = 'camera-status ready';
                     gameState.cameraReady = true;
+                    updateCameraButtons();
                 })
                 .catch(err => {
                     console.error('摄像头启动失败:', err);
                     document.getElementById('cameraStatus').textContent = '摄像头启动失败，请检查权限';
+                    document.getElementById('cameraStatus').className = 'camera-status off';
+                    document.getElementById('startCameraBtn').disabled = false;
                 });
         }
+
+        // ==================== 摄像头控制 ====================
+        let isCameraInitialized = false;
+
+        function startCamera() {
+            if (gameState.cameraReady) {
+                console.log('摄像头已经在运行中');
+                return;
+            }
+
+            console.log('正在启动摄像头...');
+            document.getElementById('cameraStatus').textContent = '正在启动摄像头...';
+            document.getElementById('cameraStatus').className = 'camera-status detecting';
+            document.getElementById('startCameraBtn').disabled = true;
+
+            // 如果 MediaPipe 还没初始化，先初始化
+            if (!isCameraInitialized) {
+                initPoseDetection();
+                isCameraInitialized = true;
+            } else {
+                // 重新启动摄像头
+                camera.start()
+                    .then(() => {
+                        console.log('摄像头已重新启动');
+                        document.getElementById('cameraStatus').textContent = '摄像头就绪 - 请站在画面中';
+                        document.getElementById('cameraStatus').className = 'camera-status ready';
+                        gameState.cameraReady = true;
+                        updateCameraButtons();
+                    })
+                    .catch(err => {
+                        console.error('摄像头启动失败:', err);
+                        document.getElementById('cameraStatus').textContent = '摄像头启动失败，请检查权限';
+                        document.getElementById('cameraStatus').className = 'camera-status off';
+                        document.getElementById('startCameraBtn').disabled = false;
+                    });
+            }
+        }
+
+        function stopCamera() {
+            if (!gameState.cameraReady) {
+                console.log('摄像头已经关闭');
+                return;
+            }
+
+            releaseCamera();
+            updateCameraButtons();
+        }
+
+        function updateCameraButtons() {
+            const startBtn = document.getElementById('startCameraBtn');
+            const stopBtn = document.getElementById('stopCameraBtn');
+            
+            if (gameState.cameraReady) {
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } else {
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        // ==================== 摄像头资源释放 ====================
+        function releaseCamera() {
+            console.log('正在释放摄像头资源...');
+            
+            // 1. 停止 MediaPipe 相机
+            if (camera) {
+                try {
+                    camera.stop();
+                    console.log('MediaPipe 相机已停止');
+                } catch (e) {
+                    console.log('停止 MediaPipe 相机时出错:', e);
+                }
+            }
+            
+            // 2. 停止所有视频轨道
+            if (cameraVideo && cameraVideo.srcObject) {
+                const tracks = cameraVideo.srcObject.getTracks();
+                tracks.forEach(track => {
+                    track.stop();
+                    console.log('视频轨道已停止:', track.kind);
+                });
+                cameraVideo.srcObject = null;
+            }
+            
+            // 3. 暂停视频元素
+            if (cameraVideo) {
+                cameraVideo.pause();
+                cameraVideo.removeAttribute('src');
+                cameraVideo.load();
+            }
+            
+            gameState.cameraReady = false;
+            document.getElementById('cameraStatus').textContent = '摄像头已关闭';
+            document.getElementById('cameraStatus').className = 'camera-status off';
+            console.log('摄像头资源已释放');
+        }
+
+        // 页面关闭/刷新前释放资源
+        window.addEventListener('beforeunload', (e) => {
+            releaseCamera();
+        });
+
+        // 页面隐藏时释放资源（适用于部分浏览器）
+        window.addEventListener('pagehide', () => {
+            releaseCamera();
+        });
+
+        // 页面可见性变化时处理
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // 页面切换到后台时暂停摄像头
+                console.log('页面切换到后台，暂停摄像头');
+                if (camera && gameState.cameraReady) {
+                    camera.stop();
+                }
+            } else {
+                // 页面重新可见时恢复摄像头
+                console.log('页面重新可见，恢复摄像头');
+                if (camera && gameState.cameraReady) {
+                    camera.start();
+                }
+            }
+        });
 
         // 姿态检测结果处理
         function onPoseResults(results) {
@@ -1132,7 +1320,10 @@
 
         // ==================== 初始化 ====================
         window.addEventListener('load', () => {
-            initPoseDetection();
+            // 更新初始状态
+            document.getElementById('cameraStatus').textContent = '请点击下方按钮启动摄像头';
+            document.getElementById('cameraStatus').className = 'camera-status off';
+            updateCameraButtons();
         });
     </script>
 </body>
