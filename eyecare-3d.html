@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>远眺护眼攒积分 - 3D版</title>
+    <link rel="stylesheet" href="eyecare-3d.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+    <!-- 开始页面 -->
+    <div id="startScreen" class="screen active">
+        <div class="start-container">
+            <div class="title-glow">
+                <h1 class="main-title">👀 远眺护眼攒积分</h1>
+            </div>
+            <p class="subtitle">3D 华丽版 · 保护视力 · 轻松赚金币</p>
+            
+            <div class="instruction-box">
+                <div class="instruction-icon">🎯</div>
+                <h2>使用说明</h2>
+                <ol class="instruction-list">
+                    <li>请站到<strong>3米外</strong>观看屏幕</li>
+                    <li>点击开始后，注视倒计时圆环</li>
+                    <li>每完成一个周期获得1枚金币</li>
+                    <li>金币自动存入3D存钱罐中</li>
+                    <li>完成设定目标即可结束</li>
+                </ol>
+            </div>
+
+            <div class="settings-box">
+                <h3>⚙️ 设置目标</h3>
+                <div class="target-selector">
+                    <button class="target-btn" data-target="5">5枚</button>
+                    <button class="target-btn active" data-target="10">10枚</button>
+                    <button class="target-btn" data-target="20">20枚</button>
+                    <button class="target-btn" data-target="30">30枚</button>
+                    <div class="custom-target">
+                        <input type="number" id="customTarget" placeholder="自定义" min="1" max="100">
+                        <span>枚</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-preview">
+                <div class="stat-item">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-text">5秒/周期</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">🪙</div>
+                    <div class="stat-text" id="previewTarget">目标：10枚</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-text" id="previewTime">约需50秒</div>
+                </div>
+            </div>
+            
+            <button class="btn-start" onclick="startGame()">
+                <span class="btn-text">开始护眼</span>
+                <span class="btn-glow"></span>
+            </button>
+            <button class="btn-back" onclick="window.location.href='home.html'">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 游戏页面 -->
+    <div id="gameScreen" class="screen">
+        <!-- 3D Canvas -->
+        <canvas id="threeCanvas"></canvas>
+        
+        <!-- UI 覆盖层 -->
+        <div class="game-ui">
+            <div class="top-bar">
+                <div class="progress-info">
+                    <span class="progress-label">进度</span>
+                    <span class="progress-value" id="progressText">0 / 10</span>
+                </div>
+                <button class="btn-exit" onclick="exitGame()">退出</button>
+            </div>
+            
+            <div class="center-message" id="centerMessage">
+                <div class="message-text">准备好，开始远眺！</div>
+            </div>
+            
+            <div class="bottom-info">
+                <div class="coin-counter">
+                    <span class="coin-icon">🪙</span>
+                    <span class="coin-count" id="coinCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 倒计时圆环 SVG 覆盖层 -->
+        <svg class="countdown-ring" id="countdownRing" viewBox="0 0 200 200">
+            <defs>
+                <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                    <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:#FF6347;stop-opacity:1" />
+                </linearGradient>
+                <filter id="ringGlow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            <circle class="ring-bg" cx="100" cy="100" r="80" />
+            <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="80" 
+                    stroke="url(#ringGradient)" filter="url(#ringGlow)"
+                    stroke-dasharray="502.65" stroke-dashoffset="502.65" />
+            <!-- 圆环中心的倒计时数字 -->
+            <text id="ringNumber" class="ring-number" x="100" y="115" text-anchor="middle">5</text>
+        </svg>
+    </div>
+
+    <!-- 完成页面 -->
+    <div id="completeScreen" class="screen">
+        <div class="complete-container">
+            <div class="complete-icon-container">
+                <div class="complete-icon">🎉</div>
+                <div class="icon-rays"></div>
+            </div>
+            <h1 class="complete-title">护眼训练完成！</h1>
+            <p class="complete-text">柏皓的眼睛得到了很好的休息</p>
+            
+            <div class="final-treasure" id="finalTreasure">
+                <div class="treasure-icon">🏺</div>
+                <div class="treasure-glow"></div>
+            </div>
+            
+            <div class="reward-box">
+                <div class="reward-icon">🪙</div>
+                <div class="reward-text">获得 <span id="finalCoins">10</span> 金币</div>
+            </div>
+            
+            <div class="stats-box">
+                <div class="stat-card">
+                    <div class="stat-label">完成周期</div>
+                    <div class="stat-value" id="completedCycles">10</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">训练时长</div>
+                    <div class="stat-value" id="totalTime">50秒</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">护眼效果</div>
+                    <div class="stat-value">⭐⭐⭐</div>
+                </div>
+            </div>
+            
+            <div class="encouragement">
+                <p id="encouragementText">👏 太棒了！坚持护眼，保护视力！</p>
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="resetGame()">再来一次</button>
+                <button class="btn-secondary" onclick="window.location.href='home.html'">返回首页</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="eyecare-3d.js"></script>
+</body>
+</html>
