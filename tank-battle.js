@@ -1,0 +1,1395 @@
+// 数学错题坦克大战 - 3D游戏逻辑
+// 使用 Three.js 实现
+
+// ========== 全局变量 ==========
+let scene, camera, renderer;
+let tank, barrel, turret;
+let projectiles = [];
+let enemies = [];
+let particles = [];
+let terrain, skybox;
+let animationId;
+let lastTime = 0;
+let trajectoryLine = null; // 抛物线轨迹预览
+
+// 鼠标控制
+let mouseX = 0, mouseY = 0;
+let targetRotationY = 0, targetRotationX = 0;
+
+// 音频上下文
+let audioContext = null;
+
+// 游戏状态
+const GameState = {
+    mistakes: 0,
+    weaponLevel: 5,
+    ammo: 30,
+    maxAmmo: 30,
+    score: 0,
+    kills: 0,
+    isPlaying: false,
+    timeRemaining: 60,
+    lastFireTime: 0,
+    shotsFired: 0,
+    shotsHit: 0
+};
+
+// 武器配置
+const WeaponConfig = {
+    5: { name: '精英坦克', stars: '⭐⭐⭐⭐⭐', fireRate: 200, damage: 100, accuracy: 0.95, ammo: 30, range: 100, color: '#FFD700' },
+    4: { name: '优秀坦克', stars: '⭐⭐⭐⭐', fireRate: 300, damage: 80, accuracy: 0.85, ammo: 25, range: 80, color: '#7eb03c' },
+    3: { name: '标准坦克', stars: '⭐⭐⭐', fireRate: 400, damage: 60, accuracy: 0.75, ammo: 20, range: 60, color: '#FFA500' },
+    2: { name: '受损坦克', stars: '⭐⭐', fireRate: 500, damage: 40, accuracy: 0.65, ammo: 15, range: 50, color: '#FF6B35' },
+    1: { name: '故障坦克', stars: '⭐', fireRate: 600, damage: 20, accuracy: 0.55, ammo: 10, range: 40, color: '#FF3333' }
+};
+
+// 鼓励语
+const Encouragements = {
+    0: '🏆 完美！你是数学小天才！坦克状态最佳！',
+    1: '👏 很棒！继续保持，坦克性能优秀！',
+    2: '👏 很棒！继续保持，坦克性能优秀！',
+    3: '👍 不错！再仔细一点就更好了！',
+    4: '👍 不错！再仔细一点就更好了！',
+    5: '👍 不错！再仔细一点就更好了！',
+    6: '💪 加油！认真检查可以减少错题哦！',
+    7: '💪 加油！认真检查可以减少错题哦！',
+    8: '💪 加油！认真检查可以减少错题哦！',
+    9: '🌟 别灰心！明天认真一点，坦克会更强的！'
+};
+
+// 表情反馈
+const Emotions = {
+    0: '😄 完美！继续保持！',
+    1: '😊 非常好！',
+    2: '🙂 还不错！',
+    3: '😐 还可以更好',
+    4: '😕 需要更认真',
+    5: '😟 要认真检查啊',
+    6: '😰 错题有点多',
+    7: '😢 下次要更仔细',
+    8: '😭 要认真对待作业',
+    9: '😱 明天一定要认真！'
+};
+
+// ========== 初始化 ==========
+document.addEventListener('DOMContentLoaded', () => {
+    initRadarChart();
+    updateWeaponPreview();
+});
+
+// 初始化雷达图
+function initRadarChart() {
+    const canvas = document.getElementById('radarCanvas');
+    const ctx = canvas.getContext('2d');
+    drawRadarChart(ctx, GameState.weaponLevel);
+}
+
+// 绘制雷达图
+function drawRadarChart(ctx, level) {
+    const centerX = 100;
+    const centerY = 100;
+    const radius = 70;
+    const labels = ['射速', '威力', '精准', '弹药', '射程'];
+    const config = WeaponConfig[level];
+    const values = [
+        config.fireRate / 600,
+        config.damage / 100,
+        config.accuracy,
+        config.ammo / 30,
+        config.range / 100
+    ];
+
+    ctx.clearRect(0, 0, 200, 200);
+
+    // 绘制背景网格
+    for (let i = 1; i <= 5; i++) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        for (let j = 0; j < 5; j++) {
+            const angle = (Math.PI * 2 / 5) * j - Math.PI / 2;
+            const x = centerX + Math.cos(angle) * (radius * i / 5);
+            const y = centerY + Math.sin(angle) * (radius * i / 5);
+            if (j === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    // 绘制轴线
+    for (let i = 0; i < 5; i++) {
+        const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        // 绘制标签
+        const labelX = centerX + Math.cos(angle) * (radius + 20);
+        const labelY = centerY + Math.sin(angle) * (radius + 20);
+        ctx.fillStyle = '#aaa';
+        ctx.font = '12px Microsoft YaHei';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(labels[i], labelX, labelY);
+    }
+
+    // 绘制数据区域
+    ctx.beginPath();
+    ctx.fillStyle = hexToRgba(config.color, 0.3);
+    ctx.strokeStyle = config.color;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 5; i++) {
+        const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * (radius * values[i]);
+        const y = centerY + Math.sin(angle) * (radius * values[i]);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 绘制数据点
+    for (let i = 0; i < 5; i++) {
+        const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+        const x = centerX + Math.cos(angle) * (radius * values[i]);
+        const y = centerY + Math.sin(angle) * (radius * values[i]);
+        ctx.beginPath();
+        ctx.fillStyle = config.color;
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// 颜色转换
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// 调整错题数
+function adjustMistakes(delta) {
+    GameState.mistakes = Math.max(0, Math.min(20, GameState.mistakes + delta));
+    document.getElementById('mistakeCount').textContent = GameState.mistakes;
+    updateWeaponPreview();
+    updateEmotion();
+}
+
+// 更新表情反馈
+function updateEmotion() {
+    const emotionEl = document.getElementById('emotionFeedback');
+    const emotion = Emotions[Math.min(GameState.mistakes, 9)] || Emotions[9];
+    emotionEl.textContent = emotion;
+
+    // 根据错题数改变背景色
+    if (GameState.mistakes <= 2) {
+        emotionEl.style.background = 'rgba(126, 176, 60, 0.2)';
+        emotionEl.style.color = '#7eb03c';
+    } else if (GameState.mistakes <= 5) {
+        emotionEl.style.background = 'rgba(255, 165, 0, 0.2)';
+        emotionEl.style.color = '#FFA500';
+    } else {
+        emotionEl.style.background = 'rgba(255, 51, 51, 0.2)';
+        emotionEl.style.color = '#FF3333';
+    }
+}
+
+// 更新武器预览
+function updateWeaponPreview() {
+    // 计算武器等级
+    if (GameState.mistakes <= 1) GameState.weaponLevel = 5;
+    else if (GameState.mistakes <= 3) GameState.weaponLevel = 4;
+    else if (GameState.mistakes <= 5) GameState.weaponLevel = 3;
+    else if (GameState.mistakes <= 8) GameState.weaponLevel = 2;
+    else GameState.weaponLevel = 1;
+
+    const config = WeaponConfig[GameState.weaponLevel];
+
+    // 更新UI
+    document.getElementById('statusName').textContent = config.name;
+    document.getElementById('statusStars').textContent = config.stars;
+
+    // 更新属性条
+    document.getElementById('statFireRate').style.width = (100 - config.fireRate / 6) + '%';
+    document.getElementById('statPower').style.width = config.damage + '%';
+    document.getElementById('statAccuracy').style.width = (config.accuracy * 100) + '%';
+    document.getElementById('statAmmo').style.width = (config.ammo / 30 * 100) + '%';
+    document.getElementById('statRange').style.width = config.range + '%';
+
+    // 更新雷达图
+    const canvas = document.getElementById('radarCanvas');
+    const ctx = canvas.getContext('2d');
+    drawRadarChart(ctx, GameState.weaponLevel);
+}
+
+// ========== 音频系统 ==========
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+// 播放射击音效
+function playShootSound() {
+    if (!audioContext) initAudio();
+    if (!audioContext) return;
+
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // 炮声音效
+    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.3);
+    oscillator.type = 'sawtooth';
+
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+}
+
+// 播放爆炸音效
+function playExplosionSound() {
+    if (!audioContext) initAudio();
+    if (!audioContext) return;
+
+    // 创建噪声缓冲区
+    const bufferSize = audioContext.sampleRate * 0.5;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * 0.1));
+    }
+
+    const noise = audioContext.createBufferSource();
+    noise.buffer = buffer;
+
+    const gainNode = audioContext.createGain();
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+    // 低通滤波器
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1000, audioContext.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.5);
+
+    noise.connect(filter);
+    filter.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    noise.start(audioContext.currentTime);
+}
+
+// 播放击中音效
+function playHitSound() {
+    if (!audioContext) initAudio();
+    if (!audioContext) return;
+
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+    oscillator.type = 'square';
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+}
+
+// ========== 游戏控制 ==========
+function startGame() {
+    // 初始化音频
+    initAudio();
+
+    // 设置游戏参数
+    const config = WeaponConfig[GameState.weaponLevel];
+    GameState.ammo = config.ammo;
+    GameState.maxAmmo = config.ammo;
+    GameState.score = 0;
+    GameState.kills = 0;
+    GameState.timeRemaining = 60;
+    GameState.shotsFired = 0;
+    GameState.shotsHit = 0;
+    GameState.isPlaying = true;
+
+    // 更新HUD
+    updateHUD();
+
+    // 切换页面
+    document.getElementById('startScreen').classList.remove('active');
+    document.getElementById('gameScreen').classList.add('active');
+
+    // 初始化3D场景
+    initThreeJS();
+
+    // 开始游戏循环
+    lastTime = performance.now();
+    animate();
+
+    // 开始计时器
+    startTimer();
+
+    // 绑定鼠标事件
+    bindMouseEvents();
+
+    // 显示开始消息
+    showMessage('战斗开始！', 2000);
+}
+
+function exitGame() {
+    GameState.isPlaying = false;
+    cleanupThreeJS();
+    window.location.href = 'home.html';
+}
+
+function playAgain() {
+    document.getElementById('resultScreen').classList.remove('active');
+    document.getElementById('startScreen').classList.add('active');
+    cleanupThreeJS();
+}
+
+// 计时器
+let timerInterval;
+function startTimer() {
+    timerInterval = setInterval(() => {
+        if (!GameState.isPlaying) {
+            clearInterval(timerInterval);
+            return;
+        }
+
+        GameState.timeRemaining--;
+        document.getElementById('timeDisplay').textContent = GameState.timeRemaining;
+
+        if (GameState.timeRemaining <= 0 || GameState.ammo <= 0) {
+            endGame();
+        }
+    }, 1000);
+}
+
+// 结束游戏
+function endGame() {
+    GameState.isPlaying = false;
+    clearInterval(timerInterval);
+
+    // 计算奖励
+    const baseCoins = Math.floor(GameState.score / 100);
+    const perfectBonus = GameState.mistakes === 0 ? 10 : 0;
+    const totalCoins = baseCoins + perfectBonus + Math.min(5, Math.floor(GameState.kills / 5));
+
+    // 计算评级
+    let rank = 'C';
+    let medal = '🥉';
+    if (GameState.score >= 1000) {
+        rank = 'S';
+        medal = '🏆';
+    } else if (GameState.score >= 700) {
+        rank = 'A';
+        medal = '🥇';
+    } else if (GameState.score >= 400) {
+        rank = 'B';
+        medal = '🥈';
+    }
+
+    // 发放金币
+    if (typeof addCoins === 'function') {
+        addCoins(totalCoins);
+    }
+
+    // 更新结果页面
+    document.getElementById('resultKills').textContent = GameState.kills;
+    document.getElementById('resultScore').textContent = GameState.score;
+    document.getElementById('resultRank').textContent = rank;
+    document.getElementById('medal').textContent = medal;
+    document.getElementById('rewardCoins').textContent = totalCoins;
+
+    // 鼓励语
+    const encouragement = Encouragements[Math.min(GameState.mistakes, 9)] || Encouragements[9];
+    document.getElementById('encouragement').textContent = encouragement;
+
+    // 切换页面
+    document.getElementById('gameScreen').classList.remove('active');
+    document.getElementById('resultScreen').classList.add('active');
+
+    // 清理
+    cleanupThreeJS();
+}
+
+// 更新HUD
+function updateHUD() {
+    const config = WeaponConfig[GameState.weaponLevel];
+
+    document.getElementById('scoreDisplay').textContent = GameState.score;
+    document.getElementById('killDisplay').textContent = GameState.kills;
+    document.getElementById('ammoDisplay').textContent = GameState.ammo;
+    document.getElementById('ammoTotal').textContent = GameState.maxAmmo;
+
+    document.getElementById('hudFireRate').style.width = (100 - config.fireRate / 6) + '%';
+    document.getElementById('hudPower').style.width = config.damage + '%';
+    document.getElementById('hudAccuracy').style.width = (config.accuracy * 100) + '%';
+}
+
+// 显示消息
+function showMessage(text, duration = 2000) {
+    const msgEl = document.getElementById('gameMessage');
+    msgEl.textContent = text;
+    msgEl.classList.add('show');
+
+    setTimeout(() => {
+        msgEl.classList.remove('show');
+    }, duration);
+}
+
+// ========== Three.js 3D场景 ==========
+function initThreeJS() {
+    const canvas = document.getElementById('gameCanvas');
+    const container = document.getElementById('gameScreen');
+
+    // 创建场景
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a2e);
+    scene.fog = new THREE.FogExp2(0x1a1a2e, 0.015);
+
+    // 创建相机
+    camera = new THREE.PerspectiveCamera(
+        60,
+        container.clientWidth / container.clientHeight,
+        0.1,
+        1000
+    );
+    camera.position.set(0, 3, 8);
+
+    // 创建渲染器
+    renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        antialias: true,
+        alpha: false
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // 设置灯光
+    setupLights();
+
+    // 创建地形
+    createTerrain();
+
+    // 创建坦克
+    createTank();
+
+    // 生成敌人
+    spawnEnemies();
+
+    // 创建粒子系统
+    createAmbientParticles();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', onWindowResize);
+}
+
+// 设置灯光
+function setupLights() {
+    // 环境光
+    const ambientLight = new THREE.AmbientLight(0x404080, 0.4);
+    scene.add(ambientLight);
+
+    // 主光源（黄昏太阳）
+    const sunLight = new THREE.DirectionalLight(0xffaa44, 1.2);
+    sunLight.position.set(50, 30, -50);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 0.5;
+    sunLight.shadow.camera.far = 200;
+    sunLight.shadow.camera.left = -50;
+    sunLight.shadow.camera.right = 50;
+    sunLight.shadow.camera.top = 50;
+    sunLight.shadow.camera.bottom = -50;
+    scene.add(sunLight);
+
+    // 补光
+    const fillLight = new THREE.DirectionalLight(0x4444ff, 0.3);
+    fillLight.position.set(-30, 20, 30);
+    scene.add(fillLight);
+}
+
+// 创建地形
+function createTerrain() {
+    // 地面
+    const groundGeometry = new THREE.PlaneGeometry(200, 200, 50, 50);
+
+    // 添加地形起伏
+    const positions = groundGeometry.attributes.position.array;
+    for (let i = 0; i < positions.length; i += 3) {
+        const x = positions[i];
+        const y = positions[i + 1];
+        positions[i + 2] = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 2 +
+                          Math.sin(x * 0.1) * Math.sin(y * 0.1) * 0.5;
+    }
+    groundGeometry.computeVertexNormals();
+
+    const groundMaterial = new THREE.MeshStandardMaterial({
+        color: 0x3d4c28,
+        roughness: 0.9,
+        metalness: 0.1
+    });
+
+    terrain = new THREE.Mesh(groundGeometry, groundMaterial);
+    terrain.rotation.x = -Math.PI / 2;
+    terrain.receiveShadow = true;
+    scene.add(terrain);
+
+    // 添加一些岩石
+    for (let i = 0; i < 20; i++) {
+        const rockGeometry = new THREE.DodecahedronGeometry(Math.random() * 2 + 0.5, 0);
+        const rockMaterial = new THREE.MeshStandardMaterial({
+            color: 0x555555,
+            roughness: 0.8
+        });
+        const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * 40 + 10;
+        rock.position.set(
+            Math.cos(angle) * distance,
+            1,
+            Math.sin(angle) * distance - 20
+        );
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        scene.add(rock);
+    }
+}
+
+// 创建坦克
+function createTank() {
+    tank = new THREE.Group();
+
+    // 坦克车身 - 注意：车身长轴在Z方向，前面是Z正方向
+    const bodyGeometry = new THREE.BoxGeometry(3, 1.2, 4);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4A5D23,
+        roughness: 0.6,
+        metalness: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.8;
+    body.castShadow = true;
+    tank.add(body);
+
+    // 坦克履带
+    const trackGeometry = new THREE.BoxGeometry(0.8, 0.6, 4.2);
+    const trackMaterial = new THREE.MeshStandardMaterial({
+        color: 0x333333,
+        roughness: 0.9
+    });
+
+    const leftTrack = new THREE.Mesh(trackGeometry, trackMaterial);
+    leftTrack.position.set(-1.6, 0.4, 0);
+    leftTrack.castShadow = true;
+    tank.add(leftTrack);
+
+    const rightTrack = new THREE.Mesh(trackGeometry, trackMaterial);
+    rightTrack.position.set(1.6, 0.4, 0);
+    rightTrack.castShadow = true;
+    tank.add(rightTrack);
+
+    // 炮塔
+    turret = new THREE.Group();
+
+    const turretGeometry = new THREE.CylinderGeometry(1, 1.2, 0.8, 8);
+    const turretMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4A5D23,
+        roughness: 0.6,
+        metalness: 0.3
+    });
+    const turretMesh = new THREE.Mesh(turretGeometry, turretMaterial);
+    turretMesh.position.y = 1.8;
+    turretMesh.castShadow = true;
+    turret.add(turretMesh);
+
+    // 炮管 - 指向Z轴正方向（前方），做长一点
+    barrel = new THREE.Group();
+
+    // 炮管长度从4增加到6
+    const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.2, 6, 8);
+    const barrelMaterial = new THREE.MeshStandardMaterial({
+        color: 0x333333,
+        roughness: 0.5,
+        metalness: 0.5
+    });
+    const barrelMesh = new THREE.Mesh(barrelGeometry, barrelMaterial);
+    // 炮管初始指向Z轴正方向（前方）
+    barrelMesh.rotation.x = -Math.PI / 2;
+    // 位置调整到炮管中心
+    barrelMesh.position.z = 3;
+    barrelMesh.castShadow = true;
+    barrel.add(barrelMesh);
+
+    // 炮口 - 相应调整位置
+    const muzzleGeometry = new THREE.CylinderGeometry(0.18, 0.15, 0.3, 8);
+    const muzzleMaterial = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        roughness: 0.4,
+        metalness: 0.7
+    });
+    const muzzle = new THREE.Mesh(muzzleGeometry, muzzleMaterial);
+    muzzle.rotation.x = -Math.PI / 2;
+    // 炮口在炮管前端
+    muzzle.position.z = 6.1;
+    barrel.add(muzzle);
+
+    turret.add(barrel);
+    tank.add(turret);
+
+    // 坦克放在原点，朝向Z轴正方向（前方）
+    // 相机放在坦克后方（Z轴负方向），看向前方
+    tank.position.set(0, 0, 0);
+    
+    scene.add(tank);
+}
+
+// 生成敌人
+function spawnEnemies() {
+    const enemyColors = [0x8B0000, 0x4B0082, 0x2F4F4F];
+
+    for (let i = 0; i < 8; i++) {
+        const enemy = new THREE.Group();
+
+        // 敌人坦克（简化版）
+        const bodyGeometry = new THREE.BoxGeometry(2, 1, 2.5);
+        const bodyMaterial = new THREE.MeshStandardMaterial({
+            color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
+            roughness: 0.6
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.position.y = 0.6;
+        body.castShadow = true;
+        enemy.add(body);
+
+        // 炮塔
+        const turretGeometry = new THREE.CylinderGeometry(0.6, 0.7, 0.5, 6);
+        const turret = new THREE.Mesh(turretGeometry, bodyMaterial);
+        turret.position.y = 1.4;
+        enemy.add(turret);
+
+        // 随机位置 - 在坦克前方（Z轴正方向）
+        const angle = (Math.PI / 6) * (i - 4) + (Math.random() - 0.5) * 0.3;
+        const distance = Math.random() * 30 + 25;
+
+        enemy.position.set(
+            Math.sin(angle) * distance,
+            0,
+            Math.cos(angle) * distance  // Z轴正方向是前方
+        );
+
+        enemy.userData = {
+            health: 100,
+            maxHealth: 100,
+            isAlive: true,
+            moveSpeed: Math.random() * 0.02 + 0.01,
+            moveDirection: Math.random() * Math.PI * 2
+        };
+
+        scene.add(enemy);
+        enemies.push(enemy);
+    }
+}
+
+// 创建环境粒子（烟雾/尘土）
+function createAmbientParticles() {
+    const particleCount = 200;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = (Math.random() - 0.5) * 100;
+        positions[i * 3 + 1] = Math.random() * 10;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 100 - 20;
+
+        // 黄昏色调
+        colors[i * 3] = 1;
+        colors[i * 3 + 1] = 0.6 + Math.random() * 0.4;
+        colors[i * 3 + 2] = 0.3 + Math.random() * 0.3;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: 0.3,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending
+    });
+
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+    particles.push(particleSystem);
+}
+
+// 绑定鼠标事件
+function bindMouseEvents() {
+    const canvas = document.getElementById('gameCanvas');
+    const container = document.getElementById('gameScreen');
+    const crosshair = document.getElementById('crosshair');
+
+    // 鼠标移动 - 控制瞄准和准星
+    document.addEventListener('mousemove', (e) => {
+        if (!GameState.isPlaying) return;
+
+        const rect = container.getBoundingClientRect();
+        
+        // 计算鼠标在屏幕上的相对位置 (-1 到 1)
+        const rawX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const rawY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // 更新全局鼠标变量（用于炮管控制）
+        mouseX = rawX;
+        mouseY = rawY;
+
+        // 更新准星位置（跟随鼠标）
+        if (crosshair) {
+            const percentX = ((e.clientX - rect.left) / rect.width) * 100;
+            const percentY = ((e.clientY - rect.top) / rect.height) * 100;
+            crosshair.style.left = percentX + '%';
+            crosshair.style.top = percentY + '%';
+            crosshair.style.transform = 'translate(-50%, -50%)';
+        }
+    });
+
+    // 鼠标点击 - 发射炮弹
+    document.addEventListener('mousedown', (e) => {
+        if (!GameState.isPlaying) return;
+        if (e.button === 0) {
+            e.preventDefault();
+            fireProjectile();
+        }
+    });
+}
+
+// 发射炮弹
+function fireProjectile() {
+    const now = performance.now();
+    const config = WeaponConfig[GameState.weaponLevel];
+
+    // 检查射速限制
+    if (now - GameState.lastFireTime < config.fireRate) return;
+
+    // 检查弹药
+    if (GameState.ammo <= 0) {
+        showMessage('弹药耗尽！', 1000);
+        return;
+    }
+
+    GameState.lastFireTime = now;
+    GameState.ammo--;
+    GameState.shotsFired++;
+    updateHUD();
+
+    // 播放音效
+    playShootSound();
+
+    // 后坐力动画
+    barrel.position.z = -0.3;
+    setTimeout(() => {
+        barrel.position.z = 0;
+    }, 100);
+
+    // 创建炮弹 - 加大尺寸和效果
+    const projectileGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const projectileMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFF6B35,
+        emissive: 0xFF4500,
+        emissiveIntensity: 1.0,
+        roughness: 0.3,
+        metalness: 0.8
+    });
+    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+    
+    // 添加炮弹光晕效果
+    const glowGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    projectile.add(glow);
+    
+    // 添加炮弹尾焰光
+    const projectileLight = new THREE.PointLight(0xFF6B35, 1, 10);
+    projectileLight.position.set(0, 0, 0);
+    projectile.add(projectileLight);
+
+    // 获取炮管前端世界位置（炮管长度现在是6，前端在Z=6.1）
+    const barrelTip = new THREE.Vector3(0, 0, 6.1);
+    barrelTip.applyMatrix4(barrel.matrixWorld);
+    projectile.position.copy(barrelTip);
+
+    // 计算发射方向（考虑精准度）
+    const accuracy = config.accuracy;
+    const spread = (1 - accuracy) * 0.1;
+
+    const direction = new THREE.Vector3(0, 0, 1);
+    direction.applyQuaternion(turret.quaternion);
+    direction.applyQuaternion(tank.quaternion);
+    direction.x += (Math.random() - 0.5) * spread;
+    direction.y += (Math.random() - 0.5) * spread;
+    direction.normalize();
+
+    const speed = 30 + config.damage * 0.3;
+
+    projectile.userData = {
+        velocity: direction.multiplyScalar(speed),
+        damage: config.damage,
+        created: now
+    };
+
+    scene.add(projectile);
+    projectiles.push(projectile);
+
+    // 炮口闪光
+    createMuzzleFlash(barrelTip);
+}
+
+// 创建炮口闪光
+function createMuzzleFlash(position) {
+    const flashGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+    const flashMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.8
+    });
+    const flash = new THREE.Mesh(flashGeometry, flashMaterial);
+    flash.position.copy(position);
+    scene.add(flash);
+
+    // 动画
+    let scale = 1;
+    const animateFlash = () => {
+        scale += 0.5;
+        flash.scale.set(scale, scale, scale);
+        flash.material.opacity -= 0.1;
+
+        if (flash.material.opacity > 0) {
+            requestAnimationFrame(animateFlash);
+        } else {
+            scene.remove(flash);
+            flash.geometry.dispose();
+            flash.material.dispose();
+        }
+    };
+    animateFlash();
+}
+
+// 创建爆炸效果 - 更夸张的效果
+function createExplosion(position, scale = 1) {
+    playExplosionSound();
+
+    // 爆炸光 - 更亮更大
+    const light = new THREE.PointLight(0xFF6B35, 5, 50);
+    light.position.copy(position);
+    scene.add(light);
+
+    // 爆炸光晕
+    const glowGeometry = new THREE.SphereGeometry(2 * scale, 16, 16);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFAA00,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    glow.position.copy(position);
+    scene.add(glow);
+
+    // 动画光晕
+    let glowScale = 1;
+    const animateGlow = () => {
+        glowScale += 0.3;
+        glow.scale.set(glowScale, glowScale, glowScale);
+        glow.material.opacity -= 0.05;
+        if (glow.material.opacity > 0) {
+            requestAnimationFrame(animateGlow);
+        } else {
+            scene.remove(glow);
+            glow.geometry.dispose();
+            glow.material.dispose();
+        }
+    };
+    animateGlow();
+
+    setTimeout(() => {
+        scene.remove(light);
+    }, 300);
+
+    // 爆炸粒子 - 更多更大
+    const particleCount = 80;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    const colors = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+        positions[i * 3] = position.x;
+        positions[i * 3 + 1] = position.y;
+        positions[i * 3 + 2] = position.z;
+
+        // 更快的爆炸速度
+        const velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 20,
+            Math.random() * 20 + 5,
+            (Math.random() - 0.5) * 20
+        );
+        velocities.push(velocity);
+
+        // 随机颜色（橙色到黄色）
+        colors[i * 3] = 1.0;
+        colors[i * 3 + 1] = 0.3 + Math.random() * 0.5;
+        colors[i * 3 + 2] = 0;
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+        size: 1.0 * scale,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        vertexColors: true
+    });
+
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+
+    // 动画
+    let frame = 0;
+    const animateExplosion = () => {
+        frame++;
+        const positions = particleSystem.geometry.attributes.position.array;
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] += velocities[i].x * 0.016;
+            positions[i * 3 + 1] += velocities[i].y * 0.016;
+            positions[i * 3 + 2] += velocities[i].z * 0.016;
+
+            velocities[i].y -= 15 * 0.016; // 更强的重力
+            velocities[i].multiplyScalar(0.98); // 空气阻力
+        }
+
+        particleSystem.geometry.attributes.position.needsUpdate = true;
+        particleSystem.material.opacity -= 0.015;
+
+        if (particleSystem.material.opacity > 0 && frame < 80) {
+            requestAnimationFrame(animateExplosion);
+        } else {
+            scene.remove(particleSystem);
+            geometry.dispose();
+            material.dispose();
+        }
+    };
+    animateExplosion();
+
+    // 添加冲击波效果
+    const shockwaveGeometry = new THREE.RingGeometry(0.1, 0.5, 32);
+    const shockwaveMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFFFFF,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending
+    });
+    const shockwave = new THREE.Mesh(shockwaveGeometry, shockwaveMaterial);
+    shockwave.position.copy(position);
+    shockwave.rotation.x = -Math.PI / 2;
+    scene.add(shockwave);
+
+    let shockwaveScale = 1;
+    const animateShockwave = () => {
+        shockwaveScale += 0.5;
+        shockwave.scale.set(shockwaveScale, shockwaveScale, shockwaveScale);
+        shockwave.material.opacity -= 0.03;
+        if (shockwave.material.opacity > 0) {
+            requestAnimationFrame(animateShockwave);
+        } else {
+            scene.remove(shockwave);
+            shockwave.geometry.dispose();
+            shockwave.material.dispose();
+        }
+    };
+    animateShockwave();
+}
+
+// 动画循环
+function animate() {
+    if (!GameState.isPlaying) return;
+
+    animationId = requestAnimationFrame(animate);
+
+    const now = performance.now();
+    const deltaTime = (now - lastTime) / 1000;
+    lastTime = now;
+
+    // 更新炮塔旋转 - 让炮管精确指向准星方向
+    if (turret && barrel && camera) {
+        // 将鼠标位置转换为世界坐标方向
+        const mouseVector = new THREE.Vector3(mouseX, mouseY, 0.5);
+        mouseVector.unproject(camera);
+        
+        // 计算从相机到鼠标点击点的方向
+        const dir = mouseVector.sub(camera.position).normalize();
+        
+        // 计算与坦克前方（Z轴正方向）的夹角
+        const forward = new THREE.Vector3(0, 0, 1);
+        
+        // 水平角度（Y轴旋转）
+        const targetY = Math.atan2(dir.x, dir.z);
+        
+        // 垂直角度（X轴旋转）- 根据鼠标Y位置计算仰角
+        const targetX = -mouseY * 0.5; // 限制仰角范围
+        
+        // 平滑插值
+        turret.rotation.y += (targetY - turret.rotation.y) * 8 * deltaTime;
+        barrel.rotation.x += (targetX - barrel.rotation.x) * 8 * deltaTime;
+
+        // 限制仰角
+        barrel.rotation.x = Math.max(-0.3, Math.min(0.4, barrel.rotation.x));
+    }
+
+    // 更新相机位置 - 相机放在坦克尾部，能看到长炮管
+    if (camera && turret && barrel) {
+        // 相机放在坦克尾部（车身后面），上方稍微高一点
+        // 坦克车身长4单位，尾部在Z=-2处，相机放在Z=-3.5（车身后面）
+        const cameraPos = new THREE.Vector3(0, 3.5, -4);
+        cameraPos.applyMatrix4(tank.matrixWorld);
+        
+        camera.position.copy(cameraPos);
+        
+        // 相机看向炮管前端稍远处，这样能看到完整的炮管
+        const lookAtPos = new THREE.Vector3(0, 1, 15);
+        lookAtPos.applyMatrix4(tank.matrixWorld);
+        camera.lookAt(lookAtPos);
+    }
+
+    // 更新抛物线轨迹预览
+    updateTrajectoryLine();
+
+    // 更新炮弹
+    updateProjectiles(deltaTime);
+
+    // 更新敌人
+    updateEnemies(deltaTime);
+
+    // 更新粒子
+    updateParticles();
+
+    renderer.render(scene, camera);
+}
+
+// 更新炮弹
+function updateProjectiles(deltaTime) {
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        const projectile = projectiles[i];
+        const velocity = projectile.userData.velocity;
+
+        // 应用重力
+        velocity.y -= 9.8 * deltaTime;
+
+        // 更新位置
+        projectile.position.x += velocity.x * deltaTime;
+        projectile.position.y += velocity.y * deltaTime;
+        projectile.position.z += velocity.z * deltaTime;
+
+        // 更新旋转以匹配速度方向
+        const direction = velocity.clone().normalize();
+        projectile.lookAt(
+            projectile.position.x + direction.x,
+            projectile.position.y + direction.y,
+            projectile.position.z + direction.z
+        );
+
+        // 检查碰撞
+        let hit = false;
+
+        // 检查与敌人的碰撞
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const enemy = enemies[j];
+            if (!enemy.userData.isAlive) continue;
+
+            const distance = projectile.position.distanceTo(enemy.position);
+            if (distance < 2) {
+                // 击中敌人
+                hit = true;
+                enemy.userData.health -= projectile.userData.damage;
+
+                if (enemy.userData.health <= 0) {
+                    // 消灭敌人
+                    enemy.userData.isAlive = false;
+                    createExplosion(enemy.position, 1.5);
+                    scene.remove(enemy);
+                    enemies.splice(j, 1);
+
+                    GameState.kills++;
+                    GameState.score += 100;
+                    GameState.shotsHit++;
+                    updateHUD();
+
+                    showMessage('+100', 500);
+
+                    // 生成新敌人
+                    setTimeout(() => spawnSingleEnemy(), 2000);
+                } else {
+                    createExplosion(projectile.position, 0.5);
+                    playHitSound();
+                }
+                break;
+            }
+        }
+
+        // 检查地面碰撞
+        if (!hit && projectile.position.y <= 0) {
+            createExplosion(projectile.position, 0.3);
+            hit = true;
+        }
+
+        // 检查射程
+        const age = (performance.now() - projectile.userData.created) / 1000;
+        if (age > 3) hit = true;
+
+        // 移除炮弹
+        if (hit) {
+            scene.remove(projectile);
+            projectile.geometry.dispose();
+            projectile.material.dispose();
+            projectiles.splice(i, 1);
+        }
+    }
+}
+
+// 更新抛物线轨迹预览
+function updateTrajectoryLine() {
+    if (!GameState.isPlaying || !turret || !barrel) return;
+
+    // 移除旧的轨迹线
+    if (trajectoryLine) {
+        scene.remove(trajectoryLine);
+        trajectoryLine.geometry.dispose();
+        trajectoryLine.material.dispose();
+        trajectoryLine = null;
+    }
+
+    // 计算发射参数
+    const config = WeaponConfig[GameState.weaponLevel];
+    const accuracy = config.accuracy;
+    const spread = (1 - accuracy) * 0.05;
+
+    const direction = new THREE.Vector3(0, 0, 1);
+    direction.applyQuaternion(turret.quaternion);
+    direction.applyQuaternion(tank.quaternion);
+    direction.x += (Math.random() - 0.5) * spread;
+    direction.y += (Math.random() - 0.5) * spread;
+    direction.normalize();
+
+    const speed = 30 + config.damage * 0.3;
+    const velocity = direction.multiplyScalar(speed);
+
+    // 预测轨迹点
+    const points = [];
+    const startPos = new THREE.Vector3(0, 0, 6.1);
+    startPos.applyMatrix4(barrel.matrixWorld);
+
+    let pos = startPos.clone();
+    let vel = velocity.clone();
+    const timeStep = 0.05;
+    const maxTime = 2;
+
+    for (let t = 0; t < maxTime; t += timeStep) {
+        points.push(pos.clone());
+        vel.y -= 9.8 * timeStep;
+        pos.x += vel.x * timeStep;
+        pos.y += vel.y * timeStep;
+        pos.z += vel.z * timeStep;
+
+        // 如果落到地面以下，停止
+        if (pos.y < 0) break;
+    }
+
+    // 创建轨迹线
+    if (points.length > 1) {
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({
+            color: 0x00FF00,
+            transparent: true,
+            opacity: 0.6,
+            linewidth: 2
+        });
+        trajectoryLine = new THREE.Line(geometry, material);
+        scene.add(trajectoryLine);
+    }
+}
+
+// 生成单个敌人
+function spawnSingleEnemy() {
+    if (!GameState.isPlaying) return;
+
+    const enemyColors = [0x8B0000, 0x4B0082, 0x2F4F4F];
+    const enemy = new THREE.Group();
+
+    const bodyGeometry = new THREE.BoxGeometry(2, 1, 2.5);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
+        roughness: 0.6
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.6;
+    body.castShadow = true;
+    enemy.add(body);
+
+    const turretGeometry = new THREE.CylinderGeometry(0.6, 0.7, 0.5, 6);
+    const turret = new THREE.Mesh(turretGeometry, bodyMaterial);
+    turret.position.y = 1.4;
+    enemy.add(turret);
+
+    const angle = (Math.random() - 0.5) * Math.PI / 2;
+    const distance = Math.random() * 20 + 30;
+
+    enemy.position.set(
+        Math.sin(angle) * distance,
+        0,
+        Math.cos(angle) * distance  // Z轴正方向是前方
+    );
+
+    enemy.userData = {
+        health: 100,
+        maxHealth: 100,
+        isAlive: true,
+        moveSpeed: Math.random() * 0.02 + 0.01,
+        moveDirection: Math.random() * Math.PI * 2
+    };
+
+    scene.add(enemy);
+    enemies.push(enemy);
+}
+
+// 更新敌人
+function updateEnemies(deltaTime) {
+    enemies.forEach(enemy => {
+        if (!enemy.userData.isAlive) return;
+
+        // 简单的移动AI
+        enemy.userData.moveDirection += (Math.random() - 0.5) * 0.1;
+
+        enemy.position.x += Math.cos(enemy.userData.moveDirection) * enemy.userData.moveSpeed;
+        enemy.position.z += Math.sin(enemy.userData.moveDirection) * enemy.userData.moveSpeed;
+
+        // 限制范围
+        const distance = Math.sqrt(enemy.position.x ** 2 + enemy.position.z ** 2);
+        if (distance > 50) {
+            enemy.userData.moveDirection += Math.PI;
+        }
+
+        // 面向玩家（玩家在Z=0处）
+        enemy.lookAt(0, 0, 0);
+    });
+}
+
+// 更新粒子
+function updateParticles() {
+    particles.forEach(particle => {
+        const positions = particle.geometry.attributes.position.array;
+        for (let i = 0; i < positions.length / 3; i++) {
+            positions[i * 3 + 1] += 0.02;
+            if (positions[i * 3 + 1] > 10) {
+                positions[i * 3 + 1] = 0;
+            }
+        }
+        particle.geometry.attributes.position.needsUpdate = true;
+        particle.rotation.y += 0.0005;
+    });
+}
+
+// 窗口大小调整
+function onWindowResize() {
+    const container = document.getElementById('gameScreen');
+
+    camera.aspect = container.clientWidth / container.clientHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+// 清理资源
+function cleanupThreeJS() {
+    window.removeEventListener('resize', onWindowResize);
+
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+
+    // 清理炮弹
+    projectiles.forEach(p => {
+        scene.remove(p);
+        p.geometry.dispose();
+        p.material.dispose();
+    });
+    projectiles = [];
+
+    // 清理敌人
+    enemies.forEach(e => {
+        scene.remove(e);
+    });
+    enemies = [];
+
+    // 清理粒子
+    particles.forEach(p => {
+        scene.remove(p);
+        p.geometry.dispose();
+        p.material.dispose();
+    });
+    particles = [];
+
+    // 清理场景
+    if (scene) {
+        while (scene.children.length > 0) {
+            const object = scene.children[0];
+            scene.remove(object);
+        }
+    }
+
+    if (renderer) {
+        renderer.dispose();
+        renderer = null;
+    }
+
+    scene = null;
+    camera = null;
+    tank = null;
+    barrel = null;
+    turret = null;
+}

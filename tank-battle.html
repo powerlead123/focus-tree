@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数学错题坦克大战 - 3D版</title>
+    <link rel="stylesheet" href="tank-battle.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <!-- 开始页面 - 错题录入 -->
+    <div id="startScreen" class="screen active">
+        <div class="start-container">
+            <div class="title-section">
+                <div class="tank-icon">🎖️</div>
+                <h1 class="main-title">数学错题坦克大战</h1>
+                <p class="subtitle">认真做作业，坦克更强悍！</p>
+            </div>
+
+            <div class="mistake-input-section">
+                <h2>📚 今天数学错了几道题？</h2>
+                <div class="input-container">
+                    <button class="btn-adjust" onclick="adjustMistakes(-1)">−</button>
+                    <div class="mistake-display">
+                        <span id="mistakeCount">0</span>
+                        <span class="unit">题</span>
+                    </div>
+                    <button class="btn-adjust" onclick="adjustMistakes(1)">+</button>
+                </div>
+                <div class="emotion-feedback" id="emotionFeedback">😄 完美！继续保持！</div>
+            </div>
+
+            <div class="weapon-preview-section">
+                <h3>🎯 坦克状态预览</h3>
+                <div class="tank-status" id="tankStatus">
+                    <div class="status-header">
+                        <span class="status-name" id="statusName">精英坦克</span>
+                        <span class="status-stars" id="statusStars">⭐⭐⭐⭐⭐</span>
+                    </div>
+                    <div class="radar-chart">
+                        <canvas id="radarCanvas" width="200" height="200"></canvas>
+                    </div>
+                    <div class="stats-list">
+                        <div class="stat-item">
+                            <span class="stat-label">射速</span>
+                            <div class="stat-bar"><div class="stat-fill" id="statFireRate" style="width: 100%"></div></div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">威力</span>
+                            <div class="stat-bar"><div class="stat-fill" id="statPower" style="width: 100%"></div></div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">精准</span>
+                            <div class="stat-bar"><div class="stat-fill" id="statAccuracy" style="width: 100%"></div></div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">弹药</span>
+                            <div class="stat-bar"><div class="stat-fill" id="statAmmo" style="width: 100%"></div></div>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">射程</span>
+                            <div class="stat-bar"><div class="stat-fill" id="statRange" style="width: 100%"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-start" onclick="startGame()">
+                <span class="btn-text">🚀 进入战场</span>
+                <span class="btn-shine"></span>
+            </button>
+            <button class="btn-back" onclick="window.location.href='home.html'">返回首页</button>
+        </div>
+    </div>
+
+    <!-- 游戏页面 -->
+    <div id="gameScreen" class="screen">
+        <!-- 3D Canvas -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD界面 -->
+        <div class="hud">
+            <!-- 左上角 - 分数和时间 -->
+            <div class="hud-top-left">
+                <div class="hud-item">
+                    <span class="hud-icon">🎯</span>
+                    <span class="hud-value" id="scoreDisplay">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-icon">⏱️</span>
+                    <span class="hud-value" id="timeDisplay">60</span>
+                </div>
+            </div>
+
+            <!-- 右上角 - 击毁数 -->
+            <div class="hud-top-right">
+                <div class="hud-item">
+                    <span class="hud-icon">💥</span>
+                    <span class="hud-value" id="killDisplay">0</span>
+                </div>
+            </div>
+
+            <!-- 准星 -->
+            <div class="crosshair" id="crosshair">
+                <div class="crosshair-center"></div>
+                <div class="crosshair-line horizontal"></div>
+                <div class="crosshair-line vertical"></div>
+                <div class="crosshair-ring"></div>
+            </div>
+
+            <!-- 底部 - 武器状态 -->
+            <div class="hud-bottom">
+                <div class="ammo-display">
+                    <span class="ammo-icon">🔫</span>
+                    <span class="ammo-count" id="ammoDisplay">30</span>
+                    <span class="ammo-total">/ <span id="ammoTotal">30</span></span>
+                </div>
+                <div class="weapon-bars">
+                    <div class="weapon-bar-item">
+                        <span class="bar-label">射速</span>
+                        <div class="mini-bar"><div class="mini-fill" id="hudFireRate"></div></div>
+                    </div>
+                    <div class="weapon-bar-item">
+                        <span class="bar-label">威力</span>
+                        <div class="mini-bar"><div class="mini-fill" id="hudPower"></div></div>
+                    </div>
+                    <div class="weapon-bar-item">
+                        <span class="bar-label">精准</span>
+                        <div class="mini-bar"><div class="mini-fill" id="hudAccuracy"></div></div>
+                    </div>
+                </div>
+                <button class="btn-exit" onclick="exitGame()">退出</button>
+            </div>
+        </div>
+
+        <!-- 游戏消息 -->
+        <div class="game-message" id="gameMessage"></div>
+    </div>
+
+    <!-- 结果页面 -->
+    <div id="resultScreen" class="screen">
+        <div class="result-container">
+            <div class="result-header">
+                <div class="medal" id="medal">🏆</div>
+                <h1 class="result-title">战斗结束！</h1>
+            </div>
+
+            <div class="result-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">💥</div>
+                    <div class="stat-value" id="resultKills">0</div>
+                    <div class="stat-label">击毁敌人</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value" id="resultScore">0</div>
+                    <div class="stat-label">总得分</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎖️</div>
+                    <div class="stat-value" id="resultRank">S</div>
+                    <div class="stat-label">评级</div>
+                </div>
+            </div>
+
+            <div class="reward-section">
+                <div class="coin-reward">
+                    <span class="coin-icon">🪙</span>
+                    <span class="coin-text">获得 <span id="rewardCoins">0</span> 金币</span>
+                </div>
+            </div>
+
+            <div class="encouragement" id="encouragement">
+                🏆 完美！你是数学小天才！坦克状态最佳！
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="playAgain()">再来一局</button>
+                <button class="btn-secondary" onclick="window.location.href='home.html'">返回首页</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="tank-battle.js"></script>
+</body>
+</html>
