@@ -523,31 +523,36 @@ function updateExtraTank(deltaTime) {
                 // 计算目标炮塔角度
                 const targetTurretY = aimAngles.horizontal - extraTank.rotation.y;
                 
-                // 平滑旋转炮塔 - 额外坦克旋转更慢
-                const turretRotationSpeed = 1.5;
+                // 计算当前角度差（在旋转之前）
                 let turretDiff = targetTurretY - extraTankTurret.rotation.y;
                 while (turretDiff > Math.PI) turretDiff -= Math.PI * 2;
                 while (turretDiff < -Math.PI) turretDiff += Math.PI * 2;
-                extraTankTurret.rotation.y += turretDiff * turretRotationSpeed * 0.016;
                 
-                // 平滑调整炮管仰角
-                const barrelRotationSpeed = 1.5;
+                // 计算目标炮管仰角
                 const targetBarrelX = -aimAngles.vertical;
                 let barrelDiff = targetBarrelX - extraTankBarrel.rotation.x;
-                extraTankBarrel.rotation.x += barrelDiff * barrelRotationSpeed * 0.016;
                 
-                // 限制仰角
-                extraTankBarrel.rotation.x = Math.max(-0.5, Math.min(0.5, extraTankBarrel.rotation.x));
-                
-                // 只有当瞄准足够精确时才射击
-                const aimThreshold = 0.12; // 额外坦克精度稍低
+                // 检查是否已经瞄准好
+                const aimThreshold = 0.1; // 额外坦克精度稍低
                 const isAimed = Math.abs(turretDiff) < aimThreshold && Math.abs(barrelDiff) < aimThreshold;
                 
-                // 自动射击（额外坦克射速较慢）
+                // 如果已经瞄准好，并且满足射击间隔，才发射
                 const now = performance.now();
-                if (isAimed && now - (extraTank.userData.lastFireTime || 0) > 1000) {
+                const canFire = now - (extraTank.userData.lastFireTime || 0) > 1000;
+                
+                if (isAimed && canFire) {
                     extraTank.userData.lastFireTime = now;
                     fireProjectileFromTank(extraTank, extraTankTurret, extraTankBarrel);
+                } else {
+                    // 否则继续瞄准（平滑旋转）
+                    const turretRotationSpeed = 1.2; // 额外坦克旋转更慢
+                    extraTankTurret.rotation.y += turretDiff * turretRotationSpeed * 0.016;
+                    
+                    const barrelRotationSpeed = 1.2;
+                    extraTankBarrel.rotation.x += barrelDiff * barrelRotationSpeed * 0.016;
+                    
+                    // 限制仰角
+                    extraTankBarrel.rotation.x = Math.max(-0.5, Math.min(0.5, extraTankBarrel.rotation.x));
                 }
             }
         }
@@ -1321,7 +1326,7 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// 计算抛物线射击角度
+// 计算抛物线射击角度 - 使用更可靠的迭代方法
 function calculateParabolicAngle(targetPos, startPos, initialSpeed) {
     const dx = targetPos.x - startPos.x;
     const dy = targetPos.y - startPos.y;
@@ -1330,33 +1335,53 @@ function calculateParabolicAngle(targetPos, startPos, initialSpeed) {
     const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
     const gravity = 9.8;
     
-    // 使用抛物线公式计算最佳仰角
-    // v^2 * sin(2θ) = g * d
-    // 解出 θ
-    const v2 = initialSpeed * initialSpeed;
-    const gd = gravity * horizontalDistance;
-    
-    // 检查是否能到达目标
-    if (v2 < gd) {
-        return null; // 速度不足以到达目标
+    // 如果水平距离为0，直接返回
+    if (horizontalDistance < 0.1) {
+        return {
+            vertical: 0,
+            horizontal: Math.atan2(dx, dz),
+            distance: 0
+        };
     }
     
-    // 计算两个可能的解（高弧线和低弧线），选择低弧线（更直接）
-    const discriminant = v2 * v2 - gravity * (gravity * horizontalDistance * horizontalDistance + 2 * dy * v2);
+    // 使用迭代法找到最佳发射角度
+    // 尝试不同的仰角，找到能击中目标的
+    let bestAngle = 0.3; // 默认30度
+    let minError = Infinity;
     
-    if (discriminant < 0) {
-        return null; // 无解
+    // 在0到60度范围内搜索最佳角度
+    for (let angleDeg = 5; angleDeg <= 60; angleDeg += 1) {
+        const angleRad = angleDeg * Math.PI / 180;
+        
+        // 计算在这个角度下的落点
+        const vx = initialSpeed * Math.cos(angleRad);
+        const vy = initialSpeed * Math.sin(angleRad);
+        
+        // 计算飞行时间（水平方向）
+        const time = horizontalDistance / vx;
+        
+        // 计算垂直方向的位移
+        const verticalDisplacement = vy * time - 0.5 * gravity * time * time;
+        
+        // 计算误差
+        const error = Math.abs(verticalDisplacement - dy);
+        
+        if (error < minError) {
+            minError = error;
+            bestAngle = angleRad;
+        }
     }
     
-    // 选择较小的角度（低弧线）
-    const tanTheta = (v2 - Math.sqrt(discriminant)) / (gravity * horizontalDistance);
-    const angle = Math.atan(tanTheta);
+    // 如果误差太大，说明无法到达
+    if (minError > 5) {
+        return null;
+    }
     
     // 计算水平方向角度
     const horizontalAngle = Math.atan2(dx, dz);
     
     return {
-        vertical: angle,
+        vertical: bestAngle,
         horizontal: horizontalAngle,
         distance: horizontalDistance
     };
@@ -1445,28 +1470,35 @@ function updateTankAutoFire() {
             // 计算目标炮塔角度（相对于坦克）
             const targetTurretY = aimAngles.horizontal - tank.rotation.y;
             
-            // 平滑旋转炮塔 - 降低旋转速度
-            const turretRotationSpeed = 2.0;
+            // 计算当前角度差（在旋转之前）
             let turretDiff = targetTurretY - turret.rotation.y;
             while (turretDiff > Math.PI) turretDiff -= Math.PI * 2;
             while (turretDiff < -Math.PI) turretDiff += Math.PI * 2;
-            turret.rotation.y += turretDiff * turretRotationSpeed * 0.016;
             
-            // 平滑调整炮管仰角
-            const barrelRotationSpeed = 2.0;
-            const targetBarrelX = -aimAngles.vertical; // 负号因为Three.js旋转方向
+            // 计算目标炮管仰角
+            const targetBarrelX = -aimAngles.vertical;
             let barrelDiff = targetBarrelX - barrel.rotation.x;
-            barrel.rotation.x += barrelDiff * barrelRotationSpeed * 0.016;
             
-            // 限制仰角
-            barrel.rotation.x = Math.max(-0.5, Math.min(0.5, barrel.rotation.x));
-            
-            // 只有当瞄准足够精确时才射击
-            const aimThreshold = 0.1; // 瞄准精度阈值
+            // 检查是否已经瞄准好
+            const aimThreshold = 0.08; // 更严格的瞄准精度
             const isAimed = Math.abs(turretDiff) < aimThreshold && Math.abs(barrelDiff) < aimThreshold;
             
-            if (isAimed) {
+            // 如果已经瞄准好，并且满足射击间隔，才发射
+            const now = performance.now();
+            const canFire = now - GameState.lastFireTime >= config.fireRate;
+            
+            if (isAimed && canFire) {
                 fireProjectile();
+            } else {
+                // 否则继续瞄准（平滑旋转）
+                const turretRotationSpeed = 1.5; // 降低旋转速度，更稳定
+                turret.rotation.y += turretDiff * turretRotationSpeed * 0.016;
+                
+                const barrelRotationSpeed = 1.5;
+                barrel.rotation.x += barrelDiff * barrelRotationSpeed * 0.016;
+                
+                // 限制仰角
+                barrel.rotation.x = Math.max(-0.5, Math.min(0.5, barrel.rotation.x));
             }
         }
     }
