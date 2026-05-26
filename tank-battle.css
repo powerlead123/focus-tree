@@ -7,12 +7,116 @@
     box-sizing: border-box;
 }
 
-body {
+html, body {
     font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0c29 100%);
     min-height: 100vh;
-    overflow-y: auto;
+    overflow: hidden;
     color: #fff;
+}
+
+/* ========== 密码锁 ========== */
+.lock-overlay {
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+
+.lock-overlay.hidden {
+    display: none;
+}
+
+.lock-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 32px 24px;
+    width: 100%;
+    max-width: 320px;
+}
+
+.lock-icon {
+    font-size: 48px;
+    line-height: 1;
+}
+
+.lock-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #f1f5f9;
+}
+
+.lock-sub {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.lock-real-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 18px;
+    border-radius: 8px;
+    border: 2px solid #475569;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    margin-bottom: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.lock-real-input:focus {
+    border-color: #3b82f6;
+}
+
+.lock-error {
+    color: #ef4444;
+    font-size: 14px;
+    height: 20px;
+    margin-bottom: 15px;
+}
+
+.lock-verify {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: none;
+    background: #3b82f6;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lock-verify:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+}
+
+.lock-back {
+    background: transparent;
+    border: none;
+    color: #475569;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin-top: 10px;
+}
+
+.lock-back:hover {
+    color: #94a3b8;
+}
+
+@keyframes lockShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
 }
 
 /* ========== 页面切换 ========== */

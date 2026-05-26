@@ -41,16 +41,21 @@ const GameState = {
     // 坦克状态
     tankState: 'moving', // 'moving' | 'aiming' | 'firing'
     currentTarget: null,
-    lastShotHit: false
+    lastShotHit: false,
+    // Boss战
+    bossSpawned: false,
+    bossDefeated: false,
+    bugsToKill: 15, // 需要消灭的糊涂虫数量
+    bugsKilled: 0
 };
 
 // 武器配置
 const WeaponConfig = {
-    5: { name: '精英坦克', stars: '⭐⭐⭐⭐⭐', fireRate: 200, damage: 100, accuracy: 0.95, ammo: 30, range: 100, color: '#FFD700' },
-    4: { name: '优秀坦克', stars: '⭐⭐⭐⭐', fireRate: 300, damage: 80, accuracy: 0.85, ammo: 25, range: 80, color: '#7eb03c' },
-    3: { name: '标准坦克', stars: '⭐⭐⭐', fireRate: 400, damage: 60, accuracy: 0.75, ammo: 20, range: 60, color: '#FFA500' },
-    2: { name: '受损坦克', stars: '⭐⭐', fireRate: 500, damage: 40, accuracy: 0.65, ammo: 15, range: 50, color: '#FF6B35' },
-    1: { name: '故障坦克', stars: '⭐', fireRate: 600, damage: 20, accuracy: 0.55, ammo: 10, range: 40, color: '#FF3333' }
+    5: { name: '精英坦克', stars: '⭐⭐⭐⭐⭐', fireRate: 1000, damage: 100, accuracy: 0.95, ammo: 30, range: 100, color: '#FFD700' },
+    4: { name: '优秀坦克', stars: '⭐⭐⭐⭐', fireRate: 1200, damage: 80, accuracy: 0.85, ammo: 25, range: 80, color: '#7eb03c' },
+    3: { name: '标准坦克', stars: '⭐⭐⭐', fireRate: 1400, damage: 60, accuracy: 0.75, ammo: 20, range: 60, color: '#FFA500' },
+    2: { name: '受损坦克', stars: '⭐⭐', fireRate: 1600, damage: 40, accuracy: 0.65, ammo: 15, range: 50, color: '#FF6B35' },
+    1: { name: '故障坦克', stars: '⭐', fireRate: 2000, damage: 20, accuracy: 0.55, ammo: 10, range: 40, color: '#FF3333' }
 };
 
 // 鼓励语
@@ -408,6 +413,9 @@ function startGame() {
     GameState.maxAmmo = config.ammo;
     GameState.score = 0;
     GameState.kills = 0;
+    GameState.bugsKilled = 0;
+    GameState.bossSpawned = false;
+    GameState.bossDefeated = false;
     GameState.timeRemaining = 60;
     GameState.shotsFired = 0;
     GameState.shotsHit = 0;
@@ -553,25 +561,53 @@ function createExtraTank() {
 
 // 更新额外坦克（自动战斗）
 function updateExtraTank(deltaTime) {
-    if (!extraTank || enemies.length === 0) return;
+    if (!extraTank) return;
     
-    // 找到最近的敌人
-    let nearestEnemy = null;
+    // 找到主坦克当前目标
+    const mainTankTarget = GameState.currentTarget;
+    
+    // 额外坦克选择目标：优先选择主坦克没有攻击的敌人
+    let targetEnemy = null;
     let minDistance = Infinity;
     
-    for (const enemy of enemies) {
-        if (!enemy.userData.isAlive) continue;
-        const distance = extraTank.position.distanceTo(enemy.position);
-        if (distance < minDistance) {
-            minDistance = distance;
-            nearestEnemy = enemy;
+    // 收集所有存活的敌人
+    const aliveEnemies = enemies.filter(e => e.userData.isAlive);
+    
+    // 如果没有普通敌人，检查Boss
+    if (aliveEnemies.length === 0) {
+        if (boss && boss.userData.isAlive) {
+            targetEnemy = boss;
+            minDistance = extraTank.position.distanceTo(boss.position);
+        }
+        if (!targetEnemy) return;
+    } else {
+        // 有普通敌人，选择目标
+        // 但如果主坦克在攻击Boss，额外坦克也攻击Boss
+        if (mainTankTarget && mainTankTarget.userData.isBoss && boss && boss.userData.isAlive) {
+            targetEnemy = boss;
+            minDistance = extraTank.position.distanceTo(boss.position);
+        } else if (aliveEnemies.length === 1) {
+            // 只有一个敌人，两个坦克攻击同一个
+            targetEnemy = aliveEnemies[0];
+            minDistance = extraTank.position.distanceTo(targetEnemy.position);
+        } else {
+            // 有多个敌人，优先选择主坦克没有攻击的敌人
+            for (const enemy of aliveEnemies) {
+                const distance = extraTank.position.distanceTo(enemy.position);
+                // 如果这是主坦克的目标，增加距离惩罚，降低优先级
+                const effectiveDistance = (enemy === mainTankTarget) ? distance + 100 : distance;
+                if (effectiveDistance < minDistance) {
+                    minDistance = effectiveDistance;
+                    targetEnemy = enemy;
+                }
+            }
         }
     }
     
-    if (nearestEnemy) {
+    if (targetEnemy) {
         // 计算朝向敌人的方向
         const direction = new THREE.Vector3();
-        direction.subVectors(nearestEnemy.position, extraTank.position);
+        direction.subVectors(targetEnemy.position, extraTank.position);
         direction.y = 0;
         direction.normalize();
         
@@ -594,9 +630,12 @@ function updateExtraTank(deltaTime) {
             extraTank.position.x += direction.x * moveSpeed * deltaTime;
             extraTank.position.z += direction.z * moveSpeed * deltaTime;
             
-            // 限制移动范围
-            extraTank.position.x = Math.max(-30, Math.min(30, extraTank.position.x));
-            extraTank.position.z = Math.max(-10, Math.min(40, extraTank.position.z));
+            // 限制移动范围 - 保持在脑区范围内
+            const extraBrainCenterX = 0;
+            const extraBrainCenterZ = 12;
+            const extraMaxRadius = 20;
+            extraTank.position.x = Math.max(-extraMaxRadius, Math.min(extraMaxRadius, extraTank.position.x));
+            extraTank.position.z = Math.max(extraBrainCenterZ - extraMaxRadius, Math.min(extraBrainCenterZ + extraMaxRadius, extraTank.position.z));
         }
         
         // 自动瞄准 - 使用抛物线计算
@@ -605,9 +644,15 @@ function updateExtraTank(deltaTime) {
             const barrelTip = new THREE.Vector3(0, 0, 6.1);
             barrelTip.applyMatrix4(extraTankBarrel.matrixWorld);
             
+            // 计算目标位置（敌人身体中心，普通敌人y=0.6，Boss y=1.5）
+            const targetPos = targetEnemy.position.clone();
+            // 判断是否是Boss，Boss的中心更高
+            const isBoss = targetEnemy.userData.isBoss;
+            targetPos.y = isBoss ? 1.5 : 0.6; // 瞄准敌人身体中心
+            
             // 计算抛物线射击角度
-            const initialSpeed = 25; // 额外坦克炮弹速度稍慢
-            const aimAngles = calculateParabolicAngle(nearestEnemy.position, barrelTip, initialSpeed);
+            const initialSpeed = 35; // 与主坦克保持一致
+            const aimAngles = calculateParabolicAngle(targetPos, barrelTip, initialSpeed);
             
             if (aimAngles) {
                 // 计算目标炮塔角度
@@ -670,29 +715,37 @@ function startTimer() {
             return;
         }
 
+        // Boss出现时停止倒计时
+        if (GameState.bossSpawned) {
+            document.getElementById('timeDisplay').textContent = 'BOSS';
+            clearInterval(timerInterval);
+            return;
+        }
+
         GameState.timeRemaining--;
         document.getElementById('timeDisplay').textContent = GameState.timeRemaining;
 
-        if (GameState.timeRemaining <= 0 || GameState.ammo <= 0) {
-            endGame();
+        if (GameState.timeRemaining <= 0) {
+            endGame(false);
         }
     }, 1000);
 }
 
 // 结束游戏
-function endGame() {
+function endGame(victory = false) {
     GameState.isPlaying = false;
     clearInterval(timerInterval);
 
     // 计算奖励
     const baseCoins = Math.floor(GameState.score / 100);
     const perfectBonus = GameState.mistakes === 0 ? 10 : 0;
-    const totalCoins = baseCoins + perfectBonus + Math.min(5, Math.floor(GameState.kills / 5));
+    const bossBonus = GameState.bossDefeated ? 20 : 0;
+    const totalCoins = baseCoins + perfectBonus + bossBonus + Math.min(5, Math.floor(GameState.kills / 5));
 
     // 计算评级
     let rank = 'C';
     let medal = '🥉';
-    if (GameState.score >= 1000) {
+    if (victory || GameState.bossDefeated) {
         rank = 'S';
         medal = '🏆';
     } else if (GameState.score >= 700) {
@@ -716,7 +769,12 @@ function endGame() {
     document.getElementById('rewardCoins').textContent = totalCoins;
 
     // 鼓励语
-    const encouragement = Encouragements[Math.min(GameState.mistakes, 9)] || Encouragements[9];
+    let encouragement;
+    if (victory || GameState.bossDefeated) {
+        encouragement = '🎉 太棒了！你战胜了粗心大王，以后做作业一定要细心哦！';
+    } else {
+        encouragement = Encouragements[Math.min(GameState.mistakes, 9)] || Encouragements[9];
+    }
     document.getElementById('encouragement').textContent = encouragement;
 
     // 切换页面
@@ -782,6 +840,12 @@ function initThreeJS() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    // 清理旧的Boss
+    if (boss) {
+        scene.remove(boss);
+        boss = null;
+    }
+
     // 设置灯光
     setupLights();
 
@@ -797,8 +861,91 @@ function initThreeJS() {
     // 创建粒子系统
     createAmbientParticles();
 
+    // 创建脑区范围显示
+    createBrainZone();
+
     // 监听窗口大小变化
     window.addEventListener('resize', onWindowResize);
+}
+
+// 创建脑区范围可视化
+let brainZone;
+function createBrainZone() {
+    // 创建一个半透明的圆形区域，代表大脑脑区
+    const zoneGeometry = new THREE.CircleGeometry(28, 64);
+    const zoneMaterial = new THREE.MeshBasicMaterial({
+        color: 0x4a90d9,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.DoubleSide
+    });
+    brainZone = new THREE.Mesh(zoneGeometry, zoneMaterial);
+    brainZone.rotation.x = -Math.PI / 2;
+    brainZone.position.set(0, 0.05, 12); // 稍微抬高一点，避免与地面重叠
+    scene.add(brainZone);
+
+    // 添加外圈边框
+    const ringGeometry = new THREE.RingGeometry(27, 28, 64);
+    const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0x6bb6ff,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(0, 0.06, 12);
+    scene.add(ring);
+
+    // 添加网格线效果
+    const gridGeometry = new THREE.RingGeometry(14, 14.2, 64);
+    const gridMaterial = new THREE.MeshBasicMaterial({
+        color: 0x8ec5fc,
+        transparent: true,
+        opacity: 0.4,
+        side: THREE.DoubleSide
+    });
+    const innerRing = new THREE.Mesh(gridGeometry, gridMaterial);
+    innerRing.rotation.x = -Math.PI / 2;
+    innerRing.position.set(0, 0.06, 12);
+    scene.add(innerRing);
+
+    // 添加文字标签
+    createBrainZoneLabel();
+}
+
+// 创建脑区标签
+function createBrainZoneLabel() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    // 绘制背景
+    ctx.fillStyle = 'rgba(74, 144, 217, 0.8)';
+    ctx.roundRect(0, 0, 256, 64, 10);
+    ctx.fill();
+
+    // 绘制文字
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Microsoft YaHei';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🧠 大脑防御区', 128, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const labelGeometry = new THREE.PlaneGeometry(12, 3);
+    const labelMaterial = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide
+    });
+
+    const label = new THREE.Mesh(labelGeometry, labelMaterial);
+    label.position.set(0, 0.5, -5);
+    label.rotation.x = -Math.PI / 4;
+    scene.add(label);
 }
 
 // 设置灯光
@@ -829,16 +976,14 @@ function setupLights() {
 
 // 创建地形
 function createTerrain() {
-    // 地面
-    const groundGeometry = new THREE.PlaneGeometry(200, 200, 50, 50);
+    // 地面 - 平坦地形，避免遮挡坦克
+    const groundGeometry = new THREE.PlaneGeometry(200, 200, 10, 10);
 
-    // 添加地形起伏
+    // 地形基本平坦，只有微小的起伏
     const positions = groundGeometry.attributes.position.array;
     for (let i = 0; i < positions.length; i += 3) {
-        const x = positions[i];
-        const y = positions[i + 1];
-        positions[i + 2] = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 2 +
-                          Math.sin(x * 0.1) * Math.sin(y * 0.1) * 0.5;
+        // 非常小的起伏，最大高度0.2，不会遮挡坦克
+        positions[i + 2] = Math.random() * 0.1;
     }
     groundGeometry.computeVertexNormals();
 
@@ -853,9 +998,9 @@ function createTerrain() {
     terrain.receiveShadow = true;
     scene.add(terrain);
 
-    // 添加一些岩石
-    for (let i = 0; i < 20; i++) {
-        const rockGeometry = new THREE.DodecahedronGeometry(Math.random() * 2 + 0.5, 0);
+    // 添加一些岩石（降低高度，避免遮挡坦克）
+    for (let i = 0; i < 15; i++) {
+        const rockGeometry = new THREE.DodecahedronGeometry(Math.random() * 1.5 + 0.3, 0);
         const rockMaterial = new THREE.MeshStandardMaterial({
             color: 0x555555,
             roughness: 0.8
@@ -863,10 +1008,10 @@ function createTerrain() {
         const rock = new THREE.Mesh(rockGeometry, rockMaterial);
 
         const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * 40 + 10;
+        const distance = Math.random() * 50 + 15;
         rock.position.set(
             Math.cos(angle) * distance,
-            1,
+            0.3,  // 降低高度到0.3，不会遮挡坦克
             Math.sin(angle) * distance - 20
         );
         rock.castShadow = true;
@@ -941,15 +1086,15 @@ function createTank() {
     turretMesh.castShadow = true;
     turret.add(turretMesh);
 
-    // 炮管 - 指向Z轴正方向（前方），做长一点
+    // 炮管 - 指向Z轴正方向（前方）
     barrel = new THREE.Group();
 
-    // 炮管长度从4增加到6
+    // 炮管 - 使用亮黄色，更容易看清
     const barrelGeometry = new THREE.CylinderGeometry(0.15, 0.2, 6, 8);
     const barrelMaterial = new THREE.MeshStandardMaterial({
-        color: 0x333333,
-        roughness: 0.5,
-        metalness: 0.5
+        color: 0xFFD700, // 亮黄色
+        roughness: 0.4,
+        metalness: 0.6
     });
     const barrelMesh = new THREE.Mesh(barrelGeometry, barrelMaterial);
     // 炮管初始指向Z轴正方向（前方）
@@ -959,10 +1104,10 @@ function createTank() {
     barrelMesh.castShadow = true;
     barrel.add(barrelMesh);
 
-    // 炮口 - 相应调整位置
+    // 炮口
     const muzzleGeometry = new THREE.CylinderGeometry(0.18, 0.15, 0.3, 8);
     const muzzleMaterial = new THREE.MeshStandardMaterial({
-        color: 0x111111,
+        color: 0x333333,
         roughness: 0.4,
         metalness: 0.7
     });
@@ -986,42 +1131,98 @@ function createTank() {
 function spawnEnemies() {
     const enemyColors = [0x8B0000, 0x4B0082, 0x2F4F4F];
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 15; i++) {
         const enemy = new THREE.Group();
 
-        // 敌人坦克（简化版）
-        const bodyGeometry = new THREE.BoxGeometry(2, 1, 2.5);
-        const bodyMaterial = new THREE.MeshStandardMaterial({
-            color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
-            roughness: 0.6
+        // 糊涂虫形象 - 用球体和圆环组合
+        const bugColor = enemyColors[Math.floor(Math.random() * enemyColors.length)];
+        const bugMaterial = new THREE.MeshStandardMaterial({
+            color: bugColor,
+            roughness: 0.4,
+            metalness: 0.2
         });
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+
+        // 身体主体 - 大球体
+        const bodyGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+        const body = new THREE.Mesh(bodyGeometry, bugMaterial);
         body.position.y = 0.6;
+        body.scale.y = 0.8; // 稍微压扁
         body.castShadow = true;
         enemy.add(body);
 
-        // 炮塔
-        const turretGeometry = new THREE.CylinderGeometry(0.6, 0.7, 0.5, 6);
-        const turret = new THREE.Mesh(turretGeometry, bodyMaterial);
-        turret.position.y = 1.4;
-        enemy.add(turret);
+        // 眼睛 - 两个小白球
+        const eyeGeometry = new THREE.SphereGeometry(0.25, 12, 12);
+        const eyeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFFFFFF,
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        
+        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        leftEye.position.set(-0.3, 1.0, 0.5);
+        enemy.add(leftEye);
+        
+        const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        rightEye.position.set(0.3, 1.0, 0.5);
+        enemy.add(rightEye);
 
-        // 随机位置 - 在坦克前方（Z轴正方向）
-        const angle = (Math.PI / 6) * (i - 4) + (Math.random() - 0.5) * 0.3;
+        // 眼珠 - 小黑点（斗鸡眼效果，显得糊涂）
+        const pupilGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+        const pupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+        
+        const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+        leftPupil.position.set(-0.25, 1.0, 0.72);
+        enemy.add(leftPupil);
+        
+        const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+        rightPupil.position.set(0.25, 1.0, 0.72);
+        enemy.add(rightPupil);
+
+        // 触角 - 两个细长的圆柱体
+        const antennaGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 8);
+        const antennaMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        
+        const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+        leftAntenna.position.set(-0.4, 1.3, 0.2);
+        leftAntenna.rotation.z = 0.3;
+        leftAntenna.rotation.x = -0.2;
+        enemy.add(leftAntenna);
+        
+        const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+        rightAntenna.position.set(0.4, 1.3, 0.2);
+        rightAntenna.rotation.z = -0.3;
+        rightAntenna.rotation.x = -0.2;
+        enemy.add(rightAntenna);
+
+        // 触角顶端小球
+        const antennaTipGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+        const antennaTipMaterial = new THREE.MeshStandardMaterial({ color: bugColor });
+        
+        const leftTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+        leftTip.position.set(-0.52, 1.55, 0.08);
+        enemy.add(leftTip);
+        
+        const rightTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+        rightTip.position.set(0.52, 1.55, 0.08);
+        enemy.add(rightTip);
+
+        // 随机位置 - 从四面八方来（360度）
+        const angle = (Math.PI * 2 / 8) * i + (Math.random() - 0.5) * 0.5;
         const distance = Math.random() * 30 + 25;
 
         enemy.position.set(
             Math.sin(angle) * distance,
-            0,
-            Math.cos(angle) * distance  // Z轴正方向是前方
+            0.6, // 敌人中心在车身高度（y=0.6），与瞄准高度一致
+            Math.cos(angle) * distance
         );
 
         enemy.userData = {
             health: 100,
             maxHealth: 100,
             isAlive: true,
-            moveSpeed: Math.random() * 0.02 + 0.01,
-            moveDirection: Math.random() * Math.PI * 2
+            moveSpeed: Math.random() * 0.05 + 0.03, // 增加移动速度
+            moveDirection: Math.random() * Math.PI * 2,
+            lastBubbleTime: 0 // 上次冒泡时间
         };
 
         scene.add(enemy);
@@ -1117,51 +1318,51 @@ function fireProjectileFromTank(sourceTank, sourceTurret, sourceBarrel) {
     }, 100);
     
     // 创建炮弹（额外坦克使用普通炮弹）
-    createProjectile(sourceTank, sourceTurret, config, false);
+    createProjectile(sourceTank, sourceTurret, sourceBarrel, config, false);
 }
 
 // 创建炮弹
-function createProjectile(sourceTank, sourceTurret, config, isMainTank) {
+function createProjectile(sourceTank, sourceTurret, sourceBarrel, config, isMainTank) {
     // 判断是否使用多功能炮弹（家里作业无错误奖励，仅主坦克）
-    const isSpecialAmmo = isMainTank && GameState.specialAmmo && Math.random() < 0.3;
+    const isSpecialAmmo = isMainTank && GameState.specialAmmo && Math.random() < 0.7;
     
     // 创建炮弹 - 加大尺寸和效果
-    const projectileSize = isSpecialAmmo ? 0.5 : 0.3;
+    const projectileSize = isSpecialAmmo ? 0.8 : 0.6; // 更大的炮弹尺寸
     const projectileGeometry = new THREE.SphereGeometry(projectileSize, 16, 16);
     const projectileMaterial = new THREE.MeshStandardMaterial({
         color: isSpecialAmmo ? 0x00FF00 : 0xFF6B35,
         emissive: isSpecialAmmo ? 0x00AA00 : 0xFF4500,
-        emissiveIntensity: 1.0,
+        emissiveIntensity: 3.0, // 更强的发光
         roughness: 0.3,
         metalness: 0.8
     });
     const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
     
     // 添加炮弹光晕效果
-    const glowGeometry = new THREE.SphereGeometry(projectileSize * 1.5, 16, 16);
+    const glowGeometry = new THREE.SphereGeometry(projectileSize * 2.5, 16, 16);
     const glowMaterial = new THREE.MeshBasicMaterial({
         color: isSpecialAmmo ? 0x00FF00 : 0xFFAA00,
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.8, // 更高的不透明度
         blending: THREE.AdditiveBlending
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     projectile.add(glow);
     
     // 添加炮弹尾焰光
-    const projectileLight = new THREE.PointLight(isSpecialAmmo ? 0x00FF00 : 0xFF6B35, 1, 10);
+    const projectileLight = new THREE.PointLight(isSpecialAmmo ? 0x00FF00 : 0xFF6B35, 3, 20); // 更强的光源
     projectileLight.position.set(0, 0, 0);
     projectile.add(projectileLight);
 
-    // 获取炮管前端世界位置（炮管长度现在是6，前端在Z=6.1）
-    const sourceBarrel = sourceTurret.children.find(child => child.type === 'Group');
-    const barrelTip = new THREE.Vector3(0, 0, 6.1);
+    // 获取炮管前端世界位置
+    const barrelLength = isMainTank ? 6.1 : 5.1;
+    const barrelTip = new THREE.Vector3(0, 0, barrelLength);
     barrelTip.applyMatrix4(sourceBarrel.matrixWorld);
     projectile.position.copy(barrelTip);
 
     // 计算发射方向（考虑精准度）
     const accuracy = config.accuracy;
-    const spread = isSpecialAmmo ? 0 : (1 - accuracy) * 0.1;
+    const spread = isSpecialAmmo ? 0 : (1 - accuracy) * 0.02; // 很小的散布
 
     const direction = new THREE.Vector3(0, 0, 1);
     direction.applyQuaternion(sourceTurret.quaternion);
@@ -1170,7 +1371,7 @@ function createProjectile(sourceTank, sourceTurret, config, isMainTank) {
     direction.y += (Math.random() - 0.5) * spread;
     direction.normalize();
 
-    const speed = 30 + config.damage * 0.3;
+    const speed = 35; // 与瞄准计算保持一致
     const now = performance.now();
 
     projectile.userData = {
@@ -1195,14 +1396,15 @@ function fireProjectile() {
     // 检查射速限制
     if (now - GameState.lastFireTime < config.fireRate) return;
 
-    // 检查弹药
-    if (GameState.ammo <= 0) {
-        showMessage('弹药耗尽！', 1000);
-        return;
-    }
+    // 无限弹药，不再检查弹药数量
+    // if (GameState.ammo <= 0) {
+    //     showMessage('弹药耗尽！', 1000);
+    //     return;
+    // }
 
     GameState.lastFireTime = now;
-    GameState.ammo--;
+    // 无限弹药，不减弹药
+    // GameState.ammo--;
     GameState.shotsFired++;
     updateHUD();
 
@@ -1216,34 +1418,87 @@ function fireProjectile() {
     }, 100);
 
     // 创建炮弹（主坦克）
-    createProjectile(tank, turret, config, true);
+    createProjectile(tank, turret, barrel, config, true);
 }
 
-// 创建炮口闪光
+// 创建炮口闪光 - 增强效果
 function createMuzzleFlash(position) {
-    const flashGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+    // 主闪光 - 更大更亮
+    const flashGeometry = new THREE.SphereGeometry(1.2, 12, 12);
     const flashMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFAA00,
+        color: 0xFFFFFF,
         transparent: true,
-        opacity: 0.8
+        opacity: 1
     });
     const flash = new THREE.Mesh(flashGeometry, flashMaterial);
     flash.position.copy(position);
     scene.add(flash);
 
-    // 动画
-    let scale = 1;
-    const animateFlash = () => {
-        scale += 0.5;
-        flash.scale.set(scale, scale, scale);
-        flash.material.opacity -= 0.1;
+    // 内层橙色火焰
+    const innerFlashGeometry = new THREE.SphereGeometry(0.8, 10, 10);
+    const innerFlashMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFF6600,
+        transparent: true,
+        opacity: 0.9
+    });
+    const innerFlash = new THREE.Mesh(innerFlashGeometry, innerFlashMaterial);
+    innerFlash.position.copy(position);
+    scene.add(innerFlash);
 
-        if (flash.material.opacity > 0) {
+    // 外层红色光晕
+    const outerFlashGeometry = new THREE.SphereGeometry(1.8, 12, 12);
+    const outerFlashMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFF3300,
+        transparent: true,
+        opacity: 0.5
+    });
+    const outerFlash = new THREE.Mesh(outerFlashGeometry, outerFlashMaterial);
+    outerFlash.position.copy(position);
+    scene.add(outerFlash);
+
+    // 点光源照亮周围
+    const light = new THREE.PointLight(0xFFAA00, 3, 15);
+    light.position.copy(position);
+    scene.add(light);
+
+    // 动画
+    let frame = 0;
+    const animateFlash = () => {
+        frame++;
+        const progress = frame / 15; // 15帧动画
+
+        if (progress < 1) {
+            // 主闪光快速扩大然后消失
+            const scale = 1 + progress * 2;
+            flash.scale.set(scale, scale, scale);
+            flash.material.opacity = 1 - progress;
+
+            // 内层火焰
+            const innerScale = 1 + progress * 1.5;
+            innerFlash.scale.set(innerScale, innerScale, innerScale);
+            innerFlash.material.opacity = 0.9 - progress * 0.9;
+
+            // 外层光晕
+            const outerScale = 1 + progress;
+            outerFlash.scale.set(outerScale, outerScale, outerScale);
+            outerFlash.material.opacity = 0.5 - progress * 0.5;
+
+            // 光源强度衰减
+            light.intensity = 3 * (1 - progress);
+
             requestAnimationFrame(animateFlash);
         } else {
+            // 清理
             scene.remove(flash);
+            scene.remove(innerFlash);
+            scene.remove(outerFlash);
+            scene.remove(light);
             flash.geometry.dispose();
             flash.material.dispose();
+            innerFlash.geometry.dispose();
+            innerFlash.material.dispose();
+            outerFlash.geometry.dispose();
+            outerFlash.material.dispose();
         }
     };
     animateFlash();
@@ -1398,15 +1653,17 @@ function animate() {
     const deltaTime = (now - lastTime) / 1000;
     lastTime = now;
 
-    // 更新相机位置 - 第三视角俯视战场
+    // 更新相机位置 - 以俯视为主，略带斜角
     if (camera && tank) {
-        // 固定相机位置：高空俯视整个战场
-        camera.position.set(0, 40, 30);
-        camera.lookAt(0, 0, 20);
+        // 相机位置：高空俯视，略带一点斜角
+        camera.position.set(0, 35, 35);
+        camera.lookAt(0, 0, 15);
     }
 
     // 坦克AI（移动和射击状态机）
-    if (GameState.autoMoveEnabled && tank && enemies.length > 0) {
+    // 当有普通敌人或Boss存在时执行AI
+    const hasTarget = enemies.some(e => e.userData.isAlive) || (boss && boss.userData.isAlive);
+    if (GameState.autoMoveEnabled && tank && hasTarget) {
         updateTankAI(deltaTime);
     }
 
@@ -1424,6 +1681,9 @@ function animate() {
     // 更新敌人
     updateEnemies(deltaTime);
 
+    // 更新Boss
+    updateBoss(deltaTime);
+
     // 更新粒子
     updateParticles();
 
@@ -1437,7 +1697,6 @@ function calculateParabolicAngle(targetPos, startPos, initialSpeed) {
     const dz = targetPos.z - startPos.z;
     
     const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-    const gravity = 9.8;
     
     // 如果水平距离为0，直接返回
     if (horizontalDistance < 0.1) {
@@ -1448,44 +1707,15 @@ function calculateParabolicAngle(targetPos, startPos, initialSpeed) {
         };
     }
     
-    // 使用迭代法找到最佳发射角度
-    // 尝试不同的仰角，找到能击中目标的
-    let bestAngle = 0.3; // 默认30度
-    let minError = Infinity;
-    
-    // 在0到60度范围内搜索最佳角度
-    for (let angleDeg = 5; angleDeg <= 60; angleDeg += 1) {
-        const angleRad = angleDeg * Math.PI / 180;
-        
-        // 计算在这个角度下的落点
-        const vx = initialSpeed * Math.cos(angleRad);
-        const vy = initialSpeed * Math.sin(angleRad);
-        
-        // 计算飞行时间（水平方向）
-        const time = horizontalDistance / vx;
-        
-        // 计算垂直方向的位移
-        const verticalDisplacement = vy * time - 0.5 * gravity * time * time;
-        
-        // 计算误差
-        const error = Math.abs(verticalDisplacement - dy);
-        
-        if (error < minError) {
-            minError = error;
-            bestAngle = angleRad;
-        }
-    }
-    
-    // 如果误差太大，说明无法到达
-    if (minError > 5) {
-        return null;
-    }
+    // 使用直线瞄准：直接指向目标
+    // 计算垂直角度（仰角）
+    const verticalAngle = Math.atan2(dy, horizontalDistance);
     
     // 计算水平方向角度
     const horizontalAngle = Math.atan2(dx, dz);
     
     return {
-        vertical: bestAngle,
+        vertical: verticalAngle,
         horizontal: horizontalAngle,
         distance: horizontalDistance
     };
@@ -1506,6 +1736,12 @@ function updateTankAI(deltaTime) {
             minDistance = distance;
             nearestEnemy = enemy;
         }
+    }
+    
+    // 如果没有普通敌人，检查Boss
+    if (!nearestEnemy && boss && boss.userData.isAlive) {
+        nearestEnemy = boss;
+        minDistance = tank.position.distanceTo(boss.position);
     }
     
     if (!nearestEnemy) return;
@@ -1538,9 +1774,13 @@ function updateTankAI(deltaTime) {
                 tank.position.x += direction.x * moveSpeed * deltaTime;
                 tank.position.z += direction.z * moveSpeed * deltaTime;
                 
-                // 限制移动范围
-                tank.position.x = Math.max(-30, Math.min(30, tank.position.x));
-                tank.position.z = Math.max(-10, Math.min(40, tank.position.z));
+                // 限制移动范围 - 保持在脑区范围内
+                // 脑区中心(0, 12)，半径28，坦克在脑区内活动
+                const brainCenterX = 0;
+                const brainCenterZ = 12;
+                const maxRadius = 20; // 最大活动半径
+                tank.position.x = Math.max(-maxRadius, Math.min(maxRadius, tank.position.x));
+                tank.position.z = Math.max(brainCenterZ - maxRadius, Math.min(brainCenterZ + maxRadius, tank.position.z));
             } else {
                 // 进入射程，切换到瞄准状态
                 GameState.tankState = 'aiming';
@@ -1549,15 +1789,20 @@ function updateTankAI(deltaTime) {
             break;
             
         case 'aiming':
-            // 瞄准状态：停止移动，调整炮塔和炮管
+            // 瞄准状态：停止移动，调整炮塔和炮管，直接发射（像额外坦克一样）
             if (minDistance <= config.range) {
                 // 获取炮管前端位置
                 const barrelTip = new THREE.Vector3(0, 0, 6.1);
                 barrelTip.applyMatrix4(barrel.matrixWorld);
                 
-                // 计算抛物线射击角度
-                const initialSpeed = 30 + config.damage * 0.3;
-                const aimAngles = calculateParabolicAngle(nearestEnemy.position, barrelTip, initialSpeed);
+                // 计算目标位置（敌人身体中心，普通敌人y=0.6，Boss y=1.5）
+                const targetPos = nearestEnemy.position.clone();
+                // 判断是否是Boss，Boss的中心更高
+                const isBoss = nearestEnemy.userData.isBoss;
+                targetPos.y = isBoss ? 1.5 : 0.6;
+                
+                // 计算射击角度
+                const aimAngles = calculateParabolicAngle(targetPos, barrelTip, 35);
                 
                 if (aimAngles) {
                     // 计算目标角度
@@ -1569,24 +1814,29 @@ function updateTankAI(deltaTime) {
                     const targetBarrelX = -aimAngles.vertical;
                     let barrelDiff = targetBarrelX - barrel.rotation.x;
                     
-                    // 旋转炮塔和炮管
-                    const turretRotationSpeed = 2.0;
-                    const barrelRotationSpeed = 2.0;
-                    turret.rotation.y += turretDiff * turretRotationSpeed * 0.016;
-                    barrel.rotation.x += barrelDiff * barrelRotationSpeed * 0.016;
-                    barrel.rotation.x = Math.max(-0.5, Math.min(0.5, barrel.rotation.x));
-                    
-                    // 检查是否瞄准好
-                    const aimThreshold = 0.08;
+                    // 检查是否已经瞄准好（收紧阈值，提高命中率）
+                    const aimThreshold = 0.05; // 更严格的瞄准要求
                     const isAimed = Math.abs(turretDiff) < aimThreshold && Math.abs(barrelDiff) < aimThreshold;
                     
-                    if (isAimed) {
-                        // 瞄准完成，切换到射击状态
-                        GameState.tankState = 'firing';
+                    // 检查射速限制
+                    const now = performance.now();
+                    const canFire = now - GameState.lastFireTime >= config.fireRate;
+                    
+                    if (isAimed && canFire && GameState.ammo > 0) {
+                        // 精确瞄准后才发射
+                        fireProjectile();
+                        showMessage('🔥 发射！', 500);
+                        GameState.lastShotTarget = nearestEnemy;
+                        GameState.lastShotTime = now;
+                    } else if (!isAimed) {
+                        // 还没瞄准好，继续旋转（降低速度，更平滑）
+                        const turretRotationSpeed = 1.0;
+                        const barrelRotationSpeed = 1.0;
+                        turret.rotation.y += turretDiff * turretRotationSpeed * deltaTime;
+                        barrel.rotation.x += barrelDiff * barrelRotationSpeed * deltaTime;
+                        barrel.rotation.x = Math.max(-0.5, Math.min(0.5, barrel.rotation.x));
                     }
-                } else {
-                    // 无法计算射击角度，继续移动找更好的位置
-                    GameState.tankState = 'moving';
+                    // 如果瞄准好了但射速限制，等待下一次循环
                 }
             } else {
                 // 敌人跑出射程，继续移动
@@ -1595,39 +1845,9 @@ function updateTankAI(deltaTime) {
             break;
             
         case 'firing':
-            // 射击状态：发射炮弹
-            const now = performance.now();
-            const canFire = now - GameState.lastFireTime >= config.fireRate;
-            
-            if (canFire && GameState.ammo > 0) {
-                fireProjectile();
-                showMessage('🔥 发射！', 500);
-                
-                // 记录这次射击的目标，用于判断是否命中
-                GameState.lastShotTarget = nearestEnemy;
-                GameState.lastShotTime = now;
-                
-                // 发射后等待观察结果，然后回到移动状态
-                setTimeout(() => {
-                    if (GameState.isPlaying) {
-                        // 检查是否命中
-                        if (GameState.lastShotHit) {
-                            showMessage('✅ 命中目标！', 800);
-                        } else {
-                            showMessage('❌ 未命中，继续移动', 800);
-                        }
-                        GameState.lastShotHit = false;
-                        GameState.tankState = 'moving';
-                    }
-                }, 1500); // 等待1.5秒观察结果
-            }
-            
-            // 切换到等待状态，防止重复发射
-            GameState.tankState = 'waiting';
-            break;
-            
         case 'waiting':
-            // 等待状态，不做任何事情，等待定时器切换回移动状态
+            // 这两个状态不再使用，直接回到移动状态
+            GameState.tankState = 'moving';
             break;
     }
 }
@@ -1638,58 +1858,105 @@ function updateProjectiles(deltaTime) {
         const projectile = projectiles[i];
         const velocity = projectile.userData.velocity;
 
-        // 应用重力
-        velocity.y -= 9.8 * deltaTime;
+        // 直线飞行，不应用重力
+        // velocity.y -= 9.8 * deltaTime;
 
         // 更新位置
         projectile.position.x += velocity.x * deltaTime;
         projectile.position.y += velocity.y * deltaTime;
         projectile.position.z += velocity.z * deltaTime;
 
-        // 更新旋转以匹配速度方向
-        const direction = velocity.clone().normalize();
-        projectile.lookAt(
-            projectile.position.x + direction.x,
-            projectile.position.y + direction.y,
-            projectile.position.z + direction.z
-        );
-
         // 检查碰撞
         let hit = false;
 
-        // 检查与敌人的碰撞
-        for (let j = enemies.length - 1; j >= 0; j--) {
-            const enemy = enemies[j];
-            if (!enemy.userData.isAlive) continue;
+        // 检查与Boss的碰撞
+        if (boss && boss.userData.isAlive) {
+            // Boss保护期检查：生成后2秒内无敌（给玩家反应时间）
+            const timeSinceSpawn = performance.now() - boss.userData.spawnTime;
+            const isInvulnerable = timeSinceSpawn < 2000;
 
-            const distance = projectile.position.distanceTo(enemy.position);
-            if (distance < 2) {
-                // 击中敌人
+            const distance = projectile.position.distanceTo(boss.position);
+            if (distance < 3) {
                 hit = true;
-                enemy.userData.health -= projectile.userData.damage;
 
-                if (enemy.userData.health <= 0) {
-                    // 消灭敌人
-                    enemy.userData.isAlive = false;
-                    createExplosion(enemy.position, 1.5);
-                    scene.remove(enemy);
-                    enemies.splice(j, 1);
-
-                    GameState.kills++;
-                GameState.score += 100;
-                GameState.shotsHit++;
-                GameState.lastShotHit = true; // 标记命中
-                updateHUD();
-
-                    showMessage('+100', 500);
-
-                    // 生成新敌人
-                    setTimeout(() => spawnSingleEnemy(), 2000);
+                if (isInvulnerable) {
+                    // 无敌状态，显示免疫效果
+                    createExplosion(projectile.position, 0.3);
+                    // 偶尔显示提示
+                    if (Math.random() < 0.1) {
+                        showMessage('🛡️ Boss保护罩生效中！', 500);
+                    }
                 } else {
-                    createExplosion(projectile.position, 0.5);
+                    // 正常受到伤害
+                    boss.userData.health -= projectile.userData.damage;
+                    createExplosion(projectile.position, 0.8);
                     playHitSound();
+
+                    // 更新Boss血量显示
+                    const bossHealthPercent = Math.floor((boss.userData.health / boss.userData.maxHealth) * 100);
+                    showMessage(`Boss血量: ${bossHealthPercent}%`, 800);
                 }
-                break;
+
+                if (boss.userData.health <= 0) {
+                    // Boss被消灭
+                    boss.userData.isAlive = false;
+                    createExplosion(boss.position, 3);
+                    scene.remove(boss);
+                    boss = null;
+                    
+                    GameState.bossDefeated = true;
+                    GameState.score += 1000;
+                    updateHUD();
+                    
+                    showMessage('🎉 恭喜！你消灭了粗心大王！', 5000);
+                    
+                    // 游戏胜利结束
+                    setTimeout(() => {
+                        endGame(true);
+                    }, 3000);
+                }
+            }
+        }
+
+        // 检查与敌人的碰撞
+        if (!hit) {
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const enemy = enemies[j];
+                if (!enemy.userData.isAlive) continue;
+
+                const distance = projectile.position.distanceTo(enemy.position);
+                if (distance < 2) {
+                    // 击中敌人
+                    hit = true;
+                    enemy.userData.health -= projectile.userData.damage;
+
+                    if (enemy.userData.health <= 0) {
+                        // 消灭敌人
+                        enemy.userData.isAlive = false;
+                        createExplosion(enemy.position, 1.5);
+                        scene.remove(enemy);
+                        enemies.splice(j, 1);
+
+                        GameState.kills++;
+                        GameState.bugsKilled++;
+                        GameState.score += 100;
+                        GameState.shotsHit++;
+                        GameState.lastShotHit = true;
+                        updateHUD();
+
+                        showMessage('+100', 500);
+
+                        // 检查是否需要召唤Boss
+                        if (GameState.bugsKilled >= GameState.bugsToKill && !GameState.bossSpawned) {
+                            spawnBoss();
+                        }
+                        // 注意：不再生成新敌人，只打最初的15个糊涂虫
+                    } else {
+                        createExplosion(projectile.position, 0.5);
+                        playHitSound();
+                    }
+                    break;
+                }
             }
         }
 
@@ -1782,44 +2049,378 @@ function spawnSingleEnemy() {
     const enemyColors = [0x8B0000, 0x4B0082, 0x2F4F4F];
     const enemy = new THREE.Group();
 
-    const bodyGeometry = new THREE.BoxGeometry(2, 1, 2.5);
-    const bodyMaterial = new THREE.MeshStandardMaterial({
-        color: enemyColors[Math.floor(Math.random() * enemyColors.length)],
-        roughness: 0.6
+    // 糊涂虫形象
+    const bugColor = enemyColors[Math.floor(Math.random() * enemyColors.length)];
+    const bugMaterial = new THREE.MeshStandardMaterial({
+        color: bugColor,
+        roughness: 0.4,
+        metalness: 0.2
     });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+
+    // 身体主体 - 大球体
+    const bodyGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+    const body = new THREE.Mesh(bodyGeometry, bugMaterial);
     body.position.y = 0.6;
+    body.scale.y = 0.8;
     body.castShadow = true;
     enemy.add(body);
 
-    const turretGeometry = new THREE.CylinderGeometry(0.6, 0.7, 0.5, 6);
-    const turret = new THREE.Mesh(turretGeometry, bodyMaterial);
-    turret.position.y = 1.4;
-    enemy.add(turret);
+    // 眼睛 - 两个小白球
+    const eyeGeometry = new THREE.SphereGeometry(0.25, 12, 12);
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFFFFFF,
+        roughness: 0.2,
+        metalness: 0.1
+    });
+    
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(-0.3, 1.0, 0.5);
+    enemy.add(leftEye);
+    
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEye.position.set(0.3, 1.0, 0.5);
+    enemy.add(rightEye);
 
-    const angle = (Math.random() - 0.5) * Math.PI / 2;
+    // 眼珠 - 小黑点（斗鸡眼效果）
+    const pupilGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+    const pupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    
+    const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    leftPupil.position.set(-0.25, 1.0, 0.72);
+    enemy.add(leftPupil);
+    
+    const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    rightPupil.position.set(0.25, 1.0, 0.72);
+    enemy.add(rightPupil);
+
+    // 触角
+    const antennaGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 8);
+    const antennaMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    
+    const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+    leftAntenna.position.set(-0.4, 1.3, 0.2);
+    leftAntenna.rotation.z = 0.3;
+    leftAntenna.rotation.x = -0.2;
+    enemy.add(leftAntenna);
+    
+    const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+    rightAntenna.position.set(0.4, 1.3, 0.2);
+    rightAntenna.rotation.z = -0.3;
+    rightAntenna.rotation.x = -0.2;
+    enemy.add(rightAntenna);
+
+    // 触角顶端小球
+    const antennaTipGeometry = new THREE.SphereGeometry(0.08, 8, 8);
+    const antennaTipMaterial = new THREE.MeshStandardMaterial({ color: bugColor });
+    
+    const leftTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+    leftTip.position.set(-0.52, 1.55, 0.08);
+    enemy.add(leftTip);
+    
+    const rightTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+    rightTip.position.set(0.52, 1.55, 0.08);
+    enemy.add(rightTip);
+
+    const angle = Math.random() * Math.PI * 2; // 360度随机方向
     const distance = Math.random() * 20 + 30;
 
     enemy.position.set(
         Math.sin(angle) * distance,
-        0,
-        Math.cos(angle) * distance  // Z轴正方向是前方
+        0.6, // 敌人中心在车身高度（y=0.6），与瞄准高度一致
+        Math.cos(angle) * distance
     );
 
     enemy.userData = {
         health: 100,
         maxHealth: 100,
         isAlive: true,
-        moveSpeed: Math.random() * 0.02 + 0.01,
-        moveDirection: Math.random() * Math.PI * 2
+        moveSpeed: Math.random() * 0.05 + 0.03, // 增加移动速度
+        moveDirection: Math.random() * Math.PI * 2,
+        lastBubbleTime: 0 // 上次冒泡时间
     };
 
     scene.add(enemy);
     enemies.push(enemy);
 }
 
+// Boss变量
+let boss = null;
+
+// 创建Boss - 粗心大王
+function spawnBoss() {
+    if (!GameState.isPlaying || GameState.bossSpawned) return;
+    
+    GameState.bossSpawned = true;
+    showMessage('⚠️ 粗心大王出现了！消灭它！', 3000);
+    
+    boss = new THREE.Group();
+    
+    // Boss材质 - 深紫色，显得邪恶
+    const bossMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4B0082,
+        roughness: 0.3,
+        metalness: 0.4,
+        emissive: 0x2E0050,
+        emissiveIntensity: 0.3
+    });
+    
+    // 身体 - 巨大球体
+    const bodyGeometry = new THREE.SphereGeometry(2, 24, 24);
+    const body = new THREE.Mesh(bodyGeometry, bossMaterial);
+    body.position.y = 1.5;
+    body.scale.y = 0.9;
+    body.castShadow = true;
+    boss.add(body);
+    
+    // 眼睛 - 红色发光
+    const eyeGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+    const eyeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFF0000,
+        emissive: 0xFF0000,
+        emissiveIntensity: 0.8
+    });
+    
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(-0.8, 2.2, 1.2);
+    boss.add(leftEye);
+    
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEye.position.set(0.8, 2.2, 1.2);
+    boss.add(rightEye);
+    
+    // 眼珠 - 黑色竖瞳
+    const pupilGeometry = new THREE.SphereGeometry(0.2, 12, 12);
+    const pupilMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    
+    const leftPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    leftPupil.position.set(-0.8, 2.2, 1.65);
+    leftPupil.scale.y = 2;
+    boss.add(leftPupil);
+    
+    const rightPupil = new THREE.Mesh(pupilGeometry, pupilMaterial);
+    rightPupil.position.set(0.8, 2.2, 1.65);
+    rightPupil.scale.y = 2;
+    boss.add(rightPupil);
+    
+    // 触角 - 更大更粗
+    const antennaGeometry = new THREE.CylinderGeometry(0.08, 0.08, 1.5, 12);
+    const antennaMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2E0050,
+        emissive: 0x4B0082,
+        emissiveIntensity: 0.5
+    });
+    
+    const leftAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+    leftAntenna.position.set(-1, 3, 0.3);
+    leftAntenna.rotation.z = 0.4;
+    leftAntenna.rotation.x = -0.3;
+    boss.add(leftAntenna);
+    
+    const rightAntenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+    rightAntenna.position.set(1, 3, 0.3);
+    rightAntenna.rotation.z = -0.4;
+    rightAntenna.rotation.x = -0.3;
+    boss.add(rightAntenna);
+    
+    // 触角顶端发光球
+    const antennaTipGeometry = new THREE.SphereGeometry(0.2, 12, 12);
+    const antennaTipMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xFF0000,
+        emissive: 0xFF0000,
+        emissiveIntensity: 1
+    });
+    
+    const leftTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+    leftTip.position.set(-1.45, 3.6, 0);
+    boss.add(leftTip);
+    
+    const rightTip = new THREE.Mesh(antennaTipGeometry, antennaTipMaterial);
+    rightTip.position.set(1.45, 3.6, 0);
+    boss.add(rightTip);
+    
+    // 光环效果
+    const ringGeometry = new THREE.RingGeometry(2.5, 3, 32);
+    const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFF0000,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.1;
+    boss.add(ring);
+    
+    // 位置 - 在屏幕内出现，直接可见
+    boss.position.set(0, 0, -20);
+
+    boss.userData = {
+        health: 1500,
+        maxHealth: 1500,
+        isAlive: true,
+        isBoss: true,
+        moveSpeed: 0.08,
+        lastBubbleTime: 0,
+        spawnTime: performance.now() // 记录生成时间，用于无敌保护期
+    };
+    
+    scene.add(boss);
+    
+    // Boss登场台词
+    setTimeout(() => {
+        if (boss && boss.userData.isAlive) {
+            const bubblePos = boss.position.clone();
+            bubblePos.y += 4;
+            createBubble('我是粗心大王！长期粗心会让你后悔的！', bubblePos);
+        }
+    }, 1000);
+}
+
+// 更新Boss
+function updateBoss(deltaTime) {
+    if (!boss || !boss.userData.isAlive) return;
+    
+    const now = performance.now();
+    
+    // Boss缓慢向玩家移动
+    const direction = new THREE.Vector3(0, 0, 0).sub(boss.position).normalize();
+    boss.position.x += direction.x * boss.userData.moveSpeed;
+    boss.position.z += direction.z * boss.userData.moveSpeed;
+    
+    // 面向玩家
+    boss.lookAt(0, 1.5, 0);
+    
+    // 光环旋转动画
+    const ring = boss.children.find(child => child.geometry && child.geometry.type === 'RingGeometry');
+    if (ring) {
+        ring.rotation.z += 0.01;
+    }
+    
+    // Boss台词（每8-12秒一次）
+    if (now - boss.userData.lastBubbleTime > 8000 + Math.random() * 4000) {
+        const bubbleText = BossBubbles[Math.floor(Math.random() * BossBubbles.length)];
+        const bubblePos = boss.position.clone();
+        bubblePos.y += 4;
+        createBubble(bubbleText, bubblePos);
+        boss.userData.lastBubbleTime = now;
+    }
+}
+
+// 更新敌人糊涂虫台词
+const BugBubbles = [
+    '我是糊涂虫，专门让你数学不认真！',
+    '粗心大意是我的好朋友！',
+    '不检查作业？太好了！',
+    '看错题目？我干的！',
+    '计算错误？嘿嘿嘿！',
+    '忘记进位？我的功劳！',
+    '漏写单位？我故意的！',
+    '抄错数字？就是我！',
+    '不验算？太棒了！',
+    '马马虎虎，我最爱！'
+];
+
+// Boss台词 - 教育性内容
+const BossBubbles = [
+    '我是粗心大王！你知道长期粗心会有什么后果吗？',
+    '总是看错题目，考试时就会丢很多分！',
+    '计算老出错，以后学更难的数学就更跟不上了！',
+    '不检查作业，坏习惯会越积越多！',
+    '粗心不改，以后考试总是考不好，会失去信心！',
+    '数学基础不扎实，以后学物理、化学都会受影响！',
+    '总是马马虎虎，长大后工作也会出错！',
+    '粗心看似小事，但会让你错过很多机会！',
+    '现在不改正，坏习惯会越来越难改！',
+    '认真检查一遍，比做十道题都有用！',
+    '细心是一种能力，需要从小培养！',
+    '消灭我，就代表你决心改掉粗心毛病！'
+];
+
+// 当前显示的冒泡
+let currentBubble = null;
+
+// 创建冒泡对话
+function createBubble(text, position) {
+    // 如果已有冒泡，先移除
+    if (currentBubble) {
+        currentBubble.remove();
+        currentBubble = null;
+    }
+    
+    const bubble = document.createElement('div');
+    bubble.className = 'bug-bubble';
+    bubble.textContent = text;
+    bubble.style.cssText = `
+        position: fixed;
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        border: 2px solid #ff6b6b;
+        max-width: 200px;
+        text-align: center;
+        will-change: transform;
+    `;
+    
+    // 添加小三角
+    const triangle = document.createElement('div');
+    triangle.style.cssText = `
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #ff6b6b;
+    `;
+    bubble.appendChild(triangle);
+    
+    document.body.appendChild(bubble);
+    currentBubble = bubble;
+    
+    // 更新位置
+    const updatePosition = () => {
+        if (!bubble.parentNode) return;
+        
+        const vector = position.clone();
+        vector.project(camera);
+        
+        const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+        const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+        
+        bubble.style.left = x + 'px';
+        bubble.style.top = (y - 60) + 'px';
+    };
+    
+    updatePosition();
+    
+    // 动画更新位置
+    const interval = setInterval(updatePosition, 16);
+    
+    // 3秒后消失
+    setTimeout(() => {
+        clearInterval(interval);
+        if (bubble.parentNode) {
+            bubble.remove();
+        }
+        if (currentBubble === bubble) {
+            currentBubble = null;
+        }
+    }, 3000);
+}
+
 // 更新敌人
 function updateEnemies(deltaTime) {
+    const now = performance.now();
+    
     enemies.forEach(enemy => {
         if (!enemy.userData.isAlive) return;
 
@@ -1837,6 +2438,15 @@ function updateEnemies(deltaTime) {
 
         // 面向玩家（玩家在Z=0处）
         enemy.lookAt(0, 0, 0);
+        
+        // 随机冒泡对话（每5-10秒一次）
+        if (now - enemy.userData.lastBubbleTime > 5000 + Math.random() * 5000) {
+            const bubbleText = BugBubbles[Math.floor(Math.random() * BugBubbles.length)];
+            const bubblePos = enemy.position.clone();
+            bubblePos.y += 1.5; // 在敌人头顶
+            createBubble(bubbleText, bubblePos);
+            enemy.userData.lastBubbleTime = now;
+        }
     });
 }
 

@@ -8,6 +8,22 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <!-- 密码锁弹窗（页面加载时显示） -->
+    <div class="lock-overlay" id="lockOverlay">
+        <div class="lock-box">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-title">数学错题坦克大战</div>
+            <div class="lock-sub">请输入今日密码</div>
+            
+            <input type="password" id="realLockInput" class="lock-real-input" placeholder="输入密码..." onkeydown="if(event.key==='Enter') lockVerify()">
+            
+            <div class="lock-error" id="lockError"></div>
+            
+            <button class="lock-verify" onclick="lockVerify()">确认密码</button>
+            <button class="lock-back" onclick="location.href='home.html'">← 返回首页</button>
+        </div>
+    </div>
+
     <!-- 开始页面 - 错题录入 -->
     <div id="startScreen" class="screen active">
         <div class="start-container">
