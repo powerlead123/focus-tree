@@ -1284,32 +1284,6 @@ function animate() {
     const deltaTime = (now - lastTime) / 1000;
     lastTime = now;
 
-    // 更新炮塔旋转 - 让炮管精确指向准星方向
-    if (turret && barrel && camera) {
-        // 将鼠标位置转换为世界坐标方向
-        const mouseVector = new THREE.Vector3(mouseX, mouseY, 0.5);
-        mouseVector.unproject(camera);
-        
-        // 计算从相机到鼠标点击点的方向
-        const dir = mouseVector.sub(camera.position).normalize();
-        
-        // 计算与坦克前方（Z轴正方向）的夹角
-        const forward = new THREE.Vector3(0, 0, 1);
-        
-        // 水平角度（Y轴旋转）
-        const targetY = Math.atan2(dir.x, dir.z);
-        
-        // 垂直角度（X轴旋转）- 根据鼠标Y位置计算仰角
-        const targetX = -mouseY * 0.5; // 限制仰角范围
-        
-        // 平滑插值
-        turret.rotation.y += (targetY - turret.rotation.y) * 8 * deltaTime;
-        barrel.rotation.x += (targetX - barrel.rotation.x) * 8 * deltaTime;
-
-        // 限制仰角
-        barrel.rotation.x = Math.max(-0.3, Math.min(0.4, barrel.rotation.x));
-    }
-
     // 更新相机位置 - 第三视角俯视战场
     if (camera && tank) {
         // 固定相机位置：高空俯视整个战场
@@ -1326,6 +1300,9 @@ function animate() {
     if (GameState.autoFireEnabled && tank && turret && barrel) {
         updateTankAutoFire();
     }
+
+    // 更新抛物线轨迹预览
+    updateTrajectoryLine();
 
     // 更新额外坦克（如果存在）
     if (extraTank) {
