@@ -65,6 +65,39 @@
                 </div>
             </div>
 
+            <!-- 家长评定区域 -->
+            <div class="parent-evaluation-section">
+                <h3>👨‍👩‍👧 家长评定</h3>
+                <div class="evaluation-items">
+                    <div class="evaluation-item">
+                        <span class="eval-label">🏫 学校作业无错误</span>
+                        <div class="eval-toggle">
+                            <input type="checkbox" id="schoolNoMistake" onchange="updateEvaluation()">
+                            <label for="schoolNoMistake" class="toggle-label">
+                                <span class="toggle-text">否</span>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <span class="eval-reward">奖励：额外坦克 ×1</span>
+                    </div>
+                    <div class="evaluation-item">
+                        <span class="eval-label">🏠 家里作业无错误</span>
+                        <div class="eval-toggle">
+                            <input type="checkbox" id="homeNoMistake" onchange="updateEvaluation()">
+                            <label for="homeNoMistake" class="toggle-label">
+                                <span class="toggle-text">否</span>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <span class="eval-reward">奖励：多功能炮弹</span>
+                    </div>
+                </div>
+                <div class="evaluation-summary" id="evaluationSummary">
+                    <span class="summary-icon">🎁</span>
+                    <span class="summary-text">完成评定可获得额外奖励！</span>
+                </div>
+            </div>
+
             <button class="btn-start" onclick="startGame()">
                 <span class="btn-text">🚀 进入战场</span>
                 <span class="btn-shine"></span>

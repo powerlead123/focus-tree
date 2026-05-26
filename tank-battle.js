@@ -31,7 +31,13 @@ const GameState = {
     timeRemaining: 60,
     lastFireTime: 0,
     shotsFired: 0,
-    shotsHit: 0
+    shotsHit: 0,
+    // 家长评定奖励
+    extraTank: false,
+    specialAmmo: false,
+    // 自动战斗
+    autoFireEnabled: true,
+    autoMoveEnabled: true
 };
 
 // 武器配置
@@ -75,7 +81,38 @@ const Emotions = {
 document.addEventListener('DOMContentLoaded', () => {
     initRadarChart();
     updateWeaponPreview();
+    updateEvaluation();
 });
+
+// 更新家长评定
+function updateEvaluation() {
+    const schoolNoMistake = document.getElementById('schoolNoMistake').checked;
+    const homeNoMistake = document.getElementById('homeNoMistake').checked;
+    
+    // 更新开关文字
+    document.querySelectorAll('.toggle-text').forEach(el => {
+        const checkbox = el.closest('.eval-toggle').querySelector('input');
+        el.textContent = checkbox.checked ? '是' : '否';
+    });
+    
+    // 更新奖励状态
+    GameState.extraTank = schoolNoMistake;
+    GameState.specialAmmo = homeNoMistake;
+    
+    // 更新汇总显示
+    const summaryEl = document.getElementById('evaluationSummary');
+    let rewards = [];
+    if (schoolNoMistake) rewards.push('🎖️ 额外坦克×1');
+    if (homeNoMistake) rewards.push('🚀 多功能炮弹');
+    
+    if (rewards.length > 0) {
+        summaryEl.innerHTML = `<span class="summary-icon">🎁</span><span class="summary-text">${rewards.join(' + ')}</span>`;
+        summaryEl.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(126, 176, 60, 0.3))';
+    } else {
+        summaryEl.innerHTML = '<span class="summary-icon">🎁</span><span class="summary-text">完成评定可获得额外奖励！</span>';
+        summaryEl.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(126, 176, 60, 0.2))';
+    }
+}
 
 // 初始化雷达图
 function initRadarChart() {
@@ -341,6 +378,11 @@ function startGame() {
     // 初始化3D场景
     initThreeJS();
 
+    // 如果学校作业无错误，添加额外坦克
+    if (GameState.extraTank) {
+        setTimeout(() => createExtraTank(), 1000);
+    }
+
     // 开始游戏循环
     lastTime = performance.now();
     animate();
@@ -348,11 +390,97 @@ function startGame() {
     // 开始计时器
     startTimer();
 
-    // 绑定鼠标事件
+    // 绑定鼠标事件（可选，现在主要是自动战斗）
     bindMouseEvents();
 
     // 显示开始消息
-    showMessage('战斗开始！', 2000);
+    let startMsg = '战斗开始！';
+    if (GameState.extraTank) startMsg += ' 额外坦克已部署！';
+    if (GameState.specialAmmo) startMsg += ' 多功能炮弹已装载！';
+    showMessage(startMsg, 3000);
+}
+
+// 创建额外坦克（学校作业无错误奖励）
+let extraTank = null;
+let extraTankTurret = null;
+let extraTankBarrel = null;
+
+function createExtraTank() {
+    // 在主角坦克旁边创建额外坦克
+    extraTank = tank.clone();
+    extraTank.position.set(8, 0, 0); // 在主角右侧8单位
+    scene.add(extraTank);
+    
+    // 获取额外坦克的炮塔和炮管
+    extraTankTurret = extraTank.children.find(child => child.type === 'Group');
+    if (extraTankTurret) {
+        extraTankBarrel = extraTankTurret.children.find(child => child.type === 'Group');
+    }
+    
+    showMessage('🎖️ 额外坦克加入战斗！', 2000);
+}
+
+// 更新额外坦克（自动战斗）
+function updateExtraTank(deltaTime) {
+    if (!extraTank || enemies.length === 0) return;
+    
+    // 找到最近的敌人
+    let nearestEnemy = null;
+    let minDistance = Infinity;
+    
+    for (const enemy of enemies) {
+        if (!enemy.userData.isAlive) continue;
+        const distance = extraTank.position.distanceTo(enemy.position);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestEnemy = enemy;
+        }
+    }
+    
+    if (nearestEnemy) {
+        // 计算朝向敌人的方向
+        const direction = new THREE.Vector3();
+        direction.subVectors(nearestEnemy.position, extraTank.position);
+        direction.y = 0;
+        direction.normalize();
+        
+        // 坦克朝向敌人
+        const targetRotation = Math.atan2(direction.x, direction.z);
+        extraTank.rotation.y += (targetRotation - extraTank.rotation.y) * 3 * deltaTime;
+        
+        // 移动坦克
+        const optimalDistance = 18;
+        if (minDistance > optimalDistance) {
+            const moveSpeed = 6;
+            extraTank.position.x += direction.x * moveSpeed * deltaTime;
+            extraTank.position.z += direction.z * moveSpeed * deltaTime;
+            
+            // 限制移动范围
+            extraTank.position.x = Math.max(-30, Math.min(30, extraTank.position.x));
+            extraTank.position.z = Math.max(-10, Math.min(40, extraTank.position.z));
+        }
+        
+        // 自动瞄准
+        if (extraTankTurret && extraTankBarrel) {
+            const aimDirection = new THREE.Vector3();
+            aimDirection.subVectors(nearestEnemy.position, extraTank.position);
+            
+            const targetY = Math.atan2(aimDirection.x, aimDirection.z);
+            extraTankTurret.rotation.y = targetY - extraTank.rotation.y;
+            
+            const distance = Math.sqrt(aimDirection.x * aimDirection.x + aimDirection.z * aimDirection.z);
+            const heightDiff = nearestEnemy.position.y - extraTank.position.y;
+            const targetX = Math.atan2(heightDiff + 2, distance) * 0.5;
+            extraTankBarrel.rotation.x = Math.max(-0.3, Math.min(0.4, targetX));
+            
+            // 自动射击（额外坦克射速较慢）
+            const now = performance.now();
+            if (now - (extraTank.userData.lastFireTime || 0) > 800) {
+                extraTank.userData.lastFireTime = now;
+                fireProjectileFromTank(extraTank, extraTankTurret, extraTankBarrel);
+            }
+        }
+    }
 }
 
 function exitGame() {
@@ -790,7 +918,91 @@ function bindMouseEvents() {
     });
 }
 
-// 发射炮弹
+// 从指定坦克发射炮弹（用于额外坦克）
+function fireProjectileFromTank(sourceTank, sourceTurret, sourceBarrel) {
+    const config = WeaponConfig[GameState.weaponLevel];
+    
+    // 播放音效
+    playShootSound();
+    
+    // 后坐力动画
+    sourceBarrel.position.z = -0.3;
+    setTimeout(() => {
+        sourceBarrel.position.z = 0;
+    }, 100);
+    
+    // 创建炮弹（额外坦克使用普通炮弹）
+    createProjectile(sourceTank, sourceTurret, config, false);
+}
+
+// 创建炮弹
+function createProjectile(sourceTank, sourceTurret, config, isMainTank) {
+    // 判断是否使用多功能炮弹（家里作业无错误奖励，仅主坦克）
+    const isSpecialAmmo = isMainTank && GameState.specialAmmo && Math.random() < 0.3;
+    
+    // 创建炮弹 - 加大尺寸和效果
+    const projectileSize = isSpecialAmmo ? 0.5 : 0.3;
+    const projectileGeometry = new THREE.SphereGeometry(projectileSize, 16, 16);
+    const projectileMaterial = new THREE.MeshStandardMaterial({
+        color: isSpecialAmmo ? 0x00FF00 : 0xFF6B35,
+        emissive: isSpecialAmmo ? 0x00AA00 : 0xFF4500,
+        emissiveIntensity: 1.0,
+        roughness: 0.3,
+        metalness: 0.8
+    });
+    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+    
+    // 添加炮弹光晕效果
+    const glowGeometry = new THREE.SphereGeometry(projectileSize * 1.5, 16, 16);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: isSpecialAmmo ? 0x00FF00 : 0xFFAA00,
+        transparent: true,
+        opacity: 0.4,
+        blending: THREE.AdditiveBlending
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    projectile.add(glow);
+    
+    // 添加炮弹尾焰光
+    const projectileLight = new THREE.PointLight(isSpecialAmmo ? 0x00FF00 : 0xFF6B35, 1, 10);
+    projectileLight.position.set(0, 0, 0);
+    projectile.add(projectileLight);
+
+    // 获取炮管前端世界位置（炮管长度现在是6，前端在Z=6.1）
+    const sourceBarrel = sourceTurret.children.find(child => child.type === 'Group');
+    const barrelTip = new THREE.Vector3(0, 0, 6.1);
+    barrelTip.applyMatrix4(sourceBarrel.matrixWorld);
+    projectile.position.copy(barrelTip);
+
+    // 计算发射方向（考虑精准度）
+    const accuracy = config.accuracy;
+    const spread = isSpecialAmmo ? 0 : (1 - accuracy) * 0.1;
+
+    const direction = new THREE.Vector3(0, 0, 1);
+    direction.applyQuaternion(sourceTurret.quaternion);
+    direction.applyQuaternion(sourceTank.quaternion);
+    direction.x += (Math.random() - 0.5) * spread;
+    direction.y += (Math.random() - 0.5) * spread;
+    direction.normalize();
+
+    const speed = 30 + config.damage * 0.3;
+    const now = performance.now();
+
+    projectile.userData = {
+        velocity: direction.multiplyScalar(speed),
+        damage: isSpecialAmmo ? config.damage * 2 : config.damage,
+        created: now,
+        isSpecial: isSpecialAmmo
+    };
+
+    scene.add(projectile);
+    projectiles.push(projectile);
+
+    // 炮口闪光
+    createMuzzleFlash(barrelTip);
+}
+
+// 主坦克发射炮弹
 function fireProjectile() {
     const now = performance.now();
     const config = WeaponConfig[GameState.weaponLevel];
@@ -818,62 +1030,8 @@ function fireProjectile() {
         barrel.position.z = 0;
     }, 100);
 
-    // 创建炮弹 - 加大尺寸和效果
-    const projectileGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const projectileMaterial = new THREE.MeshStandardMaterial({
-        color: 0xFF6B35,
-        emissive: 0xFF4500,
-        emissiveIntensity: 1.0,
-        roughness: 0.3,
-        metalness: 0.8
-    });
-    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
-    
-    // 添加炮弹光晕效果
-    const glowGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFAA00,
-        transparent: true,
-        opacity: 0.4,
-        blending: THREE.AdditiveBlending
-    });
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    projectile.add(glow);
-    
-    // 添加炮弹尾焰光
-    const projectileLight = new THREE.PointLight(0xFF6B35, 1, 10);
-    projectileLight.position.set(0, 0, 0);
-    projectile.add(projectileLight);
-
-    // 获取炮管前端世界位置（炮管长度现在是6，前端在Z=6.1）
-    const barrelTip = new THREE.Vector3(0, 0, 6.1);
-    barrelTip.applyMatrix4(barrel.matrixWorld);
-    projectile.position.copy(barrelTip);
-
-    // 计算发射方向（考虑精准度）
-    const accuracy = config.accuracy;
-    const spread = (1 - accuracy) * 0.1;
-
-    const direction = new THREE.Vector3(0, 0, 1);
-    direction.applyQuaternion(turret.quaternion);
-    direction.applyQuaternion(tank.quaternion);
-    direction.x += (Math.random() - 0.5) * spread;
-    direction.y += (Math.random() - 0.5) * spread;
-    direction.normalize();
-
-    const speed = 30 + config.damage * 0.3;
-
-    projectile.userData = {
-        velocity: direction.multiplyScalar(speed),
-        damage: config.damage,
-        created: now
-    };
-
-    scene.add(projectile);
-    projectiles.push(projectile);
-
-    // 炮口闪光
-    createMuzzleFlash(barrelTip);
+    // 创建炮弹（主坦克）
+    createProjectile(tank, turret, config, true);
 }
 
 // 创建炮口闪光
@@ -1081,23 +1239,27 @@ function animate() {
         barrel.rotation.x = Math.max(-0.3, Math.min(0.4, barrel.rotation.x));
     }
 
-    // 更新相机位置 - 相机放在坦克尾部，能看到长炮管
-    if (camera && turret && barrel) {
-        // 相机放在坦克尾部（车身后面），上方稍微高一点
-        // 坦克车身长4单位，尾部在Z=-2处，相机放在Z=-3.5（车身后面）
-        const cameraPos = new THREE.Vector3(0, 3.5, -4);
-        cameraPos.applyMatrix4(tank.matrixWorld);
-        
-        camera.position.copy(cameraPos);
-        
-        // 相机看向炮管前端稍远处，这样能看到完整的炮管
-        const lookAtPos = new THREE.Vector3(0, 1, 15);
-        lookAtPos.applyMatrix4(tank.matrixWorld);
-        camera.lookAt(lookAtPos);
+    // 更新相机位置 - 第三视角俯视战场
+    if (camera && tank) {
+        // 固定相机位置：高空俯视整个战场
+        camera.position.set(0, 40, 30);
+        camera.lookAt(0, 0, 20);
     }
 
-    // 更新抛物线轨迹预览
-    updateTrajectoryLine();
+    // 坦克自动寻敌和移动
+    if (GameState.autoMoveEnabled && tank && enemies.length > 0) {
+        updateTankAutoMove(deltaTime);
+    }
+
+    // 坦克自动射击
+    if (GameState.autoFireEnabled && tank && turret && barrel) {
+        updateTankAutoFire();
+    }
+
+    // 更新额外坦克（如果存在）
+    if (extraTank) {
+        updateExtraTank(deltaTime);
+    }
 
     // 更新炮弹
     updateProjectiles(deltaTime);
@@ -1109,6 +1271,88 @@ function animate() {
     updateParticles();
 
     renderer.render(scene, camera);
+}
+
+// 坦克自动寻敌移动
+function updateTankAutoMove(deltaTime) {
+    // 找到最近的敌人
+    let nearestEnemy = null;
+    let minDistance = Infinity;
+    
+    for (const enemy of enemies) {
+        if (!enemy.userData.isAlive) continue;
+        const distance = tank.position.distanceTo(enemy.position);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestEnemy = enemy;
+        }
+    }
+    
+    if (nearestEnemy) {
+        // 计算朝向敌人的方向
+        const direction = new THREE.Vector3();
+        direction.subVectors(nearestEnemy.position, tank.position);
+        direction.y = 0;
+        direction.normalize();
+        
+        // 坦克朝向敌人
+        const targetRotation = Math.atan2(direction.x, direction.z);
+        tank.rotation.y += (targetRotation - tank.rotation.y) * 3 * deltaTime;
+        
+        // 移动坦克（保持一定距离）
+        const optimalDistance = 15;
+        if (minDistance > optimalDistance) {
+            const moveSpeed = 8;
+            tank.position.x += direction.x * moveSpeed * deltaTime;
+            tank.position.z += direction.z * moveSpeed * deltaTime;
+            
+            // 限制坦克移动范围
+            tank.position.x = Math.max(-30, Math.min(30, tank.position.x));
+            tank.position.z = Math.max(-10, Math.min(40, tank.position.z));
+        }
+    }
+}
+
+// 坦克自动射击
+function updateTankAutoFire() {
+    const now = performance.now();
+    const config = WeaponConfig[GameState.weaponLevel];
+    
+    // 检查射击间隔
+    if (now - GameState.lastFireTime < config.fireRate) return;
+    
+    // 找到最近的敌人
+    let nearestEnemy = null;
+    let minDistance = Infinity;
+    
+    for (const enemy of enemies) {
+        if (!enemy.userData.isAlive) continue;
+        const distance = tank.position.distanceTo(enemy.position);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestEnemy = enemy;
+        }
+    }
+    
+    // 如果有敌人在射程内，自动瞄准并射击
+    if (nearestEnemy && minDistance <= config.range) {
+        // 计算瞄准角度
+        const direction = new THREE.Vector3();
+        direction.subVectors(nearestEnemy.position, tank.position);
+        
+        // 水平角度
+        const targetY = Math.atan2(direction.x, direction.z);
+        turret.rotation.y = targetY - tank.rotation.y;
+        
+        // 垂直角度（根据距离计算仰角）
+        const distance = Math.sqrt(direction.x * direction.x + direction.z * direction.z);
+        const heightDiff = nearestEnemy.position.y - tank.position.y;
+        const targetX = Math.atan2(heightDiff + 2, distance) * 0.5; // 稍微抬高
+        barrel.rotation.x = Math.max(-0.3, Math.min(0.4, targetX));
+        
+        // 自动射击
+        fireProjectile();
+    }
 }
 
 // 更新炮弹

@@ -291,6 +291,137 @@ body {
     background: rgba(255, 215, 0, 0.1);
 }
 
+/* 家长评定区域 */
+.parent-evaluation-section {
+    background: rgba(255, 215, 0, 0.1);
+    border: 2px solid #FFD700;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.parent-evaluation-section h3 {
+    color: #FFD700;
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.evaluation-items {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.evaluation-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px 15px;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.eval-label {
+    font-size: 14px;
+    color: #fff;
+    flex: 1;
+}
+
+.eval-toggle {
+    position: relative;
+}
+
+.eval-toggle input {
+    display: none;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 5px 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+}
+
+.toggle-text {
+    font-size: 12px;
+    color: #aaa;
+    min-width: 20px;
+}
+
+.toggle-slider {
+    width: 40px;
+    height: 20px;
+    background: #666;
+    border-radius: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+}
+
+.eval-toggle input:checked + .toggle-label {
+    background: rgba(126, 176, 60, 0.3);
+}
+
+.eval-toggle input:checked + .toggle-label .toggle-text {
+    color: #7eb03c;
+}
+
+.eval-toggle input:checked + .toggle-label .toggle-slider {
+    background: #7eb03c;
+}
+
+.eval-toggle input:checked + .toggle-label .toggle-slider::before {
+    left: 22px;
+}
+
+.eval-reward {
+    font-size: 12px;
+    color: #FFD700;
+    background: rgba(255, 215, 0, 0.2);
+    padding: 4px 10px;
+    border-radius: 10px;
+}
+
+.evaluation-summary {
+    margin-top: 15px;
+    padding: 12px;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(126, 176, 60, 0.2));
+    border-radius: 10px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.summary-icon {
+    font-size: 24px;
+}
+
+.summary-text {
+    color: #FFD700;
+    font-size: 14px;
+    font-weight: bold;
+}
+
 /* ========== 游戏页面 ========== */
 #gameScreen {
     position: relative;
