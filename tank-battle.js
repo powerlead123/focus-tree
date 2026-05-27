@@ -449,6 +449,9 @@ function startGame() {
     if (GameState.extraTank) {
         setTimeout(() => createExtraTank(), 1000);
     }
+    
+    // 默认添加步兵（总是存在）
+    setTimeout(() => createInfantry(), 1500);
 
     // 开始游戏循环
     lastTime = performance.now();
@@ -573,6 +576,305 @@ function createExtraTank() {
     showMessage('🎖️ 红色支援坦克加入战斗！', 2000);
 }
 
+// 创建步兵
+let infantries = []; // 步兵数组
+const INFANTRY_COUNT = 2; // 步兵数量（减少以优化性能）
+
+function createInfantry() {
+    // 创建5个步兵
+    for (let i = 0; i < INFANTRY_COUNT; i++) {
+        const infantry = createSingleInfantry(i);
+        infantries.push(infantry);
+    }
+    
+    showMessage(`🪖 ${INFANTRY_COUNT}个步兵加入战斗！`, 2000);
+}
+
+// 创建单个步兵
+function createSingleInfantry(index) {
+    const infantry = new THREE.Group();
+    
+    // 为每个步兵设置不同的颜色（稍微变化）
+    const colorVariation = 0.1 * (index % 3);
+    const bodyColor = new THREE.Color(0x4CAF50).offsetHSL(0, 0, colorVariation - 0.05);
+    
+    // 身体
+    const bodyGeometry = new THREE.BoxGeometry(0.5, 0.8, 0.3);
+    const bodyMaterial = new THREE.MeshStandardMaterial({
+        color: bodyColor,
+        roughness: 0.6,
+        metalness: 0.2
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.9;
+    body.castShadow = true;
+    infantry.add(body);
+    
+    // 头部
+    const headGeometry = new THREE.SphereGeometry(0.25, 8, 8);
+    const headMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFFCC80, // 肤色
+        roughness: 0.5,
+        metalness: 0.1
+    });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    head.position.y = 1.5;
+    infantry.add(head);
+    
+    // 头盔
+    const helmetGeometry = new THREE.SphereGeometry(0.28, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    const helmetMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2E7D32, // 军绿色头盔
+        roughness: 0.4,
+        metalness: 0.3
+    });
+    const helmet = new THREE.Mesh(helmetGeometry, helmetMaterial);
+    helmet.position.y = 1.52;
+    infantry.add(helmet);
+    
+    // 腿
+    const legGeometry = new THREE.BoxGeometry(0.18, 0.6, 0.2);
+    const legMaterial = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(0x388E3C).offsetHSL(0, 0, colorVariation - 0.05),
+        roughness: 0.6
+    });
+    
+    const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+    leftLeg.position.set(-0.15, 0.3, 0);
+    infantry.add(leftLeg);
+    
+    const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+    rightLeg.position.set(0.15, 0.3, 0);
+    infantry.add(rightLeg);
+    
+    // 手臂
+    const armGeometry = new THREE.BoxGeometry(0.12, 0.5, 0.12);
+    const armMaterial = new THREE.MeshStandardMaterial({
+        color: 0xFFCC80,
+        roughness: 0.5
+    });
+    
+    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+    leftArm.position.set(-0.35, 1.0, 0);
+    infantry.add(leftArm);
+    
+    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+    rightArm.position.set(0.35, 1.0, 0.1);
+    rightArm.rotation.x = -0.5; // 持枪姿势
+    infantry.add(rightArm);
+    
+    // 枪
+    const infantryGun = new THREE.Group();
+    const gunBodyGeometry = new THREE.BoxGeometry(0.08, 0.15, 0.6);
+    const gunMaterial = new THREE.MeshStandardMaterial({
+        color: 0x212121,
+        roughness: 0.4,
+        metalness: 0.6
+    });
+    const gunBody = new THREE.Mesh(gunBodyGeometry, gunMaterial);
+    gunBody.position.z = 0.3;
+    infantryGun.add(gunBody);
+    
+    // 枪管
+    const gunBarrelGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 6);
+    const gunBarrel = new THREE.Mesh(gunBarrelGeometry, gunMaterial);
+    gunBarrel.rotation.x = Math.PI / 2;
+    gunBarrel.position.z = 0.75;
+    infantryGun.add(gunBarrel);
+    
+    infantryGun.position.set(0.35, 1.0, 0.2);
+    infantry.add(infantryGun);
+    
+    // 分散站位 - 2个步兵分布在坦克两侧
+    const positions = [
+        { x: -6, z: 2 },   // 左侧
+        { x: 6, z: 2 }     // 右侧
+    ];
+    const pos = positions[index % positions.length];
+    infantry.position.set(pos.x, 0, pos.z);
+    scene.add(infantry);
+    
+    // 初始化开火时间（错开射击时间）
+    infantry.userData.lastFireTime = index * 200;
+    infantry.userData.gun = infantryGun;
+    infantry.userData.index = index;
+    
+    return infantry;
+}
+
+// 更新所有步兵
+function updateInfantry(deltaTime) {
+    if (!infantries.length || !tank) return;
+    
+    // 基础偏移位置（2个步兵分布在坦克两侧）
+    const basePositions = [
+        { x: -6, z: 2 },   // 左侧
+        { x: 6, z: 2 }     // 右侧
+    ];
+    
+    infantries.forEach((infantry, index) => {
+        if (!infantry) return;
+        
+        const basePos = basePositions[index % basePositions.length];
+        
+        // 步兵跟随主坦克前进，保持相对位置
+        const targetZ = tank.position.z + basePos.z;
+        const targetX = tank.position.x + basePos.x;
+        
+        // 平滑移动
+        const moveSpeed = 3.5;
+        const dx = targetX - infantry.position.x;
+        const dz = targetZ - infantry.position.z;
+        
+        infantry.position.x += dx * moveSpeed * deltaTime * 0.5;
+        infantry.position.z += dz * moveSpeed * deltaTime * 0.5;
+        
+        // 步兵也自动向前推进（比坦克慢一点）
+        infantry.position.z -= 3.0 * deltaTime;
+        
+        // 找到目标（优先攻击Boss）
+        let targetEnemy = null;
+        let minDistance = Infinity;
+        
+        // 如果Boss存在且存活，优先攻击Boss
+        if (GameState.boss && GameState.boss.userData.isAlive) {
+            const distToBoss = infantry.position.distanceTo(GameState.boss.position);
+            if (distToBoss < 60 && GameState.boss.position.z <= infantry.position.z + 5) {
+                targetEnemy = GameState.boss;
+                minDistance = distToBoss;
+            }
+        }
+        
+        // 如果没有找到Boss，攻击普通敌人或守城怪兽
+        if (!targetEnemy) {
+            // 检查守城怪兽
+            for (const guard of GameState.gateGuards) {
+                if (!guard.userData.isAlive) continue;
+                const distance = infantry.position.distanceTo(guard.position);
+                if (distance < minDistance && distance < 50 && guard.position.z <= infantry.position.z + 5) {
+                    minDistance = distance;
+                    targetEnemy = guard;
+                }
+            }
+            
+            // 检查普通敌人
+            for (const enemy of enemies) {
+                if (!enemy.userData.isAlive) continue;
+                if (enemy.position.z > infantry.position.z + 5) continue;
+                
+                const distance = infantry.position.distanceTo(enemy.position);
+                if (distance < minDistance && distance < 50) {
+                    minDistance = distance;
+                    targetEnemy = enemy;
+                }
+            }
+        }
+        
+        // 步兵朝向
+        let targetRotation = Math.PI;
+        
+        if (targetEnemy) {
+            const direction = new THREE.Vector3();
+            direction.subVectors(targetEnemy.position, infantry.position);
+            direction.y = 0;
+            direction.normalize();
+            targetRotation = Math.atan2(direction.x, direction.z);
+        }
+        
+        // 平滑转向
+        const rotationDiff = targetRotation - infantry.rotation.y;
+        let normalizedDiff = rotationDiff;
+        while (normalizedDiff > Math.PI) normalizedDiff -= Math.PI * 2;
+        while (normalizedDiff < -Math.PI) normalizedDiff += Math.PI * 2;
+        infantry.rotation.y += normalizedDiff * 3.0 * deltaTime;
+        
+        // 自动射击
+        const infantryGun = infantry.userData.gun;
+        if (targetEnemy && infantryGun) {
+            const now = performance.now();
+            const fireRate = (targetEnemy === GameState.boss) ? 300 : 600; // 打Boss时射速更快
+            const canFire = now - infantry.userData.lastFireTime > fireRate;
+            
+            if (canFire) {
+                infantry.userData.lastFireTime = now;
+                fireProjectileFromInfantry(infantry, targetEnemy);
+            }
+        }
+    });
+}
+
+// 步兵开火
+function fireProjectileFromInfantry(infantry, target) {
+    if (!infantry || !infantry.userData.gun) return;
+    
+    const infantryGun = infantry.userData.gun;
+    
+    // 获取枪口位置
+    const muzzlePos = new THREE.Vector3(0, 0, 0.9);
+    muzzlePos.applyMatrix4(infantryGun.matrixWorld);
+    
+    // 计算目标位置
+    const targetPos = target.position.clone();
+    const aimHeight = (target === GameState.boss) ? 5.0 : 1.0;
+    targetPos.y = aimHeight;
+    
+    // 计算方向
+    const direction = new THREE.Vector3();
+    direction.subVectors(targetPos, muzzlePos);
+    const distance = direction.length();
+    direction.normalize();
+    
+    // 创建简化子弹（更小的几何体，减少性能消耗）
+    const bulletGeometry = new THREE.SphereGeometry(0.05, 4, 4); // 减少顶点数
+    const bulletMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xFFEB3B,
+        transparent: true,
+        opacity: 0.7
+    });
+    const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+    bullet.position.copy(muzzlePos);
+    scene.add(bullet);
+    
+    // 子弹速度
+    const speed = 40;
+    const velocity = direction.multiplyScalar(speed);
+    
+    // 添加到炮弹数组（使用与坦克炮弹相同的结构）
+    const projectile = bullet;
+    projectile.userData = {
+        velocity: velocity,
+        damage: (target === GameState.boss) ? 15 : 25, // 打Boss伤害略低
+        isInfantryBullet: true,
+        isLightBullet: true, // 标记为轻量级子弹（无爆炸效果）
+        created: performance.now()
+    };
+    
+    projectiles.push(projectile);
+    
+    // 弱化效果：只播放音效，不显示枪口闪光
+    // playShootSound(); // 可选：关闭音效以进一步优化性能
+}
+
+// 创建枪口闪光
+function createMuzzleFlash(position) {
+    const flashGeometry = new THREE.SphereGeometry(0.15, 6, 6);
+    const flashMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFFEB3B,
+        transparent: true,
+        opacity: 0.8
+    });
+    const flash = new THREE.Mesh(flashGeometry, flashMaterial);
+    flash.position.copy(position);
+    scene.add(flash);
+    
+    // 快速消失
+    setTimeout(() => {
+        scene.remove(flash);
+        flash.geometry.dispose();
+        flash.material.dispose();
+    }, 50);
+}
+
 // 更新额外坦克（进攻模式）
 function updateExtraTank(deltaTime) {
     if (!extraTank) return;
@@ -592,19 +894,31 @@ function updateExtraTank(deltaTime) {
     // 额外坦克也自动向前推进（稍微慢一点）
     extraTank.position.z -= 3.5 * deltaTime;
     
-    // 找到前方的敌人
+    // 找到前方的敌人（优先攻击Boss）
     let targetEnemy = null;
     let minDistance = Infinity;
     
-    for (const enemy of enemies) {
-        if (!enemy.userData.isAlive) continue;
-        // 只攻击前方的敌人
-        if (enemy.position.z > extraTank.position.z + 5) continue;
-        
-        const distance = extraTank.position.distanceTo(enemy.position);
-        if (distance < minDistance && distance < 80) {
-            minDistance = distance;
-            targetEnemy = enemy;
+    // 如果Boss存在且存活，优先攻击Boss
+    if (GameState.boss && GameState.boss.userData.isAlive) {
+        const distToBoss = extraTank.position.distanceTo(GameState.boss.position);
+        if (distToBoss < 80 && GameState.boss.position.z <= extraTank.position.z + 5) {
+            targetEnemy = GameState.boss;
+            minDistance = distToBoss;
+        }
+    }
+    
+    // 如果没有找到Boss，攻击普通敌人
+    if (!targetEnemy) {
+        for (const enemy of enemies) {
+            if (!enemy.userData.isAlive) continue;
+            // 只攻击前方的敌人
+            if (enemy.position.z > extraTank.position.z + 5) continue;
+            
+            const distance = extraTank.position.distanceTo(enemy.position);
+            if (distance < minDistance && distance < 80) {
+                minDistance = distance;
+                targetEnemy = enemy;
+            }
         }
     }
     
@@ -632,7 +946,9 @@ function updateExtraTank(deltaTime) {
         barrelTip.applyMatrix4(extraTankBarrel.matrixWorld);
         
         const targetPos = targetEnemy.position.clone();
-        targetPos.y = 0.6;
+        // 根据目标类型设置瞄准高度（Boss更高）
+        const aimHeight = (targetEnemy === GameState.boss) ? 5.0 : 0.6;
+        targetPos.y = aimHeight;
         
         const aimAngles = calculateParabolicAngle(targetPos, barrelTip, 35);
         
@@ -2003,6 +2319,9 @@ function animate() {
     if (extraTank) {
         updateExtraTank(deltaTime);
     }
+    
+    // 更新步兵
+    updateInfantry(deltaTime);
 
     // 更新炮弹
     updateProjectiles(deltaTime);
@@ -2638,8 +2957,12 @@ function updateProjectiles(deltaTime) {
             if (distance < 4) {
                 hit = true;
                 GameState.boss.userData.health -= projectile.userData.damage;
-                createExplosion(projectile.position, 1.0);
-                playHitSound();
+                
+                // 轻量级子弹不显示爆炸效果，只显示血量
+                if (!projectile.userData.isLightBullet) {
+                    createExplosion(projectile.position, 1.0);
+                    playHitSound();
+                }
 
                 // 更新Boss血量显示
                 const bossHealthPercent = Math.floor((GameState.boss.userData.health / GameState.boss.userData.maxHealth) * 100);
@@ -2675,8 +2998,12 @@ function updateProjectiles(deltaTime) {
                 if (distance < 2.5) {
                     hit = true;
                     guard.userData.health -= projectile.userData.damage;
-                    createExplosion(projectile.position, 0.8);
-                    playHitSound();
+                    
+                    // 轻量级子弹不显示爆炸效果
+                    if (!projectile.userData.isLightBullet) {
+                        createExplosion(projectile.position, 0.8);
+                        playHitSound();
+                    }
                     
                     if (guard.userData.health <= 0) {
                         // 消灭守城怪兽
@@ -2723,8 +3050,11 @@ function updateProjectiles(deltaTime) {
 
                         showMessage('+100', 500);
                     } else {
-                        createExplosion(projectile.position, 0.5);
-                        playHitSound();
+                        // 轻量级子弹不显示爆炸效果
+                        if (!projectile.userData.isLightBullet) {
+                            createExplosion(projectile.position, 0.5);
+                            playHitSound();
+                        }
                     }
                     break;
                 }
@@ -2733,7 +3063,10 @@ function updateProjectiles(deltaTime) {
 
         // 检查地面碰撞
         if (!hit && projectile.position.y <= 0) {
-            createExplosion(projectile.position, 0.3);
+            // 轻量级子弹不显示地面爆炸效果
+            if (!projectile.userData.isLightBullet) {
+                createExplosion(projectile.position, 0.3);
+            }
             hit = true;
         }
 
@@ -3671,4 +4004,7 @@ function cleanupThreeJS() {
     tank = null;
     barrel = null;
     turret = null;
+    
+    // 清理步兵
+    infantries = [];
 }
