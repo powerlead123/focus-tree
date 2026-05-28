@@ -15,7 +15,7 @@
             <div class="lock-title">数学错题坦克大战</div>
             <div class="lock-sub">请输入今日密码</div>
             
-            <input type="password" id="realLockInput" class="lock-real-input" placeholder="输入密码..." onkeydown="if(event.key==='Enter') lockVerify()">
+            <input type="password" id="realLockInput" class="lock-real-input" placeholder="输入密码...">
             
             <div class="lock-error" id="lockError"></div>
             
@@ -87,30 +87,24 @@
                 <div class="evaluation-items">
                     <div class="evaluation-item">
                         <span class="eval-label">🏫 学校作业无错误</span>
-                        <div class="eval-toggle">
-                            <input type="checkbox" id="schoolNoMistake" onchange="updateEvaluation()">
-                            <label for="schoolNoMistake" class="toggle-label">
-                                <span class="toggle-text">否</span>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <span class="eval-reward">奖励：额外坦克 ×1</span>
+                        <button class="reward-btn" id="schoolRewardBtn" onclick="addTankAsset(event)">
+                            <span class="btn-icon">🎁</span>
+                            <span class="btn-text">领取坦克</span>
+                        </button>
+                        <span class="eval-reward">已有坦克: <span id="tankCount">0</span></span>
                     </div>
                     <div class="evaluation-item">
                         <span class="eval-label">🏠 家里作业无错误</span>
-                        <div class="eval-toggle">
-                            <input type="checkbox" id="homeNoMistake" onchange="updateEvaluation()">
-                            <label for="homeNoMistake" class="toggle-label">
-                                <span class="toggle-text">否</span>
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <span class="eval-reward">奖励：多功能炮弹</span>
+                        <button class="reward-btn" id="homeRewardBtn" onclick="addSoldierAsset(event)">
+                            <span class="btn-icon">🎁</span>
+                            <span class="btn-text">领取士兵</span>
+                        </button>
+                        <span class="eval-reward">已有士兵: <span id="soldierCount">0</span></span>
                     </div>
                 </div>
                 <div class="evaluation-summary" id="evaluationSummary">
                     <span class="summary-icon">🎁</span>
-                    <span class="summary-text">完成评定可获得额外奖励！</span>
+                    <span class="summary-text">当前资产已保存，下次游戏自动继承！</span>
                 </div>
             </div>
 

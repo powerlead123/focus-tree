@@ -507,6 +507,76 @@ html, body {
     border-radius: 10px;
 }
 
+/* 奖励按钮样式 */
+.reward-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 15px;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    border: none;
+    border-radius: 20px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.reward-btn:hover {
+    background: linear-gradient(135deg, #45a049, #3d8b40);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.reward-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.reward-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.reward-btn .btn-icon {
+    font-size: 16px;
+}
+
+.reward-btn .btn-text {
+    font-weight: bold;
+}
+
+/* 提示信息样式 */
+.evaluation-hint {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: rgba(100, 149, 237, 0.2);
+    border-radius: 8px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.evaluation-hint .hint-icon {
+    font-size: 16px;
+}
+
+.evaluation-hint .hint-text {
+    color: #87CEEB;
+    font-size: 13px;
+}
+
+.evaluation-hint .hint-text strong {
+    color: #FFD700;
+    background: rgba(255, 215, 0, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
 .evaluation-summary {
     margin-top: 15px;
     padding: 12px;

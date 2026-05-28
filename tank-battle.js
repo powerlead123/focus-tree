@@ -35,6 +35,9 @@ const GameState = {
     // 家长评定奖励
     extraTank: false,
     specialAmmo: false,
+    // 资产系统（从localStorage读取）
+    tankAssets: 0,
+    soldierAssets: 0,
     // 自动战斗
     autoFireEnabled: true,
     autoMoveEnabled: true,
@@ -135,41 +138,102 @@ document.addEventListener('DOMContentLoaded', () => {
     const lockInput = document.getElementById('realLockInput');
     if (lockInput) {
         setTimeout(() => lockInput.focus(), 100);
+        
+        // 添加Enter键事件监听
+        lockInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                lockVerify();
+            }
+        });
     }
+    
+    // 加载已保存的资产
+    loadAssets();
     
     initRadarChart();
     updateWeaponPreview();
     updateEvaluation();
 });
 
+// Z键状态
+let isZKeyPressed = false;
+
+// 监听键盘事件
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'z' || e.key === 'Z') {
+        isZKeyPressed = true;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key === 'z' || e.key === 'Z') {
+        isZKeyPressed = false;
+    }
+});
+
+// 从localStorage加载资产
+function loadAssets() {
+    const savedTanks = localStorage.getItem('tankAssets');
+    const savedSoldiers = localStorage.getItem('soldierAssets');
+    
+    GameState.tankAssets = savedTanks ? parseInt(savedTanks) : 0;
+    GameState.soldierAssets = savedSoldiers ? parseInt(savedSoldiers) : 0;
+    
+    // 更新显示
+    updateAssetDisplay();
+}
+
+// 保存资产到localStorage
+function saveAssets() {
+    localStorage.setItem('tankAssets', GameState.tankAssets);
+    localStorage.setItem('soldierAssets', GameState.soldierAssets);
+}
+
+// 更新资产显示
+function updateAssetDisplay() {
+    const tankCountEl = document.getElementById('tankCount');
+    const soldierCountEl = document.getElementById('soldierCount');
+    
+    if (tankCountEl) tankCountEl.textContent = GameState.tankAssets;
+    if (soldierCountEl) soldierCountEl.textContent = GameState.soldierAssets;
+}
+
+// 添加坦克资产
+function addTankAsset(event) {
+    event.preventDefault();
+    
+    // Z键验证 - 静默失败，不提示孩子
+    if (!isZKeyPressed) {
+        return;
+    }
+    
+    GameState.tankAssets++;
+    saveAssets();
+    updateAssetDisplay();
+    
+    showMessage(`✅ 获得坦克！当前拥有 ${GameState.tankAssets} 个坦克`, 2000);
+}
+
+// 添加士兵资产
+function addSoldierAsset(event) {
+    event.preventDefault();
+    
+    // Z键验证 - 静默失败，不提示孩子
+    if (!isZKeyPressed) {
+        return;
+    }
+    
+    GameState.soldierAssets++;
+    saveAssets();
+    updateAssetDisplay();
+    
+    showMessage(`✅ 获得士兵！当前拥有 ${GameState.soldierAssets} 个士兵`, 2000);
+}
+
 // 更新家长评定
 function updateEvaluation() {
-    const schoolNoMistake = document.getElementById('schoolNoMistake').checked;
-    const homeNoMistake = document.getElementById('homeNoMistake').checked;
-    
-    // 更新开关文字
-    document.querySelectorAll('.toggle-text').forEach(el => {
-        const checkbox = el.closest('.eval-toggle').querySelector('input');
-        el.textContent = checkbox.checked ? '是' : '否';
-    });
-    
-    // 更新奖励状态
-    GameState.extraTank = schoolNoMistake;
-    GameState.specialAmmo = homeNoMistake;
-    
-    // 更新汇总显示
-    const summaryEl = document.getElementById('evaluationSummary');
-    let rewards = [];
-    if (schoolNoMistake) rewards.push('🎖️ 额外坦克×1');
-    if (homeNoMistake) rewards.push('🚀 多功能炮弹');
-    
-    if (rewards.length > 0) {
-        summaryEl.innerHTML = `<span class="summary-icon">🎁</span><span class="summary-text">${rewards.join(' + ')}</span>`;
-        summaryEl.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.3), rgba(126, 176, 60, 0.3))';
-    } else {
-        summaryEl.innerHTML = '<span class="summary-icon">🎁</span><span class="summary-text">完成评定可获得额外奖励！</span>';
-        summaryEl.style.background = 'linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(126, 176, 60, 0.2))';
-    }
+    // 家长评定功能已改为资产系统
+    // 保持函数兼容性
 }
 
 // 初始化雷达图
@@ -445,13 +509,25 @@ function startGame() {
     // 初始化3D场景
     initThreeJS();
 
-    // 如果学校作业无错误，添加额外坦克
-    if (GameState.extraTank) {
-        setTimeout(() => createExtraTank(), 1000);
+    // 根据资产添加额外坦克
+    if (GameState.tankAssets > 0) {
+        for (let i = 0; i < GameState.tankAssets; i++) {
+            setTimeout(() => createExtraTank(i), 1000 + i * 500);
+        }
     }
     
-    // 默认添加步兵（总是存在）
-    setTimeout(() => createInfantry(), 1500);
+    // 根据资产添加步兵
+    if (GameState.soldierAssets > 0) {
+        for (let i = 0; i < GameState.soldierAssets; i++) {
+            setTimeout(() => {
+                const infantry = createSingleInfantry(i);
+                if (infantry) infantries.push(infantry);
+            }, 1500 + i * 300);
+        }
+    } else {
+        // 默认至少2个步兵
+        setTimeout(() => createInfantry(), 1500);
+    }
 
     // 开始游戏循环
     lastTime = performance.now();
@@ -471,13 +547,11 @@ function startGame() {
 }
 
 // 创建额外坦克（学校作业无错误奖励）
-let extraTank = null;
-let extraTankTurret = null;
-let extraTankBarrel = null;
+let extraTanks = []; // 存储所有额外坦克
 
-function createExtraTank() {
+function createExtraTank(index = 0) {
     // 创建额外坦克 - 使用红色系与主坦克区分
-    extraTank = new THREE.Group();
+    const extraTank = new THREE.Group();
     
     const tankColor = 0xF44336; // 红色
     const tankDarkColor = 0xD32F2F; // 深红色
@@ -525,7 +599,7 @@ function createExtraTank() {
     extraTank.add(rightTrack);
     
     // 炮塔
-    extraTankTurret = new THREE.Group();
+    const extraTankTurret = new THREE.Group();
     
     const turretGeometry = new THREE.CylinderGeometry(0.85, 1.0, 0.7, 8);
     const turretMaterial = new THREE.MeshStandardMaterial({
@@ -541,7 +615,7 @@ function createExtraTank() {
     extraTankTurret.add(turretMesh);
     
     // 炮管 - 略短
-    extraTankBarrel = new THREE.Group();
+    const extraTankBarrel = new THREE.Group();
     const barrelGeometry = new THREE.CylinderGeometry(0.13, 0.18, 5, 8);
     const barrelMaterial = new THREE.MeshStandardMaterial({
         color: 0x424242,
@@ -569,11 +643,24 @@ function createExtraTank() {
     extraTankTurret.add(extraTankBarrel);
     extraTank.add(extraTankTurret);
     
-    // 位置在主角右侧
-    extraTank.position.set(8, 0, 0);
+    // 分散位置（根据索引）
+    const positions = [
+        { x: 8, z: 0 },    // 右侧
+        { x: -8, z: 0 },   // 左侧
+        { x: 6, z: -4 },   // 右后方
+        { x: -6, z: -4 },  // 左后方
+        { x: 0, z: -6 }    // 正后方
+    ];
+    const pos = positions[index % positions.length];
+    extraTank.position.set(pos.x, 0, pos.z);
     scene.add(extraTank);
     
-    showMessage('🎖️ 红色支援坦克加入战斗！', 2000);
+    // 保存引用
+    extraTank.userData.turret = extraTankTurret;
+    extraTank.userData.barrel = extraTankBarrel;
+    extraTanks.push(extraTank);
+    
+    showMessage(`🎖️ 支援坦克${index + 1}号加入战斗！`, 2000);
 }
 
 // 创建步兵
@@ -685,10 +772,16 @@ function createSingleInfantry(index) {
     infantryGun.position.set(0.35, 1.0, 0.2);
     infantry.add(infantryGun);
     
-    // 分散站位 - 2个步兵分布在坦克两侧
+    // 分散站位 - 步兵分布在坦克周围
     const positions = [
         { x: -6, z: 2 },   // 左侧
-        { x: 6, z: 2 }     // 右侧
+        { x: 6, z: 2 },    // 右侧
+        { x: -4, z: -2 },  // 左后方
+        { x: 4, z: -2 },   // 右后方
+        { x: -8, z: 0 },   // 左远侧
+        { x: 8, z: 0 },    // 右远侧
+        { x: -3, z: 4 },   // 左前方
+        { x: 3, z: 4 }     // 右前方
     ];
     const pos = positions[index % positions.length];
     infantry.position.set(pos.x, 0, pos.z);
@@ -706,10 +799,16 @@ function createSingleInfantry(index) {
 function updateInfantry(deltaTime) {
     if (!infantries.length || !tank) return;
     
-    // 基础偏移位置（2个步兵分布在坦克两侧）
+    // 基础偏移位置（步兵分布在坦克周围）
     const basePositions = [
         { x: -6, z: 2 },   // 左侧
-        { x: 6, z: 2 }     // 右侧
+        { x: 6, z: 2 },    // 右侧
+        { x: -4, z: -2 },  // 左后方
+        { x: 4, z: -2 },   // 右后方
+        { x: -8, z: 0 },   // 左远侧
+        { x: 8, z: 0 },    // 右远侧
+        { x: -3, z: 4 },   // 左前方
+        { x: 3, z: 4 }     // 右前方
     ];
     
     infantries.forEach((infantry, index) => {
@@ -877,116 +976,133 @@ function createMuzzleFlash(position) {
 
 // 更新额外坦克（进攻模式）
 function updateExtraTank(deltaTime) {
-    if (!extraTank) return;
+    if (!extraTanks.length) return;
     
-    // 额外坦克跟随主坦克前进，保持一定偏移
-    const targetZ = tank.position.z + 5; // 在主坦克后方5个单位
-    const targetX = tank.position.x + 8; // 在主坦克右侧8个单位
-    
-    // 平滑移动
-    const moveSpeed = 4;
-    const dx = targetX - extraTank.position.x;
-    const dz = targetZ - extraTank.position.z;
-    
-    extraTank.position.x += dx * moveSpeed * deltaTime * 0.5;
-    extraTank.position.z += dz * moveSpeed * deltaTime * 0.5;
-    
-    // 额外坦克也自动向前推进（稍微慢一点）
-    extraTank.position.z -= 3.5 * deltaTime;
-    
-    // 找到前方的敌人（优先攻击Boss）
-    let targetEnemy = null;
-    let minDistance = Infinity;
-    
-    // 如果Boss存在且存活，优先攻击Boss
-    if (GameState.boss && GameState.boss.userData.isAlive) {
-        const distToBoss = extraTank.position.distanceTo(GameState.boss.position);
-        if (distToBoss < 80 && GameState.boss.position.z <= extraTank.position.z + 5) {
-            targetEnemy = GameState.boss;
-            minDistance = distToBoss;
-        }
-    }
-    
-    // 如果没有找到Boss，攻击普通敌人
-    if (!targetEnemy) {
-        for (const enemy of enemies) {
-            if (!enemy.userData.isAlive) continue;
-            // 只攻击前方的敌人
-            if (enemy.position.z > extraTank.position.z + 5) continue;
-            
-            const distance = extraTank.position.distanceTo(enemy.position);
-            if (distance < minDistance && distance < 80) {
-                minDistance = distance;
-                targetEnemy = enemy;
+    extraTanks.forEach((extraTank, index) => {
+        if (!extraTank) return;
+        
+        // 每个坦克保持相对位置
+        const basePositions = [
+            { x: 8, z: 0 },    // 右侧
+            { x: -8, z: 0 },   // 左侧
+            { x: 6, z: -4 },   // 右后方
+            { x: -6, z: -4 },  // 左后方
+            { x: 0, z: -6 }    // 正后方
+        ];
+        const basePos = basePositions[index % basePositions.length];
+        
+        const targetZ = tank.position.z + basePos.z;
+        const targetX = tank.position.x + basePos.x;
+        
+        // 平滑移动
+        const moveSpeed = 4;
+        const dx = targetX - extraTank.position.x;
+        const dz = targetZ - extraTank.position.z;
+        
+        extraTank.position.x += dx * moveSpeed * deltaTime * 0.5;
+        extraTank.position.z += dz * moveSpeed * deltaTime * 0.5;
+        
+        // 额外坦克也自动向前推进（稍微慢一点）
+        extraTank.position.z -= 3.5 * deltaTime;
+        
+        // 获取炮塔和炮管
+        const extraTankTurret = extraTank.userData.turret;
+        const extraTankBarrel = extraTank.userData.barrel;
+        
+        // 找到前方的敌人（优先攻击Boss）
+        let targetEnemy = null;
+        let minDistance = Infinity;
+        
+        // 如果Boss存在且存活，优先攻击Boss
+        if (GameState.boss && GameState.boss.userData.isAlive) {
+            const distToBoss = extraTank.position.distanceTo(GameState.boss.position);
+            if (distToBoss < 80 && GameState.boss.position.z <= extraTank.position.z + 5) {
+                targetEnemy = GameState.boss;
+                minDistance = distToBoss;
             }
         }
-    }
-    
-    // 坦克朝向
-    let targetRotation = Math.PI; // 默认向前
-    
-    if (targetEnemy) {
-        const direction = new THREE.Vector3();
-        direction.subVectors(targetEnemy.position, extraTank.position);
-        direction.y = 0;
-        direction.normalize();
-        targetRotation = Math.atan2(direction.x, direction.z);
-    }
-    
-    // 平滑转向
-    const rotationDiff = targetRotation - extraTank.rotation.y;
-    let normalizedDiff = rotationDiff;
-    while (normalizedDiff > Math.PI) normalizedDiff -= Math.PI * 2;
-    while (normalizedDiff < -Math.PI) normalizedDiff += Math.PI * 2;
-    extraTank.rotation.y += normalizedDiff * 2.0 * deltaTime;
-    
-    // 自动瞄准和射击
-    if (targetEnemy && extraTankTurret && extraTankBarrel) {
-        const barrelTip = new THREE.Vector3(0, 0, 6.1);
-        barrelTip.applyMatrix4(extraTankBarrel.matrixWorld);
         
-        const targetPos = targetEnemy.position.clone();
-        // 根据目标类型设置瞄准高度（Boss更高）
-        const aimHeight = (targetEnemy === GameState.boss) ? 5.0 : 0.6;
-        targetPos.y = aimHeight;
+        // 如果没有找到Boss，攻击普通敌人
+        if (!targetEnemy) {
+            for (const enemy of enemies) {
+                if (!enemy.userData.isAlive) continue;
+                // 只攻击前方的敌人
+                if (enemy.position.z > extraTank.position.z + 5) continue;
+                
+                const distance = extraTank.position.distanceTo(enemy.position);
+                if (distance < minDistance && distance < 80) {
+                    minDistance = distance;
+                    targetEnemy = enemy;
+                }
+            }
+        }
         
-        const aimAngles = calculateParabolicAngle(targetPos, barrelTip, 35);
+        // 坦克朝向
+        let targetRotation = Math.PI; // 默认向前
         
-        if (aimAngles) {
-            const targetTurretY = aimAngles.horizontal - extraTank.rotation.y;
+        if (targetEnemy) {
+            const direction = new THREE.Vector3();
+            direction.subVectors(targetEnemy.position, extraTank.position);
+            direction.y = 0;
+            direction.normalize();
+            targetRotation = Math.atan2(direction.x, direction.z);
+        }
+        
+        // 平滑转向
+        const rotationDiff = targetRotation - extraTank.rotation.y;
+        let normalizedDiff = rotationDiff;
+        while (normalizedDiff > Math.PI) normalizedDiff -= Math.PI * 2;
+        while (normalizedDiff < -Math.PI) normalizedDiff += Math.PI * 2;
+        extraTank.rotation.y += normalizedDiff * 2.0 * deltaTime;
+        
+        // 自动瞄准和射击
+        if (targetEnemy && extraTankTurret && extraTankBarrel) {
+            const barrelTip = new THREE.Vector3(0, 0, 6.1);
+            barrelTip.applyMatrix4(extraTankBarrel.matrixWorld);
+            
+            const targetPos = targetEnemy.position.clone();
+            // 根据目标类型设置瞄准高度（Boss更高）
+            const aimHeight = (targetEnemy === GameState.boss) ? 5.0 : 0.6;
+            targetPos.y = aimHeight;
+            
+            const aimAngles = calculateParabolicAngle(targetPos, barrelTip, 35);
+            
+            if (aimAngles) {
+                const targetTurretY = aimAngles.horizontal - extraTank.rotation.y;
+                let turretDiff = targetTurretY - extraTankTurret.rotation.y;
+                while (turretDiff > Math.PI) turretDiff -= Math.PI * 2;
+                while (turretDiff < -Math.PI) turretDiff += Math.PI * 2;
+                
+                const targetBarrelX = -aimAngles.vertical;
+                let barrelDiff = targetBarrelX - extraTankBarrel.rotation.x;
+                
+                // 平滑旋转
+                extraTankTurret.rotation.y += turretDiff * 3.0 * deltaTime;
+                extraTankBarrel.rotation.x += barrelDiff * 3.0 * deltaTime;
+                extraTankBarrel.rotation.x = Math.max(-0.5, Math.min(0.5, extraTankBarrel.rotation.x));
+                
+                // 检查瞄准
+                const aimThreshold = 0.15;
+                const isAimed = Math.abs(turretDiff) < aimThreshold && Math.abs(barrelDiff) < aimThreshold;
+                
+                const now = performance.now();
+                const canFire = now - (extraTank.userData.lastFireTime || 0) > 1000;
+                
+                if (isAimed && canFire) {
+                    extraTank.userData.lastFireTime = now;
+                    fireProjectileFromTank(extraTank, extraTankTurret, extraTankBarrel);
+            }
+        }
+        } else {
+            // 没有敌人，炮塔指向前方
+            const targetTurretY = Math.PI - extraTank.rotation.y;
             let turretDiff = targetTurretY - extraTankTurret.rotation.y;
             while (turretDiff > Math.PI) turretDiff -= Math.PI * 2;
             while (turretDiff < -Math.PI) turretDiff += Math.PI * 2;
-            
-            const targetBarrelX = -aimAngles.vertical;
-            let barrelDiff = targetBarrelX - extraTankBarrel.rotation.x;
-            
-            // 平滑旋转
-            extraTankTurret.rotation.y += turretDiff * 3.0 * deltaTime;
-            extraTankBarrel.rotation.x += barrelDiff * 3.0 * deltaTime;
-            extraTankBarrel.rotation.x = Math.max(-0.5, Math.min(0.5, extraTankBarrel.rotation.x));
-            
-            // 检查瞄准
-            const aimThreshold = 0.15;
-            const isAimed = Math.abs(turretDiff) < aimThreshold && Math.abs(barrelDiff) < aimThreshold;
-            
-            const now = performance.now();
-            const canFire = now - (extraTank.userData.lastFireTime || 0) > 1000;
-            
-            if (isAimed && canFire) {
-                extraTank.userData.lastFireTime = now;
-                fireProjectileFromTank(extraTank, extraTankTurret, extraTankBarrel);
-            }
+            extraTankTurret.rotation.y += turretDiff * 2.0 * deltaTime;
+            extraTankBarrel.rotation.x = 0;
         }
-    } else {
-        // 没有敌人，炮塔指向前方
-        const targetTurretY = Math.PI - extraTank.rotation.y;
-        let turretDiff = targetTurretY - extraTankTurret.rotation.y;
-        while (turretDiff > Math.PI) turretDiff -= Math.PI * 2;
-        while (turretDiff < -Math.PI) turretDiff += Math.PI * 2;
-        extraTankTurret.rotation.y += turretDiff * 2.0 * deltaTime;
-        extraTankBarrel.rotation.x = 0;
-    }
+    });
 }
 
 function exitGame() {
@@ -2316,7 +2432,7 @@ function animate() {
     updateTrajectoryLine();
 
     // 更新额外坦克（如果存在）
-    if (extraTank) {
+    if (extraTanks.length > 0) {
         updateExtraTank(deltaTime);
     }
     
@@ -3111,14 +3227,18 @@ function updateBossProjectiles(deltaTime) {
         }
 
         // 检查是否击中额外坦克
-        if (!hit && extraTank) {
-            const distance = projectile.position.distanceTo(extraTank.position);
-            if (distance < 3) {
-                hit = true;
-                createHitEffect(projectile.position, 0.8);
+        if (!hit && extraTanks.length > 0) {
+            for (const extraTank of extraTanks) {
+                if (!extraTank) continue;
+                const distance = projectile.position.distanceTo(extraTank.position);
+                if (distance < 3) {
+                    hit = true;
+                    createHitEffect(projectile.position, 0.8);
+                    break;
+                }
             }
         }
-        
+
         // 检查地面碰撞
         if (!hit && projectile.position.y <= 0) {
             createExplosion(projectile.position, 0.5);
@@ -3165,11 +3285,15 @@ function updateEnemyProjectiles(deltaTime) {
         }
 
         // 检查是否击中额外坦克
-        if (!hit && extraTank) {
-            const distance = projectile.position.distanceTo(extraTank.position);
-            if (distance < 3) {
-                hit = true;
-                createHitEffect(projectile.position, 0.6);
+        if (!hit && extraTanks.length > 0) {
+            for (const extraTank of extraTanks) {
+                if (!extraTank) continue;
+                const distance = projectile.position.distanceTo(extraTank.position);
+                if (distance < 3) {
+                    hit = true;
+                    createHitEffect(projectile.position, 0.6);
+                    break;
+                }
             }
         }
 
@@ -3260,11 +3384,15 @@ function updateGateGuardsAttack(deltaTime) {
             }
         }
 
-        if (!hit && extraTank) {
-            const distance = projectile.position.distanceTo(extraTank.position);
-            if (distance < 3) {
-                hit = true;
-                createHitEffect(projectile.position, 0.8);
+        if (!hit && extraTanks.length > 0) {
+            for (const extraTank of extraTanks) {
+                if (!extraTank) continue;
+                const distance = projectile.position.distanceTo(extraTank.position);
+                if (distance < 3) {
+                    hit = true;
+                    createHitEffect(projectile.position, 0.8);
+                    break;
+                }
             }
         }
 
@@ -3531,9 +3659,21 @@ function updateBoss(deltaTime) {
 // Boss技能
 function useBossSkill() {
     if (!GameState.boss || !tank) return;
-    
-    const skill = Math.floor(Math.random() * 3);
-    
+
+    const userData = GameState.boss.userData;
+    const healthPercent = userData.health / userData.maxHealth;
+
+    // 根据血量选择技能
+    let skill;
+    if (healthPercent < 0.3) {
+        // 低血量时更频繁使用强力技能
+        skill = Math.floor(Math.random() * 5);
+    } else if (healthPercent < 0.6) {
+        skill = Math.floor(Math.random() * 4);
+    } else {
+        skill = Math.floor(Math.random() * 3);
+    }
+
     switch (skill) {
         case 0:
             // 技能1：发射能量球
@@ -3549,6 +3689,16 @@ function useBossSkill() {
             // 技能3：狂暴模式
             showMessage('🔥 Boss进入狂暴模式！', 2000);
             bossEnrage();
+            break;
+        case 3:
+            // 技能4：激光扫射
+            showMessage('💥 Boss使用激光扫射！', 2000);
+            bossLaserAttack();
+            break;
+        case 4:
+            // 技能5：能量爆发
+            showMessage('💀 Boss释放能量爆发！', 2000);
+            bossEnergyBurst();
             break;
     }
 }
@@ -3651,19 +3801,19 @@ function createMiniBug() {
 // Boss狂暴模式
 function bossEnrage() {
     if (!GameState.boss) return;
-    
+
     const boss = GameState.boss;
-    
+
     // 变红
     const body = boss.children[0];
     if (body && body.material) {
         body.material.emissive.setHex(0xFF0000);
         body.material.emissiveIntensity = 0.8;
     }
-    
+
     // 加速
     boss.userData.skillInterval = 3000; // 技能间隔缩短
-    
+
     // 5秒后恢复正常
     setTimeout(() => {
         if (boss && body && body.material) {
@@ -3672,6 +3822,160 @@ function bossEnrage() {
             boss.userData.skillInterval = 5000;
         }
     }, 5000);
+}
+
+// Boss技能4：激光扫射
+function bossLaserAttack() {
+    if (!GameState.boss || !tank) return;
+
+    const boss = GameState.boss;
+
+    // 创建激光效果
+    const laserGeometry = new THREE.CylinderGeometry(0.3, 0.3, 50, 8);
+    const laserMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFF0000,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    // 左激光
+    const leftLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+    leftLaser.position.copy(boss.position);
+    leftLaser.position.x -= 4;
+    leftLaser.position.y += 2;
+    leftLaser.rotation.x = Math.PI / 2;
+    scene.add(leftLaser);
+
+    // 右激光
+    const rightLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+    rightLaser.position.copy(boss.position);
+    rightLaser.position.x += 4;
+    rightLaser.position.y += 2;
+    rightLaser.rotation.x = Math.PI / 2;
+    scene.add(rightLaser);
+
+    // 激光扫射动画
+    let sweepAngle = 0;
+    const sweepInterval = setInterval(() => {
+        sweepAngle += 0.1;
+        leftLaser.rotation.z = Math.sin(sweepAngle) * 0.5;
+        rightLaser.rotation.z = Math.cos(sweepAngle) * 0.5;
+
+        // 检查是否击中坦克
+        if (tank) {
+            const distToLeft = tank.position.distanceTo(leftLaser.position);
+            const distToRight = tank.position.distanceTo(rightLaser.position);
+
+            if (distToLeft < 5 || distToRight < 5) {
+                // 击中坦克
+                createHitEffect(tank.position, 1.0);
+                showMessage('💥 坦克被激光击中！', 1000);
+            }
+        }
+
+        // 检查是否击中额外坦克
+        if (extraTanks.length > 0) {
+            extraTanks.forEach(extraTank => {
+                if (!extraTank) return;
+                const distToLeft = extraTank.position.distanceTo(leftLaser.position);
+                const distToRight = extraTank.position.distanceTo(rightLaser.position);
+
+                if (distToLeft < 5 || distToRight < 5) {
+                    createHitEffect(extraTank.position, 1.0);
+                }
+            });
+        }
+
+        // 检查是否击中步兵
+        if (infantries.length > 0) {
+            infantries.forEach(infantry => {
+                if (!infantry) return;
+                const distToLeft = infantry.position.distanceTo(leftLaser.position);
+                const distToRight = infantry.position.distanceTo(rightLaser.position);
+
+                if (distToLeft < 3 || distToRight < 3) {
+                    createHitEffect(infantry.position, 0.8);
+                }
+            });
+        }
+    }, 100);
+
+    // 3秒后停止激光
+    setTimeout(() => {
+        clearInterval(sweepInterval);
+        scene.remove(leftLaser);
+        scene.remove(rightLaser);
+        laserGeometry.dispose();
+        laserMaterial.dispose();
+    }, 3000);
+}
+
+// Boss技能5：能量爆发
+function bossEnergyBurst() {
+    if (!GameState.boss) return;
+
+    const boss = GameState.boss;
+
+    // 创建能量波
+    const burstGeometry = new THREE.RingGeometry(0.1, 1, 32);
+    const burstMaterial = new THREE.MeshBasicMaterial({
+        color: 0xFF6600,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+    });
+
+    const burst = new THREE.Mesh(burstGeometry, burstMaterial);
+    burst.position.copy(boss.position);
+    burst.position.y += 3;
+    burst.rotation.x = -Math.PI / 2;
+    scene.add(burst);
+
+    // 能量波扩散动画
+    let scale = 1;
+    const burstInterval = setInterval(() => {
+        scale += 0.5;
+        burst.scale.set(scale, scale, scale);
+        burstMaterial.opacity = Math.max(0, 0.8 - scale * 0.05);
+
+        // 检查是否击中坦克
+        if (tank) {
+            const distance = tank.position.distanceTo(burst.position);
+            if (distance < scale * 2 && distance > (scale - 0.5) * 2) {
+                createHitEffect(tank.position, 1.2);
+                showMessage('💥 坦克被能量波击中！', 1000);
+            }
+        }
+
+        // 检查是否击中额外坦克
+        if (extraTanks.length > 0) {
+            extraTanks.forEach(extraTank => {
+                if (!extraTank) return;
+                const distance = extraTank.position.distanceTo(burst.position);
+                if (distance < scale * 2 && distance > (scale - 0.5) * 2) {
+                    createHitEffect(extraTank.position, 1.0);
+                }
+            });
+        }
+
+        // 检查是否击中步兵
+        if (infantries.length > 0) {
+            infantries.forEach(infantry => {
+                if (!infantry) return;
+                const distance = infantry.position.distanceTo(burst.position);
+                if (distance < scale * 2 && distance > (scale - 0.5) * 2) {
+                    createHitEffect(infantry.position, 0.8);
+                }
+            });
+        }
+
+        if (scale > 20) {
+            clearInterval(burstInterval);
+            scene.remove(burst);
+            burstGeometry.dispose();
+            burstMaterial.dispose();
+        }
+    }, 50);
 }
 
 // 更新敌人糊涂虫台词
@@ -4007,4 +4311,8 @@ function cleanupThreeJS() {
     
     // 清理步兵
     infantries = [];
+    
+    // 清理额外坦克
+    extraTanks = [];
 }
+
