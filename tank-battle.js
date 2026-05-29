@@ -28,7 +28,7 @@ const GameState = {
     score: 0,
     kills: 0,
     isPlaying: false,
-    timeRemaining: 180, // 3分钟，确保有足够时间攻城
+    timeRemaining: 300, // 5分钟，确保有足够时间攻城并击败Boss
     lastFireTime: 0,
     shotsFired: 0,
     shotsHit: 0,
@@ -488,7 +488,7 @@ function startGame() {
     GameState.bugsKilled = 0;
     GameState.bossSpawned = false;
     GameState.bossDefeated = false;
-    GameState.timeRemaining = 180; // 3分钟，确保有足够时间攻城
+    GameState.timeRemaining = 300; // 5分钟，确保有足够时间攻城并击败Boss
     GameState.shotsFired = 0;
     GameState.shotsHit = 0;
     GameState.isPlaying = true;
@@ -2359,9 +2359,11 @@ function createExplosion(position, scale = 1) {
         if (particleSystem.material.opacity > 0 && frame < 80) {
             requestAnimationFrame(animateExplosion);
         } else {
-            scene.remove(particleSystem);
-            geometry.dispose();
-            material.dispose();
+            if (scene && particleSystem) {
+                scene.remove(particleSystem);
+            }
+            if (geometry) geometry.dispose();
+            if (material) material.dispose();
         }
     };
     animateExplosion();
@@ -2388,12 +2390,48 @@ function createExplosion(position, scale = 1) {
         if (shockwave.material.opacity > 0) {
             requestAnimationFrame(animateShockwave);
         } else {
-            scene.remove(shockwave);
-            shockwave.geometry.dispose();
-            shockwave.material.dispose();
+            if (scene && shockwave) {
+                scene.remove(shockwave);
+            }
+            if (shockwave && shockwave.geometry) shockwave.geometry.dispose();
+            if (shockwave && shockwave.material) shockwave.material.dispose();
         }
     };
     animateShockwave();
+}
+
+// 相机震动效果
+function shakeCamera(intensity, duration) {
+    if (!camera) return;
+
+    const originalPosition = camera.position.clone();
+    let elapsed = 0;
+    const interval = 16; // 约60fps
+
+    const shake = () => {
+        elapsed += interval;
+
+        if (elapsed >= duration) {
+            // 恢复原始位置
+            camera.position.copy(originalPosition);
+            return;
+        }
+
+        // 计算震动偏移
+        const decay = 1 - (elapsed / duration);
+        const offsetX = (Math.random() - 0.5) * intensity * decay;
+        const offsetY = (Math.random() - 0.5) * intensity * decay;
+        const offsetZ = (Math.random() - 0.5) * intensity * decay * 0.5;
+
+        // 应用震动
+        camera.position.x = originalPosition.x + offsetX;
+        camera.position.y = originalPosition.y + offsetY;
+        camera.position.z = originalPosition.z + offsetZ;
+
+        requestAnimationFrame(shake);
+    };
+
+    shake();
 }
 
 // 动画循环
@@ -2596,11 +2634,11 @@ function updateSiegePhase(deltaTime, config) {
             updateTankOrientation(deltaTime, nearestEnemy, config);
         }
     } else if (!GameState.gateOpen) {
-        // 消灭所有守城怪兽，打开大门
-        openGate();
+        // 消灭所有守城怪兽，炸开大门
+        explodeGate();
         GameState.gateOpen = true;
         GameState.bossSpawned = true; // 标记Boss已生成，停止倒计时
-        showMessage('🚪 大门打开！Boss出现了！', 3000);
+        showMessage('💥 大门被炸开！Boss出现了！', 3000);
 
         // 立即进入Boss战并生成Boss
         GameState.gamePhase = 'boss';
@@ -2856,23 +2894,122 @@ function createBigMonster(color) {
 }
 
 // 打开大门
-function openGate() {
+function explodeGate() {
     if (!GameState.enemyBase) return;
-    
-    // 找到大门并打开（旋转或移除）
+
+    // 找到大门和门框（从baseGroup中找）
+    let gate = null;
+    let gateFrame = null;
     GameState.enemyBase.children.forEach(child => {
-        if (child.geometry && child.geometry.type === 'BoxGeometry') {
-            // 大门打开动画
-            const openGateAnimation = () => {
-                child.rotation.y += 0.05;
-                child.position.x += 0.5;
-                if (child.rotation.y < Math.PI / 2) {
-                    requestAnimationFrame(openGateAnimation);
-                }
-            };
-            openGateAnimation();
+        // 大门是BoxGeometry，位置在z=11，高度为12
+        if (child.geometry && child.geometry.type === 'BoxGeometry' && 
+            child.position.z > 8 && child.position.z < 12 && 
+            child.position.y === 6) {
+            gate = child;
+        }
+        // 门框也是BoxGeometry，位置在z=10.5，材质透明
+        if (child.geometry && child.geometry.type === 'BoxGeometry' && 
+            child.position.z > 9 && child.position.z < 11 && 
+            child.material && child.material.transparent) {
+            gateFrame = child;
         }
     });
+
+    if (!gate) {
+        console.log('未找到大门，无法炸开');
+        return;
+    }
+    console.log('找到大门，准备炸开');
+
+    // 获取大门在世界坐标系中的位置用于爆炸效果
+    const explosionPos = new THREE.Vector3();
+    gate.getWorldPosition(explosionPos);
+    explosionPos.y += 4;
+
+    // 大爆炸效果
+    createExplosion(explosionPos, 4);
+
+    // 创建多个小爆炸
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+            const offset = new THREE.Vector3(
+                (Math.random() - 0.5) * 8,
+                (Math.random() - 0.5) * 6,
+                (Math.random() - 0.5) * 2
+            );
+            createExplosion(explosionPos.clone().add(offset), 2 + Math.random() * 2);
+        }, i * 200);
+    }
+
+    // 大门碎片效果
+    const fragmentGeometry = new THREE.BoxGeometry(1, 1, 0.5);
+    const fragmentMaterial = new THREE.MeshStandardMaterial({
+        color: 0x8B4513,
+        roughness: 0.8
+    });
+
+    for (let i = 0; i < 20; i++) {
+        const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
+        // 在世界坐标系中设置碎片位置
+        fragment.position.copy(explosionPos);
+        fragment.position.x += (Math.random() - 0.5) * 6;
+        fragment.position.y += (Math.random() - 0.5) * 6;
+        fragment.position.z += (Math.random() - 0.5) * 2;
+
+        // 随机旋转
+        fragment.rotation.set(
+            Math.random() * Math.PI,
+            Math.random() * Math.PI,
+            Math.random() * Math.PI
+        );
+
+        scene.add(fragment);
+
+        // 碎片飞散动画
+        const velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 10,
+            Math.random() * 8 + 2,
+            (Math.random() - 0.5) * 5
+        );
+
+        let life = 1.0;
+        const animateFragment = () => {
+            if (life <= 0) {
+                if (scene && fragment) scene.remove(fragment);
+                return;
+            }
+
+            // 物理运动
+            fragment.position.add(velocity.clone().multiplyScalar(0.016));
+            velocity.y -= 0.3; // 重力
+
+            // 旋转
+            fragment.rotation.x += 0.1;
+            fragment.rotation.y += 0.1;
+
+            // 淡出
+            life -= 0.02;
+            fragment.material.opacity = life;
+            fragment.material.transparent = true;
+
+            requestAnimationFrame(animateFragment);
+        };
+
+        animateFragment();
+    }
+
+    // 从baseGroup中移除大门和门框（而不是从scene中移除）
+    if (gate && gate.parent) {
+        gate.parent.remove(gate);
+        console.log('大门已移除');
+    }
+    if (gateFrame && gateFrame.parent) {
+        gateFrame.parent.remove(gateFrame);
+        console.log('门框已移除');
+    }
+
+    // 震动效果
+    shakeCamera(1.0, 1000);
 }
 
 // 生成Boss - 粗心大王（全新设计）
@@ -3026,8 +3163,8 @@ function spawnBoss() {
     boss.add(shield);
     boss.userData.shield = shield;
     
-    // 位置 - 大门后面
-    boss.position.set(0, 0, -245);
+    // 位置 - 大门外面一点，确保玩家能看到（大门世界坐标z=-239，主建筑前缘z=-240）
+    boss.position.set(0, 0, -235);
     
     // 保存已有的userData引用，只添加新属性
     boss.userData.health = 3000;
@@ -3333,7 +3470,7 @@ function updateGateGuardsAttack(deltaTime) {
                 guard.userData.lastAttackTime = now;
 
                 const geometry = new THREE.SphereGeometry(0.5, 12, 12);
-                const material = new THREE.MeshBasicMaterial({
+                const material = new THREE.MeshStandardMaterial({
                     color: 0xFF0000,
                     emissive: 0xFF0000,
                     emissiveIntensity: 0.8
