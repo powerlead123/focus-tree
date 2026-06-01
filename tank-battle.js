@@ -259,6 +259,63 @@ function addRegimentAsset(event) {
     showMessage(`🏆 获得兵团！当前拥有 ${GameState.regimentAssets} 个兵团（${GameState.regimentAssets * REGIMENT_SIZE}人）`, 3000);
 }
 
+// 减少坦克资产
+function removeTankAsset(event) {
+    event.preventDefault();
+
+    // Z键验证 - 静默失败，不提示孩子
+    if (!isZKeyPressed) {
+        return;
+    }
+
+    if (GameState.tankAssets > 0) {
+        GameState.tankAssets--;
+        saveAssets();
+        updateAssetDisplay();
+        showMessage(`➖ 减少坦克！当前拥有 ${GameState.tankAssets} 个坦克`, 2000);
+    } else {
+        showMessage(`⚠️ 没有坦克可以减少了`, 2000);
+    }
+}
+
+// 减少士兵资产
+function removeSoldierAsset(event) {
+    event.preventDefault();
+
+    // Z键验证 - 静默失败，不提示孩子
+    if (!isZKeyPressed) {
+        return;
+    }
+
+    if (GameState.soldierAssets > 0) {
+        GameState.soldierAssets--;
+        saveAssets();
+        updateAssetDisplay();
+        showMessage(`➖ 减少士兵！当前拥有 ${GameState.soldierAssets} 个士兵`, 2000);
+    } else {
+        showMessage(`⚠️ 没有士兵可以减少了`, 2000);
+    }
+}
+
+// 减少兵团资产
+function removeRegimentAsset(event) {
+    event.preventDefault();
+
+    // Z键验证 - 静默失败，不提示孩子
+    if (!isZKeyPressed) {
+        return;
+    }
+
+    if (GameState.regimentAssets > 0) {
+        GameState.regimentAssets--;
+        saveAssets();
+        updateAssetDisplay();
+        showMessage(`➖ 减少兵团！当前拥有 ${GameState.regimentAssets} 个兵团（${GameState.regimentAssets * REGIMENT_SIZE}人）`, 3000);
+    } else {
+        showMessage(`⚠️ 没有兵团可以减少了`, 2000);
+    }
+}
+
 // 更新家长评定
 function updateEvaluation() {
     // 家长评定功能已改为资产系统

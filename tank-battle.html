@@ -87,26 +87,44 @@
                 <div class="evaluation-items">
                     <div class="evaluation-item">
                         <span class="eval-label">🏫 学校作业无错误</span>
-                        <button class="reward-btn" id="schoolRewardBtn" onclick="addTankAsset(event)">
-                            <span class="btn-icon">🎁</span>
-                            <span class="btn-text">领取坦克</span>
-                        </button>
+                        <div class="btn-group">
+                            <button class="reward-btn" id="schoolRewardBtn" onclick="addTankAsset(event)">
+                                <span class="btn-icon">🎁</span>
+                                <span class="btn-text">领取坦克</span>
+                            </button>
+                            <button class="reward-btn btn-remove" id="removeTankBtn" onclick="removeTankAsset(event)">
+                                <span class="btn-icon">➖</span>
+                                <span class="btn-text">减少坦克</span>
+                            </button>
+                        </div>
                         <span class="eval-reward">已有坦克: <span id="tankCount">0</span></span>
                     </div>
                     <div class="evaluation-item">
                         <span class="eval-label">🏠 家里作业无错误</span>
-                        <button class="reward-btn" id="homeRewardBtn" onclick="addSoldierAsset(event)">
-                            <span class="btn-icon">🎁</span>
-                            <span class="btn-text">领取士兵</span>
-                        </button>
+                        <div class="btn-group">
+                            <button class="reward-btn" id="homeRewardBtn" onclick="addSoldierAsset(event)">
+                                <span class="btn-icon">🎁</span>
+                                <span class="btn-text">领取士兵</span>
+                            </button>
+                            <button class="reward-btn btn-remove" id="removeSoldierBtn" onclick="removeSoldierAsset(event)">
+                                <span class="btn-icon">➖</span>
+                                <span class="btn-text">减少士兵</span>
+                            </button>
+                        </div>
                         <span class="eval-reward">已有士兵: <span id="soldierCount">0</span></span>
                     </div>
                     <div class="evaluation-item">
                         <span class="eval-label">🏆 超级表现奖励</span>
-                        <button class="reward-btn" id="regimentRewardBtn" onclick="addRegimentAsset(event)" style="background: linear-gradient(135deg, #FFD700, #FFA500);">
-                            <span class="btn-icon">👑</span>
-                            <span class="btn-text">领取兵团(20人)</span>
-                        </button>
+                        <div class="btn-group">
+                            <button class="reward-btn" id="regimentRewardBtn" onclick="addRegimentAsset(event)" style="background: linear-gradient(135deg, #FFD700, #FFA500);">
+                                <span class="btn-icon">👑</span>
+                                <span class="btn-text">领取兵团(20人)</span>
+                            </button>
+                            <button class="reward-btn btn-remove" id="removeRegimentBtn" onclick="removeRegimentAsset(event)" style="background: linear-gradient(135deg, #ff6b6b, #ee5a5a);">
+                                <span class="btn-icon">➖</span>
+                                <span class="btn-text">减少兵团</span>
+                            </button>
+                        </div>
                         <span class="eval-reward">已有兵团: <span id="regimentCount">0</span></span>
                     </div>
                 </div>

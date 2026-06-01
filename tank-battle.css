@@ -548,6 +548,35 @@ html, body {
     font-weight: bold;
 }
 
+/* 按钮组样式 */
+.btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-group .reward-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.btn-group .reward-btn.btn-remove {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-group .reward-btn.btn-remove:hover {
+    background: linear-gradient(135deg, #ff5252, #e04040);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.btn-group .reward-btn.btn-remove:active {
+    transform: translateY(0);
+}
+
 /* 提示信息样式 */
 .evaluation-hint {
     margin: 10px 0;
