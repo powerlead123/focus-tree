@@ -19,6 +19,13 @@ let targetRotationY = 0, targetRotationX = 0;
 // 音频上下文
 let audioContext = null;
 
+// 兵团系统（InstancedMesh优化）
+let regimentMesh = null; // 兵团InstancedMesh
+let regimentData = []; // 每个士兵的数据（位置、旋转、生命值等）
+const REGIMENT_SIZE = 20; // 每个兵团20人
+const REGIMENT_FORMATION_WIDTH = 5; // 方阵宽度（5列）
+const REGIMENT_FORMATION_DEPTH = 4; // 方阵深度（4行）
+
 // 游戏状态
 const GameState = {
     mistakes: 0,
@@ -38,6 +45,7 @@ const GameState = {
     // 资产系统（从localStorage读取）
     tankAssets: 0,
     soldierAssets: 0,
+    regimentAssets: 0, // 兵团资产（1个兵团=20个士兵）
     // 自动战斗
     autoFireEnabled: true,
     autoMoveEnabled: true,
@@ -175,10 +183,12 @@ document.addEventListener('keyup', (e) => {
 function loadAssets() {
     const savedTanks = localStorage.getItem('tankAssets');
     const savedSoldiers = localStorage.getItem('soldierAssets');
-    
+    const savedRegiments = localStorage.getItem('regimentAssets');
+
     GameState.tankAssets = savedTanks ? parseInt(savedTanks) : 0;
     GameState.soldierAssets = savedSoldiers ? parseInt(savedSoldiers) : 0;
-    
+    GameState.regimentAssets = savedRegiments ? parseInt(savedRegiments) : 0;
+
     // 更新显示
     updateAssetDisplay();
 }
@@ -187,15 +197,18 @@ function loadAssets() {
 function saveAssets() {
     localStorage.setItem('tankAssets', GameState.tankAssets);
     localStorage.setItem('soldierAssets', GameState.soldierAssets);
+    localStorage.setItem('regimentAssets', GameState.regimentAssets);
 }
 
 // 更新资产显示
 function updateAssetDisplay() {
     const tankCountEl = document.getElementById('tankCount');
     const soldierCountEl = document.getElementById('soldierCount');
-    
+    const regimentCountEl = document.getElementById('regimentCount');
+
     if (tankCountEl) tankCountEl.textContent = GameState.tankAssets;
     if (soldierCountEl) soldierCountEl.textContent = GameState.soldierAssets;
+    if (regimentCountEl) regimentCountEl.textContent = GameState.regimentAssets;
 }
 
 // 添加坦克资产
@@ -217,17 +230,33 @@ function addTankAsset(event) {
 // 添加士兵资产
 function addSoldierAsset(event) {
     event.preventDefault();
-    
+
     // Z键验证 - 静默失败，不提示孩子
     if (!isZKeyPressed) {
         return;
     }
-    
+
     GameState.soldierAssets++;
     saveAssets();
     updateAssetDisplay();
-    
+
     showMessage(`✅ 获得士兵！当前拥有 ${GameState.soldierAssets} 个士兵`, 2000);
+}
+
+// 添加兵团资产（20人兵团）
+function addRegimentAsset(event) {
+    event.preventDefault();
+
+    // Z键验证 - 静默失败，不提示孩子
+    if (!isZKeyPressed) {
+        return;
+    }
+
+    GameState.regimentAssets++;
+    saveAssets();
+    updateAssetDisplay();
+
+    showMessage(`🏆 获得兵团！当前拥有 ${GameState.regimentAssets} 个兵团（${GameState.regimentAssets * REGIMENT_SIZE}人）`, 3000);
 }
 
 // 更新家长评定
@@ -529,6 +558,15 @@ function startGame() {
         setTimeout(() => createInfantry(), 1500);
     }
 
+    // 根据资产添加兵团（使用InstancedMesh优化，每个兵团20人）
+    if (GameState.regimentAssets > 0) {
+        for (let i = 0; i < GameState.regimentAssets; i++) {
+            setTimeout(() => {
+                createRegiment(i);
+            }, 2000 + i * 500);
+        }
+    }
+
     // 开始游戏循环
     lastTime = performance.now();
     animate();
@@ -791,8 +829,218 @@ function createSingleInfantry(index) {
     infantry.userData.lastFireTime = index * 200;
     infantry.userData.gun = infantryGun;
     infantry.userData.index = index;
-    
+
     return infantry;
+}
+
+// 创建兵团 - 使用InstancedMesh优化（20人兵团）
+function createRegiment(regimentIndex = 0) {
+    if (!scene) return null;
+
+    // 如果已存在兵团，先移除
+    if (regimentMesh) {
+        scene.remove(regimentMesh);
+        regimentMesh.dispose();
+    }
+
+    // 创建士兵几何体（简化版，用于InstancedMesh）
+    const soldierGeometry = createSoldierGeometry();
+    const soldierMaterial = new THREE.MeshStandardMaterial({
+        color: 0x4CAF50,
+        roughness: 0.6,
+        metalness: 0.2
+    });
+
+    // 创建InstancedMesh，支持20个士兵
+    regimentMesh = new THREE.InstancedMesh(soldierGeometry, soldierMaterial, REGIMENT_SIZE);
+    regimentMesh.castShadow = true;
+    regimentMesh.receiveShadow = true;
+
+    // 初始化每个士兵的数据
+    regimentData = [];
+    const dummy = new THREE.Object3D();
+
+    // 方阵编队：5列 x 4行
+    const spacing = 2.5; // 士兵间距
+    const offsetX = (REGIMENT_FORMATION_WIDTH - 1) * spacing / 2;
+    const offsetZ = (REGIMENT_FORMATION_DEPTH - 1) * spacing / 2;
+
+    for (let i = 0; i < REGIMENT_SIZE; i++) {
+        const row = Math.floor(i / REGIMENT_FORMATION_WIDTH);
+        const col = i % REGIMENT_FORMATION_WIDTH;
+
+        // 计算方阵中的相对位置
+        const localX = col * spacing - offsetX;
+        const localZ = row * spacing - offsetZ;
+
+        // 设置初始位置（在坦克后方）
+        dummy.position.set(localX, 0, localZ - 15);
+        dummy.rotation.set(0, Math.PI, 0); // 面向前方
+        dummy.updateMatrix();
+
+        regimentMesh.setMatrixAt(i, dummy.matrix);
+
+        // 保存士兵数据
+        regimentData.push({
+            index: i,
+            localX: localX,
+            localZ: localZ,
+            health: 100,
+            maxHealth: 100,
+            lastFireTime: 0,
+            isAlive: true,
+            targetEnemy: null
+        });
+    }
+
+    regimentMesh.instanceMatrix.needsUpdate = true;
+    scene.add(regimentMesh);
+
+    showMessage(`🏆 兵团${regimentIndex + 1}集结完毕！20名战士准备出征！`, 3000);
+    return regimentMesh;
+}
+
+// 创建士兵几何体（用于InstancedMesh的简化版）
+function createSoldierGeometry() {
+    // 使用BoxGeometry组合成一个简单的士兵形状
+    // 身体
+    const bodyGeo = new THREE.BoxGeometry(0.5, 0.8, 0.3);
+    bodyGeo.translate(0, 0.9, 0);
+
+    // 头部
+    const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
+    headGeo.translate(0, 1.5, 0);
+
+    // 合并几何体（简化版，使用BufferGeometryUtils合并）
+    // 这里我们创建一个简单的组合对象
+    const soldierGroup = new THREE.Group();
+
+    const body = new THREE.Mesh(bodyGeo);
+    const head = new THREE.Mesh(headGeo);
+
+    soldierGroup.add(body);
+    soldierGroup.add(head);
+
+    // 由于InstancedMesh需要单个几何体，我们返回身体作为代表
+    // 实际游戏中可以创建一个更复杂的几何体
+    return bodyGeo;
+}
+
+// 更新兵团（InstancedMesh动画）
+function updateRegiment(deltaTime) {
+    if (!regimentMesh || !tank || regimentData.length === 0) return;
+
+    const dummy = new THREE.Object3D();
+    const tankPos = tank.position;
+
+    // 兵团跟随坦克，保持方阵编队
+    const formationOffsetZ = -12; // 兵团在坦克后方12米
+
+    for (let i = 0; i < REGIMENT_SIZE; i++) {
+        const soldier = regimentData[i];
+        if (!soldier.isAlive) continue;
+
+        // 计算世界位置（跟随坦克）
+        const worldX = tankPos.x + soldier.localX;
+        const worldZ = tankPos.z + formationOffsetZ + soldier.localZ;
+
+        // 平滑移动
+        dummy.position.set(worldX, 0, worldZ);
+
+        // 朝向敌人或前进方向
+        let targetRotation = Math.PI; // 默认向前
+
+        // 寻找目标
+        let nearestEnemy = null;
+        let minDistance = Infinity;
+
+        // 检查Boss
+        if (GameState.boss && GameState.boss.userData.isAlive) {
+            const dist = dummy.position.distanceTo(GameState.boss.position);
+            if (dist < 80 && dist < minDistance) {
+                minDistance = dist;
+                nearestEnemy = GameState.boss;
+            }
+        }
+
+        // 检查守城怪兽
+        if (!nearestEnemy) {
+            for (const guard of GameState.gateGuards) {
+                if (!guard.userData.isAlive) continue;
+                const dist = dummy.position.distanceTo(guard.position);
+                if (dist < 60 && dist < minDistance) {
+                    minDistance = dist;
+                    nearestEnemy = guard;
+                }
+            }
+        }
+
+        // 检查普通敌人
+        if (!nearestEnemy) {
+            for (const enemy of enemies) {
+                if (!enemy.userData.isAlive) continue;
+                const dist = dummy.position.distanceTo(enemy.position);
+                if (dist < 50 && dist < minDistance) {
+                    minDistance = dist;
+                    nearestEnemy = enemy;
+                }
+            }
+        }
+
+        // 如果有敌人，朝向敌人
+        if (nearestEnemy) {
+            const direction = new THREE.Vector3();
+            direction.subVectors(nearestEnemy.position, dummy.position);
+            direction.y = 0;
+            direction.normalize();
+            targetRotation = Math.atan2(direction.x, direction.z);
+
+            // 开火逻辑
+            const now = performance.now();
+            if (now - soldier.lastFireTime > 1500 && minDistance < 60) {
+                soldier.lastFireTime = now;
+                fireFromRegiment(dummy.position, nearestEnemy, i);
+            }
+        }
+
+        dummy.rotation.y = targetRotation;
+        dummy.updateMatrix();
+        regimentMesh.setMatrixAt(i, dummy.matrix);
+    }
+
+    regimentMesh.instanceMatrix.needsUpdate = true;
+}
+
+// 兵团士兵开火
+function fireFromRegiment(position, target, soldierIndex) {
+    if (!scene) return;
+
+    // 创建子弹
+    const bulletGeometry = new THREE.SphereGeometry(0.15, 8, 8);
+    const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+
+    bullet.position.copy(position);
+    bullet.position.y += 1.2;
+
+    // 计算方向
+    const direction = new THREE.Vector3();
+    direction.subVectors(target.position, bullet.position);
+    direction.normalize();
+    direction.multiplyScalar(25); // 子弹速度
+
+    bullet.userData = {
+        velocity: direction,
+        damage: 8,
+        isRegimentBullet: true,
+        life: 100
+    };
+
+    scene.add(bullet);
+    projectiles.push(bullet);
+
+    // 播放音效
+    playShootSound(0.3);
 }
 
 // 更新所有步兵
@@ -2476,6 +2724,9 @@ function animate() {
     
     // 更新步兵
     updateInfantry(deltaTime);
+
+    // 更新兵团（InstancedMesh）
+    updateRegiment(deltaTime);
 
     // 更新炮弹
     updateProjectiles(deltaTime);
@@ -4448,8 +4699,16 @@ function cleanupThreeJS() {
     
     // 清理步兵
     infantries = [];
-    
+
     // 清理额外坦克
     extraTanks = [];
+
+    // 清理兵团
+    if (regimentMesh) {
+        if (scene) scene.remove(regimentMesh);
+        regimentMesh.dispose();
+        regimentMesh = null;
+    }
+    regimentData = [];
 }
 
