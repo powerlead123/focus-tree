@@ -902,28 +902,90 @@ function createRegiment(regimentIndex = 0) {
 
 // 创建士兵几何体（用于InstancedMesh的简化版）
 function createSoldierGeometry() {
-    // 使用BoxGeometry组合成一个简单的士兵形状
-    // 身体
-    const bodyGeo = new THREE.BoxGeometry(0.5, 0.8, 0.3);
-    bodyGeo.translate(0, 0.9, 0);
+    // 创建完整的人形士兵几何体
+    // 由于InstancedMesh需要单个几何体，我们手动合并多个部分
 
-    // 头部
-    const headGeo = new THREE.SphereGeometry(0.25, 8, 8);
-    headGeo.translate(0, 1.5, 0);
+    // 1. 身体 (躯干)
+    const bodyGeo = new THREE.BoxGeometry(0.5, 0.7, 0.3);
+    bodyGeo.translate(0, 0.95, 0);
 
-    // 合并几何体（简化版，使用BufferGeometryUtils合并）
-    // 这里我们创建一个简单的组合对象
-    const soldierGroup = new THREE.Group();
+    // 2. 头部 (球体)
+    const headGeo = new THREE.SphereGeometry(0.22, 8, 8);
+    headGeo.translate(0, 1.55, 0);
 
-    const body = new THREE.Mesh(bodyGeo);
-    const head = new THREE.Mesh(headGeo);
+    // 3. 头盔 (半球)
+    const helmetGeo = new THREE.SphereGeometry(0.24, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    helmetGeo.translate(0, 1.57, 0);
 
-    soldierGroup.add(body);
-    soldierGroup.add(head);
+    // 4. 左腿
+    const leftLegGeo = new THREE.BoxGeometry(0.15, 0.6, 0.18);
+    leftLegGeo.translate(-0.15, 0.3, 0);
 
-    // 由于InstancedMesh需要单个几何体，我们返回身体作为代表
-    // 实际游戏中可以创建一个更复杂的几何体
-    return bodyGeo;
+    // 5. 右腿
+    const rightLegGeo = new THREE.BoxGeometry(0.15, 0.6, 0.18);
+    rightLegGeo.translate(0.15, 0.3, 0);
+
+    // 6. 左臂
+    const leftArmGeo = new THREE.BoxGeometry(0.12, 0.5, 0.12);
+    leftArmGeo.translate(-0.35, 1.0, 0);
+
+    // 7. 右臂 (持枪姿势，稍微向前)
+    const rightArmGeo = new THREE.BoxGeometry(0.12, 0.5, 0.12);
+    rightArmGeo.translate(0.35, 1.0, 0.1);
+
+    // 8. 枪身
+    const gunBodyGeo = new THREE.BoxGeometry(0.08, 0.12, 0.5);
+    gunBodyGeo.translate(0.35, 1.0, 0.4);
+
+    // 9. 枪管
+    const gunBarrelGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.25, 6);
+    gunBarrelGeo.rotateX(Math.PI / 2);
+    gunBarrelGeo.translate(0.35, 1.0, 0.75);
+
+    // 合并所有几何体
+    // 使用BufferGeometry的merge方法（Three.js r128支持）
+    const mergedGeometry = new THREE.BufferGeometry();
+
+    // 将每个几何体转换为BufferGeometry并合并
+    const geometries = [
+        bodyGeo, headGeo, helmetGeo,
+        leftLegGeo, rightLegGeo,
+        leftArmGeo, rightArmGeo,
+        gunBodyGeo, gunBarrelGeo
+    ];
+
+    // 手动合并顶点数据
+    let vertices = [];
+    let normals = [];
+    let uvs = [];
+
+    geometries.forEach(geo => {
+        const posAttribute = geo.attributes.position;
+        const normalAttribute = geo.attributes.normal;
+        const uvAttribute = geo.attributes.uv;
+
+        for (let i = 0; i < posAttribute.count; i++) {
+            vertices.push(posAttribute.getX(i), posAttribute.getY(i), posAttribute.getZ(i));
+            if (normalAttribute) {
+                normals.push(normalAttribute.getX(i), normalAttribute.getY(i), normalAttribute.getZ(i));
+            }
+            if (uvAttribute) {
+                uvs.push(uvAttribute.getX(i), uvAttribute.getY(i));
+            }
+        }
+    });
+
+    mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    if (normals.length > 0) {
+        mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    }
+    if (uvs.length > 0) {
+        mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    }
+
+    mergedGeometry.computeVertexNormals();
+
+    return mergedGeometry;
 }
 
 // 更新兵团（InstancedMesh动画）
