@@ -26,6 +26,30 @@ const REGIMENT_SIZE = 20; // 每个兵团20人
 const REGIMENT_FORMATION_WIDTH = 5; // 方阵宽度（5列）
 const REGIMENT_FORMATION_DEPTH = 4; // 方阵深度（4行）
 
+// 性能监控
+let fpsStats = {
+    frames: 0,
+    lastTime: 0,
+    fps: 60,
+    updateInterval: 500 // 每500ms更新一次FPS显示
+};
+
+// 对象池系统
+const ObjectPools = {
+    projectiles: [],
+    explosions: [],
+    particles: [],
+    maxProjectiles: 100,
+    maxExplosions: 20,
+    maxParticles: 200
+};
+
+// InstancedMesh对象池
+let treeInstancedMesh = null;
+let rockInstancedMesh = null;
+const TREE_COUNT = 100;
+const ROCK_COUNT = 30;
+
 // 游戏状态
 const GameState = {
     mistakes: 0,
@@ -1649,6 +1673,12 @@ function initThreeJS() {
     // 创建脑区范围显示
     createBrainZone();
 
+    // 初始化子弹对象池
+    initProjectilePool();
+
+    // 初始化树木InstancedMesh
+    initTreeInstancedMesh();
+
     // 监听窗口大小变化
     window.addEventListener('resize', onWindowResize);
 }
@@ -1845,16 +1875,18 @@ function createRoadMarker() {
 
 // 创建路边装饰
 function createRoadsideDecorations() {
+    let treeIndex = 0;
+
     // 左侧树木
-    for (let z = 0; z > -300; z -= 15) {
+    for (let z = 0; z > -300 && treeIndex < TREE_COUNT; z -= 15) {
         const offset = (Math.random() - 0.5) * 10;
-        createTree(-20 + offset, z);
+        setTreePosition(treeIndex++, -20 + offset, z);
     }
 
     // 右侧树木
-    for (let z = -10; z > -300; z -= 18) {
+    for (let z = -10; z > -300 && treeIndex < TREE_COUNT; z -= 18) {
         const offset = (Math.random() - 0.5) * 10;
-        createTree(20 + offset, z);
+        setTreePosition(treeIndex++, 20 + offset, z);
     }
 
     // 随机岩石
@@ -1866,33 +1898,133 @@ function createRoadsideDecorations() {
 }
 
 // 创建树木
-function createTree(x, z) {
-    const tree = new THREE.Group();
+// 初始化树木InstancedMesh
+function initTreeInstancedMesh() {
+    // 如果已存在，先移除
+    if (treeInstancedMesh) {
+        scene.remove(treeInstancedMesh);
+        treeInstancedMesh.dispose();
+    }
 
-    // 树干
-    const trunkGeometry = new THREE.CylinderGeometry(0.4, 0.6, 3, 8);
-    const trunkMaterial = new THREE.MeshStandardMaterial({
-        color: 0x8B4513,
+    // 创建树干几何体（圆柱体）
+    const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 3, 6); // 降低细分度
+    trunkGeo.translate(0, 1.5, 0);
+
+    // 创建树冠几何体（圆锥体）
+    const crownGeo = new THREE.ConeGeometry(2.5, 5, 6); // 降低细分度
+    crownGeo.translate(0, 4.5, 0);
+
+    // 合并树干和树冠为一个几何体
+    const treeGeometry = mergeGeometries([trunkGeo, crownGeo]);
+
+    // 创建材质（使用顶点颜色来区分树干和树冠）
+    const treeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff, // 使用白色，通过实例颜色来区分
+        roughness: 0.9,
+        metalness: 0.0
+    });
+
+    // 创建InstancedMesh
+    treeInstancedMesh = new THREE.InstancedMesh(treeGeometry, treeMaterial, TREE_COUNT);
+    treeInstancedMesh.castShadow = true;
+    treeInstancedMesh.receiveShadow = true;
+
+    // 初始化所有实例为隐藏状态
+    const dummy = new THREE.Object3D();
+    dummy.position.set(0, -1000, 0); // 放到地下
+    dummy.updateMatrix();
+
+    for (let i = 0; i < TREE_COUNT; i++) {
+        treeInstancedMesh.setMatrixAt(i, dummy.matrix);
+        // 树干棕色，树冠绿色
+        treeInstancedMesh.setColorAt(i, new THREE.Color(0x8B4513));
+    }
+
+    treeInstancedMesh.instanceMatrix.needsUpdate = true;
+    treeInstancedMesh.instanceColor.needsUpdate = true;
+
+    scene.add(treeInstancedMesh);
+}
+
+// 设置树木位置（在生成地形时调用）
+function setTreePosition(index, x, z) {
+    if (!treeInstancedMesh || index >= TREE_COUNT) return;
+
+    const dummy = new THREE.Object3D();
+    dummy.position.set(x, 0, z);
+
+    // 随机缩放和旋转，让树木看起来更自然
+    const scale = 0.8 + Math.random() * 0.4;
+    dummy.scale.set(scale, scale, scale);
+    dummy.rotation.y = Math.random() * Math.PI * 2;
+
+    dummy.updateMatrix();
+    treeInstancedMesh.setMatrixAt(index, dummy.matrix);
+
+    // 随机颜色变化
+    const colorVariation = (Math.random() - 0.5) * 0.2;
+    const trunkColor = new THREE.Color(0x8B4513).offsetHSL(0, 0, colorVariation);
+    treeInstancedMesh.setColorAt(index, trunkColor);
+
+    treeInstancedMesh.instanceMatrix.needsUpdate = true;
+    treeInstancedMesh.instanceColor.needsUpdate = true;
+}
+
+// 辅助函数：合并几何体
+function mergeGeometries(geometries) {
+    // 简单的几何体合并实现
+    const mergedGeometry = new THREE.BufferGeometry();
+    let vertices = [];
+    let normals = [];
+    let uvs = [];
+
+    geometries.forEach(geo => {
+        const posAttribute = geo.attributes.position;
+        const normalAttribute = geo.attributes.normal;
+        const uvAttribute = geo.attributes.uv;
+
+        for (let i = 0; i < posAttribute.count; i++) {
+            vertices.push(posAttribute.getX(i), posAttribute.getY(i), posAttribute.getZ(i));
+            if (normalAttribute) {
+                normals.push(normalAttribute.getX(i), normalAttribute.getY(i), normalAttribute.getZ(i));
+            }
+            if (uvAttribute) {
+                uvs.push(uvAttribute.getX(i), uvAttribute.getY(i));
+            }
+        }
+    });
+
+    mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    if (normals.length > 0) {
+        mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    }
+    if (uvs.length > 0) {
+        mergedGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    }
+
+    mergedGeometry.computeVertexNormals();
+    return mergedGeometry;
+}
+
+// 旧的createTree函数（保留用于兼容性，但不再使用）
+function createTree(x, z) {
+    // 现在使用InstancedMesh，此函数不再创建单独的树
+    // 树木位置在createTerrain中通过setTreePosition设置
+}
+
+// 创建岩石（也改用InstancedMesh）
+function createRock(x, z) {
+    // 暂时保留原实现，后续可以同样优化为InstancedMesh
+    const rockGeometry = new THREE.DodecahedronGeometry(Math.random() * 1.5 + 0.5, 0);
+    const rockMaterial = new THREE.MeshStandardMaterial({
+        color: 0x666666,
         roughness: 0.9
     });
-    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
-    trunk.position.y = 1.5;
-    trunk.castShadow = true;
-    tree.add(trunk);
-
-    // 树冠
-    const crownGeometry = new THREE.ConeGeometry(2.5, 5, 8);
-    const crownMaterial = new THREE.MeshStandardMaterial({
-        color: 0x228B22,
-        roughness: 0.8
-    });
-    const crown = new THREE.Mesh(crownGeometry, crownMaterial);
-    crown.position.y = 4.5;
-    crown.castShadow = true;
-    tree.add(crown);
-
-    tree.position.set(x, 0, z);
-    scene.add(tree);
+    const rock = new THREE.Mesh(rockGeometry, rockMaterial);
+    rock.position.set(x, 0.5, z);
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    scene.add(rock);
 }
 
 // 创建岩石
@@ -2380,37 +2512,103 @@ function fireProjectileFromTank(sourceTank, sourceTurret, sourceBarrel) {
 }
 
 // 创建炮弹
+// 初始化子弹对象池
+function initProjectilePool() {
+    const poolSize = ObjectPools.maxProjectiles;
+
+    for (let i = 0; i < poolSize; i++) {
+        // 创建炮弹几何体和材质（只创建一次）
+        const projectileGeometry = new THREE.SphereGeometry(0.6, 8, 8); // 降低细分度
+        const projectileMaterial = new THREE.MeshStandardMaterial({
+            color: 0xFF6B35,
+            emissive: 0xFF4500,
+            emissiveIntensity: 2.0,
+            roughness: 0.3,
+            metalness: 0.8
+        });
+        const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+
+        // 添加简化版光晕
+        const glowGeometry = new THREE.SphereGeometry(1.2, 8, 8);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: 0xFFAA00,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        glow.name = 'glow'; // 标记以便后续查找
+        projectile.add(glow);
+
+        // 添加光源（但减少影响范围）
+        const projectileLight = new THREE.PointLight(0xFF6B35, 2, 10);
+        projectileLight.name = 'light';
+        projectile.add(projectileLight);
+
+        // 初始状态为隐藏
+        projectile.visible = false;
+        projectile.userData = {
+            isActive: false,
+            poolIndex: i
+        };
+
+        scene.add(projectile);
+        ObjectPools.projectiles.push(projectile);
+    }
+}
+
+// 从对象池获取子弹
+function getProjectileFromPool() {
+    // 查找未使用的子弹
+    for (let i = 0; i < ObjectPools.projectiles.length; i++) {
+        const projectile = ObjectPools.projectiles[i];
+        if (!projectile.userData.isActive) {
+            return projectile;
+        }
+    }
+
+    // 如果池已满，复用最旧的子弹
+    return ObjectPools.projectiles[0];
+}
+
+// 归还子弹到对象池
+function returnProjectileToPool(projectile) {
+    if (!projectile) return;
+
+    projectile.visible = false;
+    projectile.userData.isActive = false;
+
+    // 重置位置到远处，避免碰撞检测
+    projectile.position.set(0, -1000, 0);
+}
+
 function createProjectile(sourceTank, sourceTurret, sourceBarrel, config, isMainTank) {
     // 判断是否使用多功能炮弹（家里作业无错误奖励，仅主坦克）
     const isSpecialAmmo = isMainTank && GameState.specialAmmo && Math.random() < 0.7;
-    
-    // 创建炮弹 - 加大尺寸和效果
-    const projectileSize = isSpecialAmmo ? 0.8 : 0.6; // 更大的炮弹尺寸
-    const projectileGeometry = new THREE.SphereGeometry(projectileSize, 16, 16);
-    const projectileMaterial = new THREE.MeshStandardMaterial({
-        color: isSpecialAmmo ? 0x00FF00 : 0xFF6B35,
-        emissive: isSpecialAmmo ? 0x00AA00 : 0xFF4500,
-        emissiveIntensity: 3.0, // 更强的发光
-        roughness: 0.3,
-        metalness: 0.8
-    });
-    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
-    
-    // 添加炮弹光晕效果
-    const glowGeometry = new THREE.SphereGeometry(projectileSize * 2.5, 16, 16);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-        color: isSpecialAmmo ? 0x00FF00 : 0xFFAA00,
-        transparent: true,
-        opacity: 0.8, // 更高的不透明度
-        blending: THREE.AdditiveBlending
-    });
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    projectile.add(glow);
-    
-    // 添加炮弹尾焰光
-    const projectileLight = new THREE.PointLight(isSpecialAmmo ? 0x00FF00 : 0xFF6B35, 3, 20); // 更强的光源
-    projectileLight.position.set(0, 0, 0);
-    projectile.add(projectileLight);
+
+    // 从对象池获取子弹
+    const projectile = getProjectileFromPool();
+    if (!projectile) return;
+
+    // 更新材质颜色（根据弹药类型）
+    projectile.material.color.setHex(isSpecialAmmo ? 0x00FF00 : 0xFF6B35);
+    projectile.material.emissive.setHex(isSpecialAmmo ? 0x00AA00 : 0xFF4500);
+
+    // 更新光晕
+    const glow = projectile.getObjectByName('glow');
+    if (glow) {
+        glow.material.color.setHex(isSpecialAmmo ? 0x00FF00 : 0xFFAA00);
+    }
+
+    // 更新光源
+    const light = projectile.getObjectByName('light');
+    if (light) {
+        light.color.setHex(isSpecialAmmo ? 0x00FF00 : 0xFF6B35);
+    }
+
+    // 激活子弹
+    projectile.visible = true;
+    projectile.userData.isActive = true;
 
     // 获取炮管前端世界位置
     const barrelLength = isMainTank ? 6.1 : 5.1;
@@ -2420,7 +2618,7 @@ function createProjectile(sourceTank, sourceTurret, sourceBarrel, config, isMain
 
     // 计算发射方向（考虑精准度）
     const accuracy = config.accuracy;
-    const spread = isSpecialAmmo ? 0 : (1 - accuracy) * 0.02; // 很小的散布
+    const spread = isSpecialAmmo ? 0 : (1 - accuracy) * 0.02;
 
     const direction = new THREE.Vector3(0, 0, 1);
     direction.applyQuaternion(sourceTurret.quaternion);
@@ -2429,18 +2627,18 @@ function createProjectile(sourceTank, sourceTurret, sourceBarrel, config, isMain
     direction.y += (Math.random() - 0.5) * spread;
     direction.normalize();
 
-    const speed = 35; // 与瞄准计算保持一致
+    const speed = 35;
     const now = performance.now();
 
-    projectile.userData = {
-        velocity: direction.multiplyScalar(speed),
-        damage: isSpecialAmmo ? config.damage * 2 : config.damage,
-        created: now,
-        isSpecial: isSpecialAmmo
-    };
+    projectile.userData.velocity = direction.multiplyScalar(speed);
+    projectile.userData.damage = isSpecialAmmo ? config.damage * 2 : config.damage;
+    projectile.userData.created = now;
+    projectile.userData.isSpecial = isSpecialAmmo;
 
-    scene.add(projectile);
-    projectiles.push(projectile);
+    // 添加到活动子弹列表（用于碰撞检测）
+    if (!projectiles.includes(projectile)) {
+        projectiles.push(projectile);
+    }
 
     // 炮口闪光
     createMuzzleFlash(barrelTip);
@@ -2810,6 +3008,28 @@ function animate() {
     const now = performance.now();
     const deltaTime = (now - lastTime) / 1000;
     lastTime = now;
+
+    // 更新FPS统计
+    fpsStats.frames++;
+    if (now - fpsStats.lastTime >= fpsStats.updateInterval) {
+        fpsStats.fps = Math.round((fpsStats.frames * 1000) / (now - fpsStats.lastTime));
+        fpsStats.frames = 0;
+        fpsStats.lastTime = now;
+
+        // 更新FPS显示
+        const fpsDisplay = document.getElementById('fpsDisplay');
+        if (fpsDisplay) {
+            fpsDisplay.textContent = fpsStats.fps + ' FPS';
+            // 根据FPS改变颜色
+            if (fpsStats.fps >= 55) {
+                fpsDisplay.style.color = '#4CAF50'; // 绿色 - 流畅
+            } else if (fpsStats.fps >= 30) {
+                fpsDisplay.style.color = '#FFC107'; // 黄色 - 一般
+            } else {
+                fpsDisplay.style.color = '#F44336'; // 红色 - 卡顿
+            }
+        }
+    }
 
     // 更新相机位置 - 跟随坦克前进
     if (camera && tank) {
@@ -3697,11 +3917,9 @@ function updateProjectiles(deltaTime) {
         const age = (performance.now() - projectile.userData.created) / 1000;
         if (age > 3) hit = true;
 
-        // 移除炮弹
+        // 移除炮弹（使用对象池）
         if (hit) {
-            scene.remove(projectile);
-            projectile.geometry.dispose();
-            projectile.material.dispose();
+            returnProjectileToPool(projectile);
             projectiles.splice(i, 1);
         }
     }
