@@ -2512,38 +2512,21 @@ function fireProjectileFromTank(sourceTank, sourceTurret, sourceBarrel) {
 }
 
 // 创建炮弹
-// 初始化子弹对象池
+// 初始化子弹对象池 - 超轻量版
 function initProjectilePool() {
     const poolSize = ObjectPools.maxProjectiles;
 
     for (let i = 0; i < poolSize; i++) {
-        // 创建炮弹几何体和材质（只创建一次）
-        const projectileGeometry = new THREE.SphereGeometry(0.6, 8, 8); // 降低细分度
-        const projectileMaterial = new THREE.MeshStandardMaterial({
-            color: 0xFF6B35,
-            emissive: 0xFF4500,
-            emissiveIntensity: 2.0,
-            roughness: 0.3,
-            metalness: 0.8
+        // 创建炮弹几何体 - 使用最简单的几何体
+        const projectileGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.8); // 长方体比球体性能更好
+        const projectileMaterial = new THREE.MeshBasicMaterial({
+            color: 0xFF6B35
+            // 移除emissive，使用BasicMaterial本身就很亮
         });
         const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
 
-        // 添加简化版光晕
-        const glowGeometry = new THREE.SphereGeometry(1.2, 8, 8);
-        const glowMaterial = new THREE.MeshBasicMaterial({
-            color: 0xFFAA00,
-            transparent: true,
-            opacity: 0.5,
-            blending: THREE.AdditiveBlending
-        });
-        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-        glow.name = 'glow'; // 标记以便后续查找
-        projectile.add(glow);
-
-        // 添加光源（但减少影响范围）
-        const projectileLight = new THREE.PointLight(0xFF6B35, 2, 10);
-        projectileLight.name = 'light';
-        projectile.add(projectileLight);
+        // 移除光晕和光源 - 这些是性能杀手
+        // 只保留简单的发光效果通过材质颜色
 
         // 初始状态为隐藏
         projectile.visible = false;
@@ -2590,21 +2573,8 @@ function createProjectile(sourceTank, sourceTurret, sourceBarrel, config, isMain
     const projectile = getProjectileFromPool();
     if (!projectile) return;
 
-    // 更新材质颜色（根据弹药类型）
+    // 更新材质颜色（根据弹药类型）- 超轻量版只改颜色
     projectile.material.color.setHex(isSpecialAmmo ? 0x00FF00 : 0xFF6B35);
-    projectile.material.emissive.setHex(isSpecialAmmo ? 0x00AA00 : 0xFF4500);
-
-    // 更新光晕
-    const glow = projectile.getObjectByName('glow');
-    if (glow) {
-        glow.material.color.setHex(isSpecialAmmo ? 0x00FF00 : 0xFFAA00);
-    }
-
-    // 更新光源
-    const light = projectile.getObjectByName('light');
-    if (light) {
-        light.color.setHex(isSpecialAmmo ? 0x00FF00 : 0xFF6B35);
-    }
 
     // 激活子弹
     projectile.visible = true;
@@ -2640,8 +2610,8 @@ function createProjectile(sourceTank, sourceTurret, sourceBarrel, config, isMain
         projectiles.push(projectile);
     }
 
-    // 炮口闪光
-    createMuzzleFlash(barrelTip);
+    // 炮口闪光 - 简化版
+    createSimpleMuzzleFlash(barrelTip);
 }
 
 // 主坦克发射炮弹
@@ -2678,86 +2648,28 @@ function fireProjectile() {
 }
 
 // 创建炮口闪光 - 增强效果
-function createMuzzleFlash(position) {
-    // 主闪光 - 更大更亮
-    const flashGeometry = new THREE.SphereGeometry(1.2, 12, 12);
+// 简化版炮口闪光 - 超轻量
+function createSimpleMuzzleFlash(position) {
+    // 只创建一个简单的闪光，持续2帧
+    const flashGeometry = new THREE.SphereGeometry(0.5, 4, 4); // 极低细分度
     const flashMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFFFFF,
-        transparent: true,
-        opacity: 1
+        color: 0xFFAA00
     });
     const flash = new THREE.Mesh(flashGeometry, flashMaterial);
     flash.position.copy(position);
     scene.add(flash);
 
-    // 内层橙色火焰
-    const innerFlashGeometry = new THREE.SphereGeometry(0.8, 10, 10);
-    const innerFlashMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFF6600,
-        transparent: true,
-        opacity: 0.9
-    });
-    const innerFlash = new THREE.Mesh(innerFlashGeometry, innerFlashMaterial);
-    innerFlash.position.copy(position);
-    scene.add(innerFlash);
+    // 2帧后移除（约33ms）
+    setTimeout(() => {
+        scene.remove(flash);
+        flash.geometry.dispose();
+        flash.material.dispose();
+    }, 50);
+}
 
-    // 外层红色光晕
-    const outerFlashGeometry = new THREE.SphereGeometry(1.8, 12, 12);
-    const outerFlashMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFF3300,
-        transparent: true,
-        opacity: 0.5
-    });
-    const outerFlash = new THREE.Mesh(outerFlashGeometry, outerFlashMaterial);
-    outerFlash.position.copy(position);
-    scene.add(outerFlash);
-
-    // 点光源照亮周围
-    const light = new THREE.PointLight(0xFFAA00, 3, 15);
-    light.position.copy(position);
-    scene.add(light);
-
-    // 动画
-    let frame = 0;
-    const animateFlash = () => {
-        frame++;
-        const progress = frame / 15; // 15帧动画
-
-        if (progress < 1) {
-            // 主闪光快速扩大然后消失
-            const scale = 1 + progress * 2;
-            flash.scale.set(scale, scale, scale);
-            flash.material.opacity = 1 - progress;
-
-            // 内层火焰
-            const innerScale = 1 + progress * 1.5;
-            innerFlash.scale.set(innerScale, innerScale, innerScale);
-            innerFlash.material.opacity = 0.9 - progress * 0.9;
-
-            // 外层光晕
-            const outerScale = 1 + progress;
-            outerFlash.scale.set(outerScale, outerScale, outerScale);
-            outerFlash.material.opacity = 0.5 - progress * 0.5;
-
-            // 光源强度衰减
-            light.intensity = 3 * (1 - progress);
-
-            requestAnimationFrame(animateFlash);
-        } else {
-            // 清理
-            scene.remove(flash);
-            scene.remove(innerFlash);
-            scene.remove(outerFlash);
-            scene.remove(light);
-            flash.geometry.dispose();
-            flash.material.dispose();
-            innerFlash.geometry.dispose();
-            innerFlash.material.dispose();
-            outerFlash.geometry.dispose();
-            outerFlash.material.dispose();
-        }
-    };
-    animateFlash();
+// 保留原函数但不再使用（为了兼容性）
+function createMuzzleFlash(position) {
+    createSimpleMuzzleFlash(position);
 }
 
 // 创建爆炸效果 - 更夸张的效果
@@ -2822,147 +2734,39 @@ function createHitEffect(position, scale = 1) {
     animateParticles();
 }
 
+// 简化的爆炸效果 - 超轻量版
 function createExplosion(position, scale = 1) {
     playExplosionSound();
 
-    // 爆炸光 - 更亮更大
-    const light = new THREE.PointLight(0xFF6B35, 5, 50);
-    light.position.copy(position);
-    scene.add(light);
-
-    // 爆炸光晕
-    const glowGeometry = new THREE.SphereGeometry(2 * scale, 16, 16);
+    // 只保留最简单的光晕效果
+    const glowGeometry = new THREE.SphereGeometry(1.5 * scale, 6, 6); // 极低细分度
     const glowMaterial = new THREE.MeshBasicMaterial({
         color: 0xFFAA00,
         transparent: true,
-        opacity: 0.8,
-        blending: THREE.AdditiveBlending
+        opacity: 0.6
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     glow.position.copy(position);
     scene.add(glow);
 
-    // 动画光晕
-    let glowScale = 1;
+    // 简单动画 - 只持续10帧
+    let frame = 0;
     const animateGlow = () => {
-        if (!glow || !glow.parent) return;
-        glowScale += 0.3;
-        glow.scale.set(glowScale, glowScale, glowScale);
-        glow.material.opacity -= 0.05;
-        if (glow.material.opacity > 0) {
+        frame++;
+        if (frame < 10 && glow.parent) {
+            const s = 1 + frame * 0.2;
+            glow.scale.set(s, s, s);
+            glow.material.opacity = 0.6 - frame * 0.06;
             requestAnimationFrame(animateGlow);
         } else {
-            scene.remove(glow);
-            glow.geometry.dispose();
-            glow.material.dispose();
+            if (scene && glow) scene.remove(glow);
+            if (glowGeometry) glowGeometry.dispose();
+            if (glowMaterial) glowMaterial.dispose();
         }
     };
     animateGlow();
 
-    setTimeout(() => {
-        scene.remove(light);
-    }, 300);
-
-    // 爆炸粒子 - 更多更大
-    const particleCount = 80;
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(particleCount * 3);
-    const velocities = [];
-    const colors = new Float32Array(particleCount * 3);
-
-    for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = position.x;
-        positions[i * 3 + 1] = position.y;
-        positions[i * 3 + 2] = position.z;
-
-        // 更快的爆炸速度
-        const velocity = new THREE.Vector3(
-            (Math.random() - 0.5) * 20,
-            Math.random() * 20 + 5,
-            (Math.random() - 0.5) * 20
-        );
-        velocities.push(velocity);
-
-        // 随机颜色（橙色到黄色）
-        colors[i * 3] = 1.0;
-        colors[i * 3 + 1] = 0.3 + Math.random() * 0.5;
-        colors[i * 3 + 2] = 0;
-    }
-
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-    const material = new THREE.PointsMaterial({
-        size: 1.0 * scale,
-        transparent: true,
-        opacity: 1,
-        blending: THREE.AdditiveBlending,
-        vertexColors: true
-    });
-
-    const particleSystem = new THREE.Points(geometry, material);
-    scene.add(particleSystem);
-
-    // 动画
-    let frame = 0;
-    const animateExplosion = () => {
-        frame++;
-        const positions = particleSystem.geometry.attributes.position.array;
-
-        for (let i = 0; i < particleCount; i++) {
-            positions[i * 3] += velocities[i].x * 0.016;
-            positions[i * 3 + 1] += velocities[i].y * 0.016;
-            positions[i * 3 + 2] += velocities[i].z * 0.016;
-
-            velocities[i].y -= 15 * 0.016; // 更强的重力
-            velocities[i].multiplyScalar(0.98); // 空气阻力
-        }
-
-        particleSystem.geometry.attributes.position.needsUpdate = true;
-        particleSystem.material.opacity -= 0.015;
-
-        if (particleSystem.material.opacity > 0 && frame < 80) {
-            requestAnimationFrame(animateExplosion);
-        } else {
-            if (scene && particleSystem) {
-                scene.remove(particleSystem);
-            }
-            if (geometry) geometry.dispose();
-            if (material) material.dispose();
-        }
-    };
-    animateExplosion();
-
-    // 添加冲击波效果
-    const shockwaveGeometry = new THREE.RingGeometry(0.1, 0.5, 32);
-    const shockwaveMaterial = new THREE.MeshBasicMaterial({
-        color: 0xFFFFFF,
-        transparent: true,
-        opacity: 0.6,
-        side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending
-    });
-    const shockwave = new THREE.Mesh(shockwaveGeometry, shockwaveMaterial);
-    shockwave.position.copy(position);
-    shockwave.rotation.x = -Math.PI / 2;
-    scene.add(shockwave);
-
-    let shockwaveScale = 1;
-    const animateShockwave = () => {
-        shockwaveScale += 0.5;
-        shockwave.scale.set(shockwaveScale, shockwaveScale, shockwaveScale);
-        shockwave.material.opacity -= 0.03;
-        if (shockwave.material.opacity > 0) {
-            requestAnimationFrame(animateShockwave);
-        } else {
-            if (scene && shockwave) {
-                scene.remove(shockwave);
-            }
-            if (shockwave && shockwave.geometry) shockwave.geometry.dispose();
-            if (shockwave && shockwave.material) shockwave.material.dispose();
-        }
-    };
-    animateShockwave();
+    // 移除复杂的粒子系统、光源和冲击波 - 这些是性能杀手
 }
 
 // 相机震动效果
