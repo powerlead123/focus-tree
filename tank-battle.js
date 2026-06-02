@@ -19,12 +19,17 @@ let targetRotationY = 0, targetRotationX = 0;
 // 音频上下文
 let audioContext = null;
 
-// 兵团系统（InstancedMesh优化）
-let regimentMesh = null; // 兵团InstancedMesh
-let regimentData = []; // 每个士兵的数据（位置、旋转、生命值等）
+// 兵团系统（InstancedMesh优化）- 支持多个兵团
+let regimentMeshes = []; // 兵团InstancedMesh数组
+let regimentDataArray = []; // 每个兵团的数据数组
 const REGIMENT_SIZE = 20; // 每个兵团20人
 const REGIMENT_FORMATION_WIDTH = 5; // 方阵宽度（5列）
 const REGIMENT_FORMATION_DEPTH = 4; // 方阵深度（4行）
+const MAX_REGIMENTS = 5; // 最多支持5个兵团
+
+// 为了兼容性保留旧变量名
+let regimentMesh = null;
+let regimentData = [];
 
 // 性能监控
 let fpsStats = {
@@ -918,10 +923,10 @@ function createSingleInfantry(index) {
 function createRegiment(regimentIndex = 0) {
     if (!scene) return null;
 
-    // 如果已存在兵团，先移除
-    if (regimentMesh) {
-        scene.remove(regimentMesh);
-        regimentMesh.dispose();
+    // 检查是否超过最大兵团数
+    if (regimentMeshes.length >= MAX_REGIMENTS) {
+        showMessage('⚠️ 已达到最大兵团数量限制！', 2000);
+        return null;
     }
 
     // 创建士兵几何体（简化版，用于InstancedMesh）
@@ -933,12 +938,12 @@ function createRegiment(regimentIndex = 0) {
     });
 
     // 创建InstancedMesh，支持20个士兵
-    regimentMesh = new THREE.InstancedMesh(soldierGeometry, soldierMaterial, REGIMENT_SIZE);
-    regimentMesh.castShadow = true;
-    regimentMesh.receiveShadow = true;
+    const newRegimentMesh = new THREE.InstancedMesh(soldierGeometry, soldierMaterial, REGIMENT_SIZE);
+    newRegimentMesh.castShadow = true;
+    newRegimentMesh.receiveShadow = true;
 
     // 初始化每个士兵的数据
-    regimentData = [];
+    const newRegimentData = [];
     const dummy = new THREE.Object3D();
 
     // 方阵编队：5列 x 4行
@@ -946,26 +951,32 @@ function createRegiment(regimentIndex = 0) {
     const offsetX = (REGIMENT_FORMATION_WIDTH - 1) * spacing / 2;
     const offsetZ = (REGIMENT_FORMATION_DEPTH - 1) * spacing / 2;
 
+    // 计算兵团整体偏移（让不同兵团错开位置）
+    const regimentOffsetX = (regimentIndex % 2 === 0 ? -1 : 1) * (Math.floor(regimentIndex / 2) + 1) * 15;
+    const regimentOffsetZ = -15 - (regimentIndex * 8); // 每个兵团向后偏移8米
+
     for (let i = 0; i < REGIMENT_SIZE; i++) {
         const row = Math.floor(i / REGIMENT_FORMATION_WIDTH);
         const col = i % REGIMENT_FORMATION_WIDTH;
 
         // 计算方阵中的相对位置
-        const localX = col * spacing - offsetX;
-        const localZ = row * spacing - offsetZ;
+        const localX = col * spacing - offsetX + regimentOffsetX;
+        const localZ = row * spacing - offsetZ + regimentOffsetZ;
 
-        // 设置初始位置（在坦克后方）
-        dummy.position.set(localX, 0, localZ - 15);
+        // 设置初始位置
+        dummy.position.set(localX, 0, localZ);
         dummy.rotation.set(0, Math.PI, 0); // 面向前方
         dummy.updateMatrix();
 
-        regimentMesh.setMatrixAt(i, dummy.matrix);
+        newRegimentMesh.setMatrixAt(i, dummy.matrix);
 
         // 保存士兵数据
-        regimentData.push({
+        newRegimentData.push({
             index: i,
             localX: localX,
             localZ: localZ,
+            baseOffsetX: regimentOffsetX,
+            baseOffsetZ: regimentOffsetZ,
             health: 100,
             maxHealth: 100,
             lastFireTime: 0,
@@ -974,11 +985,19 @@ function createRegiment(regimentIndex = 0) {
         });
     }
 
-    regimentMesh.instanceMatrix.needsUpdate = true;
-    scene.add(regimentMesh);
+    newRegimentMesh.instanceMatrix.needsUpdate = true;
+    scene.add(newRegimentMesh);
+
+    // 保存到数组
+    regimentMeshes.push(newRegimentMesh);
+    regimentDataArray.push(newRegimentData);
+
+    // 更新兼容性变量
+    regimentMesh = newRegimentMesh;
+    regimentData = newRegimentData;
 
     showMessage(`🏆 兵团${regimentIndex + 1}集结完毕！20名战士准备出征！`, 3000);
-    return regimentMesh;
+    return newRegimentMesh;
 }
 
 // 创建士兵几何体（用于InstancedMesh的简化版）
@@ -1071,87 +1090,100 @@ function createSoldierGeometry() {
 
 // 更新兵团（InstancedMesh动画）
 function updateRegiment(deltaTime) {
-    if (!regimentMesh || !tank || regimentData.length === 0) return;
+    if (!tank || regimentMeshes.length === 0) return;
 
     const dummy = new THREE.Object3D();
     const tankPos = tank.position;
 
-    // 兵团跟随坦克，保持方阵编队
-    const formationOffsetZ = -12; // 兵团在坦克后方12米
+    // 更新所有兵团
+    for (let r = 0; r < regimentMeshes.length; r++) {
+        const currentRegimentMesh = regimentMeshes[r];
+        const currentRegimentData = regimentDataArray[r];
 
-    for (let i = 0; i < REGIMENT_SIZE; i++) {
-        const soldier = regimentData[i];
-        if (!soldier.isAlive) continue;
+        if (!currentRegimentMesh || !currentRegimentData) continue;
 
-        // 计算世界位置（跟随坦克）
-        const worldX = tankPos.x + soldier.localX;
-        const worldZ = tankPos.z + formationOffsetZ + soldier.localZ;
+        for (let i = 0; i < REGIMENT_SIZE; i++) {
+            const soldier = currentRegimentData[i];
+            if (!soldier.isAlive) continue;
 
-        // 平滑移动
-        dummy.position.set(worldX, 0, worldZ);
+            // 计算世界位置（跟随坦克）
+            // 使用士兵的baseOffset来保持兵团之间的相对位置
+            const worldX = tankPos.x + soldier.baseOffsetX + (soldier.localX - soldier.baseOffsetX);
+            const worldZ = tankPos.z + soldier.baseOffsetZ + (soldier.localZ - soldier.baseOffsetZ);
 
-        // 朝向敌人或前进方向
-        let targetRotation = Math.PI; // 默认向前
+            // 平滑移动
+            dummy.position.set(worldX, 0, worldZ);
 
-        // 寻找目标
-        let nearestEnemy = null;
-        let minDistance = Infinity;
+            // 朝向敌人或前进方向
+            let targetRotation = Math.PI; // 默认向前
 
-        // 检查Boss
-        if (GameState.boss && GameState.boss.userData.isAlive) {
-            const dist = dummy.position.distanceTo(GameState.boss.position);
-            if (dist < 80 && dist < minDistance) {
-                minDistance = dist;
-                nearestEnemy = GameState.boss;
-            }
-        }
+            // 寻找目标
+            let nearestEnemy = null;
+            let minDistance = Infinity;
 
-        // 检查守城怪兽
-        if (!nearestEnemy) {
-            for (const guard of GameState.gateGuards) {
-                if (!guard.userData.isAlive) continue;
-                const dist = dummy.position.distanceTo(guard.position);
-                if (dist < 60 && dist < minDistance) {
+            // 检查Boss
+            if (GameState.boss && GameState.boss.userData.isAlive) {
+                const dist = dummy.position.distanceTo(GameState.boss.position);
+                if (dist < 80 && dist < minDistance) {
                     minDistance = dist;
-                    nearestEnemy = guard;
+                    nearestEnemy = GameState.boss;
                 }
             }
-        }
 
-        // 检查普通敌人
-        if (!nearestEnemy) {
-            for (const enemy of enemies) {
-                if (!enemy.userData.isAlive) continue;
-                const dist = dummy.position.distanceTo(enemy.position);
-                if (dist < 50 && dist < minDistance) {
-                    minDistance = dist;
-                    nearestEnemy = enemy;
+            // 检查守城怪兽
+            if (!nearestEnemy) {
+                for (const guard of GameState.gateGuards) {
+                    if (!guard.userData.isAlive) continue;
+                    const dist = dummy.position.distanceTo(guard.position);
+                    if (dist < 60 && dist < minDistance) {
+                        minDistance = dist;
+                        nearestEnemy = guard;
+                    }
                 }
             }
-        }
 
-        // 如果有敌人，朝向敌人
-        if (nearestEnemy) {
-            const direction = new THREE.Vector3();
-            direction.subVectors(nearestEnemy.position, dummy.position);
-            direction.y = 0;
-            direction.normalize();
-            targetRotation = Math.atan2(direction.x, direction.z);
-
-            // 开火逻辑
-            const now = performance.now();
-            if (now - soldier.lastFireTime > 1500 && minDistance < 60) {
-                soldier.lastFireTime = now;
-                fireFromRegiment(dummy.position, nearestEnemy, i);
+            // 检查普通敌人
+            if (!nearestEnemy) {
+                for (const enemy of enemies) {
+                    if (!enemy.userData.isAlive) continue;
+                    const dist = dummy.position.distanceTo(enemy.position);
+                    if (dist < 50 && dist < minDistance) {
+                        minDistance = dist;
+                        nearestEnemy = enemy;
+                    }
+                }
             }
+
+            // 如果有敌人，朝向敌人
+            if (nearestEnemy) {
+                const direction = new THREE.Vector3();
+                direction.subVectors(nearestEnemy.position, dummy.position);
+                direction.y = 0;
+                direction.normalize();
+                targetRotation = Math.atan2(direction.x, direction.z);
+
+                // 开火逻辑（每个兵团只有部分士兵开火，避免过于密集）
+                const now = performance.now();
+                const fireInterval = 1500 + (r * 200) + (i % 5) * 100; // 错开开火时间
+                if (now - soldier.lastFireTime > fireInterval && minDistance < 60) {
+                    soldier.lastFireTime = now;
+                    fireFromRegiment(dummy.position, nearestEnemy, r * REGIMENT_SIZE + i);
+                }
+            }
+
+            dummy.rotation.y = targetRotation;
+            dummy.updateMatrix();
+            currentRegimentMesh.setMatrixAt(i, dummy.matrix);
         }
 
-        dummy.rotation.y = targetRotation;
-        dummy.updateMatrix();
-        regimentMesh.setMatrixAt(i, dummy.matrix);
+        currentRegimentMesh.instanceMatrix.needsUpdate = true;
     }
 
-    regimentMesh.instanceMatrix.needsUpdate = true;
+    // 更新兼容性变量
+    if (regimentMeshes.length > 0) {
+        regimentMesh = regimentMeshes[regimentMeshes.length - 1];
+        regimentData = regimentDataArray[regimentDataArray.length - 1];
+    }
 }
 
 // 兵团士兵开火
@@ -4845,11 +4877,15 @@ function cleanupThreeJS() {
     extraTanks = [];
 
     // 清理兵团
-    if (regimentMesh) {
-        if (scene) scene.remove(regimentMesh);
-        regimentMesh.dispose();
-        regimentMesh = null;
+    for (let i = 0; i < regimentMeshes.length; i++) {
+        if (regimentMeshes[i]) {
+            if (scene) scene.remove(regimentMeshes[i]);
+            regimentMeshes[i].dispose();
+        }
     }
+    regimentMeshes = [];
+    regimentDataArray = [];
+    regimentMesh = null;
     regimentData = [];
 }
 
