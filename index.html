@@ -1,213 +1,1943 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>专注小树 - 孩子端</title>
-    <link rel="stylesheet" href="style.css">
+    <title>修仙主页 - 修炼者之路</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <script src="firebase-config.js"></script>
+        body {
+            font-family: 'KaiTi', 'STKaiti', '楷体', serif;
+            background: #0a0608;
+            background-image: 
+                radial-gradient(ellipse at top, #1a0e15 0%, #0a0608 70%),
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 215, 0, 0.03) 2px, rgba(255, 215, 0, 0.03) 4px);
+            min-height: 100vh;
+            color: #d4af37;
+            overflow-x: hidden;
+        }
+
+        /* 古风卷轴背景纹理 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(139, 69, 19, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 顶部标题 */
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background: linear-gradient(to bottom, rgba(139, 69, 19, 0.3), transparent);
+            border-bottom: 2px solid #8b4513;
+            border-image: linear-gradient(to right, transparent, #d4af37, transparent) 1;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 48px;
+            color: #d4af37;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.5), 0 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 12px;
+            font-weight: normal;
+        }
+
+        .header .subtitle {
+            font-size: 16px;
+            color: #a08040;
+            margin-top: 10px;
+            letter-spacing: 4px;
+        }
+
+        /* 角色信息区 */
+        .character-panel {
+            display: flex;
+            align-items: stretch;
+            gap: 20px;
+            background: linear-gradient(135deg, rgba(30, 20, 15, 0.9), rgba(20, 15, 10, 0.9));
+            border: 1px solid #8b4513;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5), inset 0 0 30px rgba(139, 69, 19, 0.1);
+            position: relative;
+        }
+
+        .character-panel::before,
+        .character-panel::after {
+            content: '◆';
+            position: absolute;
+            color: #d4af37;
+            font-size: 14px;
+        }
+        .character-panel::before { top: 10px; left: 10px; }
+        .character-panel::after { bottom: 10px; right: 10px; }
+
+        .character-avatar {
+            width: 180px;
+            height: 220px;
+            border: 2px solid #d4af37;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.2), inset 0 0 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        /* 左侧容器：立绘 + 坐骑垂直排列 */
+        .character-left {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .character-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 人物预览护体光环 */
+        .character-avatar::after {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%; height: 100%;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 0;
+            border-radius: 50%;
+        }
+        .character-avatar.armor-cloth::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(180,140,80,0.45) 0%, rgba(180,140,80,0.1) 60%);
+            box-shadow: inset 0 0 30px rgba(180,140,80,0.2), 0 0 20px rgba(180,140,80,0.15);
+            animation: aura-breathe 2.5s ease-in-out infinite;
+        }
+        .character-avatar.armor-leather::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(139,105,20,0.4) 0%, rgba(139,105,20,0.1) 60%);
+            box-shadow: inset 0 0 30px rgba(139,105,20,0.2), 0 0 20px rgba(139,105,20,0.15);
+            animation: aura-breathe 3s ease-in-out infinite;
+        }
+        .character-avatar.armor-iron::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(100,124,140,0.4) 0%, rgba(100,124,140,0.1) 60%);
+            box-shadow: inset 0 0 30px rgba(100,124,140,0.2), 0 0 20px rgba(100,124,140,0.15);
+            animation: aura-iron-pulse 2s ease-in-out infinite;
+        }
+        .character-avatar.armor-ice::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(91,181,212,0.4) 0%, rgba(91,181,212,0.1) 60%);
+            box-shadow: inset 0 0 30px rgba(91,181,212,0.2), 0 0 20px rgba(91,181,212,0.15);
+            animation: aura-breathe 2s ease-in-out infinite;
+        }
+        .character-avatar.armor-dragon::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(212,175,55,0.45) 0%, rgba(212,175,55,0.1) 60%);
+            box-shadow: inset 0 0 35px rgba(212,175,55,0.25), 0 0 25px rgba(212,175,55,0.2);
+            animation: aura-dragon 6s linear infinite;
+        }
+        .character-avatar.armor-turtle::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(45,90,61,0.45) 0%, rgba(45,90,61,0.1) 60%);
+            box-shadow: inset 0 0 30px rgba(45,90,61,0.2), 0 0 20px rgba(45,90,61,0.15);
+            animation: aura-breathe 3.5s ease-in-out infinite;
+        }
+        .character-avatar.armor-taiji::after {
+            opacity: 1;
+            background: conic-gradient(from 0deg, rgba(0,0,0,0.25), rgba(255,255,255,0.25), rgba(0,0,0,0.25));
+            animation: aura-taiji 4s linear infinite;
+        }
+
+        @keyframes aura-breathe {
+            0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%,-50%) scale(1.15); opacity: 0.95; }
+        }
+        @keyframes aura-iron-pulse {
+            0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; box-shadow: inset 0 0 20px rgba(100,124,140,0.15), 0 0 10px rgba(100,124,140,0.1); }
+            50% { transform: translate(-50%,-50%) scale(1.15); opacity: 0.9; box-shadow: inset 0 0 40px rgba(100,124,140,0.25), 0 0 25px rgba(100,124,140,0.2); }
+        }
+        @keyframes aura-dragon {
+            0% { transform: translate(-50%,-50%) rotate(0deg) scale(1); opacity: 0.5; }
+            25% { transform: translate(-50%,-50%) rotate(90deg) scale(1.15); opacity: 0.95; }
+            50% { transform: translate(-50%,-50%) rotate(180deg) scale(1); opacity: 0.5; }
+            75% { transform: translate(-50%,-50%) rotate(270deg) scale(1.15); opacity: 0.95; }
+            100% { transform: translate(-50%,-50%) rotate(360deg) scale(1); opacity: 0.5; }
+        }
+        @keyframes aura-taiji {
+            from { transform: translate(-50%,-50%) rotate(0deg); opacity: 0.6; }
+            to { transform: translate(-50%,-50%) rotate(360deg); opacity: 0.6; }
+        }
+
+        /* 装备展示区 - 独立显示在角色旁边 */
+        .equipment-showcase {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #6b5526;
+            border-radius: 4px;
+            width: 280px;
+            flex-shrink: 0;
+        }
+
+        .equipment-showcase-title {
+            font-size: 13px;
+            color: #d4af37;
+            text-align: center;
+            border-bottom: 1px solid #6b5526;
+            padding-bottom: 6px;
+            margin-bottom: 4px;
+        }
+
+        .equip-slot-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 8px;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid #4a3a1a;
+            border-radius: 3px;
+        }
+
+        .equip-slot-label {
+            font-size: 12px;
+            color: #a08040;
+            min-width: 36px;
+        }
+
+        .equip-slot-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #6b5526;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .equip-slot-icon img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .equip-slot-icon .empty {
+            color: #6b5526;
+            font-size: 20px;
+        }
+
+        .equip-slot-name {
+            font-size: 12px;
+            color: #d4af37;
+            flex: 1;
+        }
+
+        .equip-slot-name .empty {
+            color: #6b5526;
+        }
+
+        /* 坐骑大图展示 - 整张图独立显示 */
+        .mount-showcase {
+            width: 180px;
+            height: 110px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid #6b5526;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            padding: 4px;
+        }
+
+        .mount-showcase img {
+            max-width: 100%;
+            max-height: 100px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* 坐骑原地行走动画 - 显示完整4帧精灵图 */
+        .mount-showcase .walking-mount {
+            width: 100px;
+            height: 100px;
+            background-size: 200% 200%;
+            background-repeat: no-repeat;
+            background-position: 0% 0%;
+            animation: walkMount 0.8s steps(1) infinite;
+            max-width: none;
+            max-height: none;
+            image-rendering: pixelated;
+        }
+
+        @keyframes walkMount {
+            0%   { background-position: 0% 0%; }
+            25%  { background-position: 100% 0%; }
+            50%  { background-position: 0% 100%; }
+            75%  { background-position: 100% 100%; }
+        }
+
+        /* 装备槽位中的坐骑动画 - 60x60容器内显示4帧 */
+        .equip-mount-anim {
+            background-size: 200% 200% !important;
+            background-repeat: no-repeat !important;
+            animation: walkMount 0.8s steps(1) infinite !important;
+            image-rendering: pixelated;
+        }
+
+        .mount-showcase .empty {
+            color: #6b5526;
+            font-size: 13px;
+        }
+
+        /* 装备图层叠加 - 仅坐骑用 */
+        .equipment-layer {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 2;
+            image-rendering: pixelated;
+        }
+
+        .equipment-layer.spirit {
+            width: 50px;
+            height: 50px;
+            left: 80%;
+            top: 20%;
+            filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.6));
+            animation: spiritFloat 2s ease-in-out infinite;
+        }
+
+        @keyframes spiritFloat {
+            0%, 100% { transform: translate(-50%, -50%); }
+            50% { transform: translate(-50%, -60%); }
+        }
+
+        .character-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .character-name {
+            font-size: 32px;
+            color: #d4af37;
+            margin-bottom: 8px;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .character-realm {
+            font-size: 20px;
+            color: #8b6914;
+            margin-bottom: 20px;
+            padding: 5px 15px;
+            border: 1px solid #8b4513;
+            display: inline-block;
+            background: rgba(139, 69, 19, 0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(139, 69, 19, 0.1);
+            border-left: 3px solid #d4af37;
+        }
+
+        .stat-label {
+            color: #a08040;
+            font-size: 14px;
+            margin-right: 10px;
+            min-width: 70px;
+        }
+
+        .stat-value {
+            color: #d4af37;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* 金币显示区 */
+        .currency-panel {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .currency-box {
+            flex: 1;
+            background: linear-gradient(135deg, rgba(30, 20, 15, 0.9), rgba(20, 15, 10, 0.9));
+            border: 1px solid #8b4513;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .currency-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #d4af37, transparent);
+        }
+
+        .currency-title {
+            color: #a08040;
+            font-size: 14px;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .currency-amount {
+            color: #d4af37;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .currency-amount .unit {
+            font-size: 16px;
+            color: #a08040;
+            margin-left: 5px;
+        }
+
+        /* 修炼模块 */
+        .cultivation-panel {
+            background: linear-gradient(135deg, rgba(30, 20, 15, 0.9), rgba(20, 15, 10, 0.9));
+            border: 1px solid #8b4513;
+            padding: 25px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .panel-title {
+            font-size: 24px;
+            color: #d4af37;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #8b4513;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .panel-title::before {
+            content: '【';
+            color: #8b4513;
+            margin-right: 5px;
+        }
+        .panel-title::after {
+            content: '】';
+            color: #8b4513;
+            margin-left: 5px;
+        }
+
+        .cultivation-btn {
+            display: block;
+            width: 100%;
+            padding: 25px;
+            background: linear-gradient(135deg, #4a1a1a, #2a0a0a);
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            font-size: 24px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 8px;
+            transition: all 0.3s;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2), inset 0 0 20px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cultivation-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        .cultivation-btn:hover {
+            background: linear-gradient(135deg, #6a2a2a, #4a1a1a);
+            box-shadow: 0 0 40px rgba(212, 175, 55, 0.5), inset 0 0 20px rgba(0,0,0,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 日常修炼科目 */
+        .subjects-panel {
+            background: linear-gradient(135deg, rgba(30, 20, 15, 0.9), rgba(20, 15, 10, 0.9));
+            border: 1px solid #8b4513;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .subject-btn {
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(60, 40, 30, 0.8), rgba(40, 25, 15, 0.8));
+            border: 1px solid #8b4513;
+            color: #d4af37;
+            font-family: inherit;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+
+        .subject-btn::before {
+            content: attr(data-icon);
+            display: block;
+            font-size: 28px;
+            margin-bottom: 8px;
+            color: #d4af37;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+
+        .subject-btn:hover {
+            background: linear-gradient(135deg, rgba(80, 50, 30, 0.9), rgba(60, 35, 20, 0.9));
+            border-color: #d4af37;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .subject-btn .reward {
+            display: block;
+            font-size: 12px;
+            color: #a08040;
+            margin-top: 5px;
+        }
+
+        /* 商店按钮 */
+        .shop-panel {
+            background: linear-gradient(135deg, rgba(30, 20, 15, 0.9), rgba(20, 15, 10, 0.9));
+            border: 1px solid #8b4513;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .shop-btn {
+            display: block;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #3a2a1a, #2a1a0a);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-size: 20px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 4px;
+            transition: all 0.3s;
+        }
+
+        .shop-btn:hover {
+            background: linear-gradient(135deg, #5a3a2a, #4a2a1a);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a0e15, #0a0608);
+            border: 2px solid #d4af37;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 0 50px rgba(212, 175, 55, 0.3);
+        }
+
+        .modal-title {
+            font-size: 28px;
+            color: #d4af37;
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #8b4513;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 15px;
+            background: none;
+            border: none;
+            color: #d4af37;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* 录入项 */
+        .record-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background: rgba(139, 69, 19, 0.1);
+            border-left: 3px solid #d4af37;
+        }
+
+        .record-label {
+            flex: 1;
+            color: #d4af37;
+            font-size: 16px;
+        }
+
+        .record-input {
+            width: 80px;
+            padding: 8px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #8b4513;
+            color: #d4af37;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .record-reward {
+            margin-left: 15px;
+            color: #a08040;
+            font-size: 14px;
+            min-width: 60px;
+        }
+
+        .submit-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #4a2a1a, #2a1a0a);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-size: 18px;
+            font-family: inherit;
+            cursor: pointer;
+            letter-spacing: 4px;
+        }
+
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #6a3a2a, #4a2a1a);
+        }
+
+        /* 录入页灵石显示 */
+        .record-gold-display {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.05));
+            border: 1px solid #6b5526;
+            border-radius: 4px;
+            padding: 12px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .record-gold-label {
+            color: #b8956a;
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+        .record-gold-value {
+            color: #d4af37;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+        }
+
+        /* 奖励按钮 - 默认状态看起来像不可用（等待Z键） */
+        .claim-btn {
+            background: linear-gradient(135deg, #1a1410, #0a0805);
+            border: 1px solid #3a2a1a;
+            color: #6b5526;
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: not-allowed;
+            letter-spacing: 1px;
+            font-family: inherit;
+            transition: all 0.2s;
+            white-space: nowrap;
+            opacity: 0.45;
+        }
+        .claim-btn:hover {
+            /* 默认状态无hover效果 */
+        }
+        .claim-btn:active {
+            /* 默认状态无效果 */
+        }
+        /* Z键激活时按钮亮起 - 可点击状态 */
+        .claim-btn.z-active {
+            background: linear-gradient(135deg, #5a4a2a, #3a2a1a) !important;
+            border-color: #d4af37 !important;
+            color: #ffd700 !important;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.6) !important;
+            opacity: 1 !important;
+            cursor: pointer !important;
+        }
+        .claim-btn.z-active:hover {
+            background: linear-gradient(135deg, #6a5a3a, #4a3a2a) !important;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.8) !important;
+        }
+        .claim-btn.z-active:active {
+            transform: scale(0.95);
+        }
+        .claim-btn.claimed {
+            background: linear-gradient(135deg, #1a4a2a, #0a2a1a);
+            border-color: #4a8a4a;
+            color: #6afa6a;
+            opacity: 1;
+        }
+
+        /* 商店商品 */
+        .shop-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #8b4513;
+            padding-bottom: 10px;
+        }
+
+        .shop-tab {
+            flex: 1;
+            padding: 10px;
+            background: rgba(139, 69, 19, 0.2);
+            border: 1px solid #8b4513;
+            color: #a08040;
+            font-family: inherit;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: center;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+        }
+
+        .shop-tab:hover {
+            background: rgba(139, 69, 19, 0.4);
+            color: #d4af37;
+        }
+
+        .shop-tab.active {
+            background: linear-gradient(135deg, #4a2a1a, #2a1a0a);
+            color: #d4af37;
+            border-color: #d4af37;
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .shop-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(139, 69, 19, 0.1);
+            border: 1px solid #8b4513;
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+        }
+
+        .shop-item-icon {
+            width: 60px; height: 60px;
+            border: 1px solid #d4af37;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            color: #d4af37;
+            font-size: 24px;
+        }
+
+        .shop-item-info {
+            flex: 1;
+        }
+
+        .shop-item-name {
+            color: #d4af37;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .shop-item-desc {
+            color: #a08040;
+            font-size: 12px;
+        }
+
+        .shop-item-price {
+            color: #d4af37;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .buy-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #4a2a1a, #2a1a0a);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .buy-btn:hover {
+            background: linear-gradient(135deg, #6a3a2a, #4a2a1a);
+        }
+
+        .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 装备页面 */
+        .equip-slot {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 12px;
+            background: rgba(139, 69, 19, 0.1);
+            border: 1px solid #8b4513;
+        }
+
+        .equip-slot-label {
+            width: 80px;
+            color: #d4af37;
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        .equip-slot-current {
+            flex: 1;
+            color: #a08040;
+            font-size: 14px;
+            margin-left: 15px;
+        }
+
+        .equip-slot-current.has-item {
+            color: #d4af37;
+        }
+
+        .equip-change-btn {
+            padding: 6px 15px;
+            background: rgba(139, 69, 19, 0.3);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .equip-change-btn:hover {
+            background: rgba(139, 69, 19, 0.6);
+        }
+
+        /* 装备选择列表 */
+        .equip-select-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(139, 69, 19, 0.1);
+            border: 1px solid #8b4513;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .equip-select-item:hover {
+            background: rgba(139, 69, 19, 0.3);
+            border-color: #d4af37;
+        }
+
+        .equip-select-item.selected {
+            background: linear-gradient(135deg, rgba(74, 42, 26, 0.5), rgba(42, 26, 10, 0.5));
+            border-color: #d4af37;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+        }
+
+        .equip-select-icon {
+            width: 40px; height: 40px;
+            border: 1px solid #d4af37;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 20px;
+        }
+
+        .equip-select-info {
+            flex: 1;
+        }
+
+        .equip-select-name {
+            font-size: 15px;
+            margin-bottom: 3px;
+        }
+
+        .equip-select-desc {
+            font-size: 12px;
+            color: #a08040;
+        }
+
+        /* 属性预览 */
+        .stats-preview {
+            background: rgba(139, 69, 19, 0.15);
+            border: 1px solid #8b4513;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .stats-preview-title {
+            color: #d4af37;
+            font-size: 16px;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            border-bottom: 1px solid #8b4513;
+            padding-bottom: 5px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+        }
+
+        .stat-row .stat-name {
+            color: #a08040;
+            font-size: 14px;
+        }
+
+        .stat-row .stat-val {
+            color: #d4af37;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .stat-row .stat-bonus {
+            color: #4ade80;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .open-equip-btn {
+            margin-top: 10px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #3a2a1a, #2a1a0a);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            letter-spacing: 2px;
+        }
+
+        .open-equip-btn:hover {
+            background: linear-gradient(135deg, #5a3a2a, #4a2a1a);
+        }
+
+        /* 飘字提示 */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-size: 18px;
+            z-index: 2000;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+    </style>
 </head>
+<body>
+    <div class="container">
+        <!-- 顶部标题 -->
+        <div class="header">
+            <h1>修 仙 之 路</h1>
+            <div class="subtitle">—  修心养性，问道长生  —</div>
+        </div>
 
-<body></body>
-<!-- 任务名称输入弹窗 -->
-<div id="taskNameModal" class="modal">
-    <div class="modal-content">
-        <h2>🌳 专注力训练</h2>
-
-        <a href="home.html" class="btn-home">← 返回首页</a>
-
-        <div id="focusTaskSection">
-            <h3 style="margin-top: 20px;">今天做什么作业？</h3>
-            <input type="text" id="taskNameInput" class="task-input" placeholder="例如：数学作业、语文练习..."
-                maxlength="20"></span>""
-
-            <div class="time-input-section">
-                <label class="time-label">预计需要多长时间？</label>
-                <div class="time-options">
-                    <button class="time-option" data-minutes="10">10分钟</button>
-                    <button class="time-option" data-minutes="20">20分钟</button>
-                    <button class="time-option active" data-minutes="30">30分钟</button>
-                    <button class="time-option" data-minutes="45">45分钟</button>
-                    <button class="time-option" data-minutes="60">60分钟</button>
+        <!-- 角色信息面板 -->
+        <div class="character-panel">
+            <!-- 左侧：角色立绘 + 坐骑大图（垂直排列，紧凑布局） -->
+            <div class="character-left">
+                <div class="character-avatar" id="characterAvatar">
+                    <img src="assets/characters/character_lv1_portrait.png?v=2" alt="修仙者">
                 </div>
-                <div class="custom-time">
-                    <label>自定义：</label>
-                    <input type="number" id="customMinutes" min="1" max="180" placeholder="分钟">
+                <div class="mount-showcase" id="showcase-mount">
+                    <span class="empty">未装备坐骑</span>
                 </div>
             </div>
 
-            <div class="background-selector-section">
-                <label class="time-label">选择背景（可选）</label>
-                <div id="focusBackgroundSelector" class="background-options"></div>
-            </div>
-
-            <button id="confirmTaskBtn" class="btn btn-primary">开始专注</button>
-            <button id="viewHistoryBtn" class="btn btn-secondary-small">查看历史记录</button>
-        </div>
-    </div>
-</div>
-
-<!-- 房间号显示弹窗 -->
-<div id="roomModal" class="modal hidden">
-    <div class="modal-content room-modal">
-        <h2>📱 家长监控连接</h2>
-        <p class="room-instruction">请在手机上打开家长端，输入以下房间号：</p>
-        <div class="room-id-display">
-            <span id="roomIdDisplay">------</span>
-        </div>
-        <p class="room-url">或访问：<span id="parentUrl">--</span></p>
-        <button id="startWithoutParent" class="btn btn-primary">开始学习</button>
-    </div>
-</div>
-
-<div class="fullscreen-container hidden" id="mainScreen">
-    <!-- 顶部信息栏 -->
-    <div class="top-bar">
-        <div class="task-info-group">
-            <div class="task-name-display">📚 <span id="currentTaskName">作业任务</span></div>
-            <div class="room-id-display">
-                房间号：<span id="roomIdDisplay" class="room-id">------</span>
-            </div>
-        </div>
-        <div class="timer-display-group">
-            <div class="countdown-display" id="countdownDisplay">
-                <span class="countdown-label">剩余时间</span>
-                <div class="dice-timer" id="diceTimer">
-                    <div class="dice-digit" id="diceMin1">0</div>
-                    <div class="dice-digit" id="diceMin2">0</div>
-                    <div class="dice-separator">:</div>
-                    <div class="dice-digit" id="diceSec1">0</div>
-                    <div class="dice-digit" id="diceSec2">0</div>
+            <!-- 中间：角色信息 -->
+            <div class="character-info">
+                <div class="character-name">修炼者 · 小明</div>
+                <div class="character-realm">炼气期 一层</div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">生命值：</span>
+                        <span class="stat-value" id="statHp">100 / 100</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">灵力值：</span>
+                        <span class="stat-value" id="statMp">50 / 50</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">攻击力：</span>
+                        <span class="stat-value" id="statAtk">15</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">防御力：</span>
+                        <span class="stat-value" id="statDef">8</span>
+                    </div>
                 </div>
+                <button class="open-equip-btn" onclick="openEquipment()">—  装 备 管 理  —</button>
             </div>
-            <div class="time-progress-bar">
-                <div class="progress-bar-fill" id="progressBarFill"></div>
-                <div class="progress-bar-text" id="progressBarText">0%</div>
-            </div>
-            <div class="elapsed-time">
-                已用：<span id="timeDisplay">00:00</span>
-            </div>
-        </div>
-        <div class="stats-group">
-            <div class="tree-counter">
-                🌳 <span id="treeCount">0</span> 棵
-            </div>
-            <div class="distraction-display" id="distractionDisplay">
-                <span class="distraction-label">走神记录：</span>
-                <span class="distraction-clouds" id="distractionClouds"></span>
-            </div>
-        </div>
-    </div>
 
-    <!-- 森林区域 -->
-    <div class="forest-area">
-        <div id="clouds" class="clouds hidden">
-            <div class="cloud-group">
-                <div class="cloud">☁️</div>
-                <div class="cloud">☁️</div>
-                <div class="cloud">☁️</div>
-            </div>
-            <div class="message">注意力跑掉啦！快回来～</div>
-        </div>
+            <!-- 右侧：装备展示区（不含坐骑） -->
+            <div class="equipment-showcase">
+                <div class="equipment-showcase-title">—  已 装 备  —</div>
 
-        <div id="forest" class="forest"></div>
-    </div>
-
-    <!-- 底部控制栏 -->
-    <div class="bottom-bar">
-        <button id="endBtn" class="btn btn-end">🏁 结束作业</button>
-    </div>
-</div>
-
-<div id="resultModal" class="modal hidden">
-    <div class="modal-content">
-        <h2>🎉 太棒了！</h2>
-        <div id="resultStats"></div>
-        <button id="closeModal" class="btn btn-primary">完成</button>
-    </div>
-</div>
-
-<div id="historyModal" class="modal hidden">
-    <div class="modal-content history-modal">
-        <h2>📊 学习统计</h2>
-
-        <!-- 统计汇总 -->
-        <div class="stats-summary">
-            <div class="summary-card">
-                <div class="summary-icon">📅</div>
-                <div class="summary-content">
-                    <div class="summary-label">今日成果</div>
-                    <div class="summary-value" id="todayTrees">0棵树</div>
-                    <div class="summary-detail" id="todayTasks">0个任务</div>
+                <div class="equip-slot-card">
+                    <span class="equip-slot-label">武器</span>
+                    <div class="equip-slot-icon" id="showcase-weapon">
+                        <span class="empty">?</span>
+                    </div>
+                    <span class="equip-slot-name" id="showcase-weapon-name"><span class="empty">未装备</span></span>
                 </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-icon">📆</div>
-                <div class="summary-content">
-                    <div class="summary-label">本周成果</div>
-                    <div class="summary-value" id="weekTrees">0棵树</div>
-                    <div class="summary-detail" id="weekTasks">0个任务</div>
+
+                <div class="equip-slot-card">
+                    <span class="equip-slot-label">防具</span>
+                    <div class="equip-slot-icon" id="showcase-armor">
+                        <span class="empty">?</span>
+                    </div>
+                    <span class="equip-slot-name" id="showcase-armor-name"><span class="empty">未装备</span></span>
                 </div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-icon">🏆</div>
-                <div class="summary-content">
-                    <div class="summary-label">总成就</div>
-                    <div class="summary-value" id="totalTrees">0棵树</div>
-                    <div class="summary-detail" id="totalTasks">0个任务</div>
+
+                <div class="equip-slot-card">
+                    <span class="equip-slot-label">精灵</span>
+                    <div class="equip-slot-icon" id="showcase-spirit">
+                        <span class="empty">?</span>
+                    </div>
+                    <span class="equip-slot-name" id="showcase-spirit-name"><span class="empty">未装备</span></span>
                 </div>
             </div>
         </div>
 
-        <!-- 成果森林可视化 -->
-        <div class="achievement-forest">
-            <div class="forest-header">
-                <h3>🌲 成果森林</h3>
-                <div class="forest-tabs">
-                    <button class="forest-tab active" data-period="today">今日</button>
-                    <button class="forest-tab" data-period="week">本周</button>
-                    <button class="forest-tab" data-period="total">全部</button>
+        <!-- 金币显示区 -->
+        <div class="currency-panel">
+            <div class="currency-box">
+                <div class="currency-title">—  灵 石 总 数  —</div>
+                <div class="currency-amount">1280<span class="unit">枚</span></div>
+            </div>
+            <div class="currency-box">
+                <div class="currency-title">—  今 日 修 为  —</div>
+                <div class="currency-amount">85<span class="unit">点</span></div>
+            </div>
+            <div class="currency-box">
+                <div class="currency-title">—  今 日 收 获  —</div>
+                <div class="currency-amount">120<span class="unit">灵石</span></div>
+            </div>
+        </div>
+
+        <!-- 修炼入口 -->
+        <div class="cultivation-panel">
+            <div class="panel-title">修 炼 入 口</div>
+            <button class="cultivation-btn" onclick="enterCultivation()">入 山 修 炼</button>
+        </div>
+
+        <!-- 日常修炼科目 -->
+        <div class="subjects-panel">
+            <div class="panel-title">日 常 修 炼</div>
+            <div class="subjects-grid">
+                <button class="subject-btn" data-icon="数" onclick="openRecord('数学')">
+                    数 学
+                    <span class="reward">+10灵石/题</span>
+                </button>
+                <button class="subject-btn" data-icon="英" onclick="openRecord('英语')">
+                    英 语
+                    <span class="reward">+10灵石/题</span>
+                </button>
+                <button class="subject-btn" data-icon="语" onclick="openRecord('语文')">
+                    语 文
+                    <span class="reward">+10灵石/题</span>
+                </button>
+                <button class="subject-btn" data-icon="锻" onclick="openRecord('锻炼')">
+                    锻 炼
+                    <span class="reward">+15灵石/次</span>
+                </button>
+                <button class="subject-btn" data-icon="作" onclick="openRecord('作文')">
+                    作 文
+                    <span class="reward">+20灵石/篇</span>
+                </button>
+                <button class="subject-btn" data-icon="生" onclick="openRecord('生活')">
+                    生 活
+                    <span class="reward">+8灵石/项</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 商店入口 -->
+        <div class="shop-panel">
+            <div class="panel-title">百 宝 阁</div>
+            <button class="shop-btn" onclick="openShop()">—  进 入 商 铺  —</button>
+        </div>
+    </div>
+
+    <!-- 录入模态框 -->
+    <div class="modal" id="recordModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeRecord()">×</button>
+            <div class="modal-title" id="recordTitle">数 学 修 炼</div>
+            <div id="recordContent"></div>
+            <button class="submit-btn" id="submitRecordBtn" onclick="submitRecord()">记 录 完 成</button>
+        </div>
+    </div>
+
+    <!-- 商店模态框 -->
+    <div class="modal" id="shopModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeShop()">×</button>
+            <div class="modal-title">—  百 宝 阁  —</div>
+            <div class="shop-tabs">
+                <button class="shop-tab active" data-type="all" onclick="filterShop('all', this)">全 部</button>
+                <button class="shop-tab" data-type="武器" onclick="filterShop('武器', this)">武 器</button>
+                <button class="shop-tab" data-type="防具" onclick="filterShop('防具', this)">铠 甲</button>
+                <button class="shop-tab" data-type="坐骑" onclick="filterShop('坐骑', this)">坐 骑</button>
+                <button class="shop-tab" data-type="精灵" onclick="filterShop('精灵', this)">精 灵</button>
+            </div>
+            <div id="shopContent"></div>
+        </div>
+    </div>
+
+    <!-- 装备管理模态框 -->
+    <div class="modal" id="equipModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeEquipment()">×</button>
+            <div class="modal-title">—  装 备 管 理  —</div>
+
+            <!-- 装备槽位 -->
+            <div class="equip-slot">
+                <span class="equip-slot-label">武 器</span>
+                <span class="equip-slot-current" id="slot-weapon">未装备</span>
+                <button class="equip-change-btn" onclick="changeEquip('武器')">更 换</button>
+            </div>
+            <div class="equip-slot">
+                <span class="equip-slot-label">铠 甲</span>
+                <span class="equip-slot-current" id="slot-armor">未装备</span>
+                <button class="equip-change-btn" onclick="changeEquip('防具')">更 换</button>
+            </div>
+            <div class="equip-slot">
+                <span class="equip-slot-label">坐 骑</span>
+                <span class="equip-slot-current" id="slot-mount">未装备</span>
+                <button class="equip-change-btn" onclick="changeEquip('坐骑')">更 换</button>
+            </div>
+            <div class="equip-slot">
+                <span class="equip-slot-label">精 灵</span>
+                <span class="equip-slot-current" id="slot-spirit">未装备</span>
+                <button class="equip-change-btn" onclick="changeEquip('精灵')">更 换</button>
+            </div>
+
+            <!-- 属性预览 -->
+            <div class="stats-preview">
+                <div class="stats-preview-title">—  战 斗 属 性  —</div>
+                <div class="stat-row">
+                    <span class="stat-name">生 命 值</span>
+                    <span><span class="stat-val" id="previewHp">100</span><span class="stat-bonus" id="bonusHp"></span></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">灵 力 值</span>
+                    <span><span class="stat-val" id="previewMp">50</span><span class="stat-bonus" id="bonusMp"></span></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">攻 击 力</span>
+                    <span><span class="stat-val" id="previewAtk">15</span><span class="stat-bonus" id="bonusAtk"></span></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">防 御 力</span>
+                    <span><span class="stat-val" id="previewDef">8</span><span class="stat-bonus" id="bonusDef"></span></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">移 动 速 度</span>
+                    <span><span class="stat-val" id="previewSpeed">0%</span><span class="stat-bonus" id="bonusSpeed"></span></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">灵 气 收 集</span>
+                    <span><span class="stat-val" id="previewSpirit">0%</span><span class="stat-bonus" id="bonusSpirit"></span></span>
                 </div>
             </div>
-            <div class="forest-display" id="achievementForest">
-                <div class="forest-empty">开始学习，种下第一棵树吧！🌱</div>
-            </div>
         </div>
-
-        <!-- 专注度分析 -->
-        <div class="focus-analysis">
-            <h3>专注度分析</h3>
-            <div class="analysis-row">
-                <span>今日专注率：</span>
-                <span class="focus-rate" id="todayFocusRate">--</span>
-            </div>
-            <div class="analysis-row">
-                <span>本周专注率：</span>
-                <span class="focus-rate" id="weekFocusRate">--</span>
-            </div>
-        </div>
-
-        <!-- 筛选标签 -->
-        <div class="history-tabs">
-            <button class="history-tab active" data-filter="all">全部</button>
-            <button class="history-tab" data-filter="today">今天</button>
-            <button class="history-tab" data-filter="week">本周</button>
-        </div>
-
-        <!-- 历史记录列表 -->
-        <div id="historyList" class="history-list"></div>
-
-        <button id="closeHistoryBtn" class="btn btn-secondary-small">关闭</button>
     </div>
-</div>
 
-<script src="common.js"></script>
-<script src="child.js"></script>
+    <!-- 装备选择模态框 -->
+    <div class="modal" id="selectModal">
+        <div class="modal-content" style="max-width:500px;">
+            <button class="modal-close" onclick="closeSelect()">×</button>
+            <div class="modal-title" id="selectTitle">—  选 择 武 器  —</div>
+            <div id="selectContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // 各科目录入配置
+        const subjects = {
+            '数学': {
+                items: [
+                    { name: '校内习题全对', reward: 50 },
+                    { name: '回家作业全对', reward: 50 },
+                    { name: '口算全对', reward: 25 }
+                ]
+            },
+            '英语': {
+                items: [
+                    { name: '听写5个单词全对', reward: 50 },
+                    { name: '英语作业全对', reward: 25 },
+                    { name: '一篇认读习题全对', reward: 50 }
+                ]
+            },
+            '语文': {
+                items: [
+                    { name: '听写10个字词全对', reward: 50 },
+                    { name: '语文作业全对', reward: 50 },
+                    { name: '主动学习pad语文课20分钟', reward: 50 }
+                ]
+            },
+            '锻炼': {
+                items: [
+                    { name: '跳绳500个', reward: 80 },
+                    { name: '游泳一次', reward: 80 },
+                    { name: '拉升5分钟', reward: 50 }
+                ]
+            },
+            '作文': {
+                items: [
+                    { name: '机构里作文', reward: 40 },
+                    { name: '回家自己写作文', reward: 80 },
+                    { name: '学校作文作业', reward: 50 }
+                ]
+            },
+            '生活': {
+                items: [
+                    { name: '一天自己穿鞋不用提醒', reward: 20 },
+                    { name: '主动帮忙收拾桌子和碗筷', reward: 20 },
+                    { name: '自己主动洗漱', reward: 20 }
+                ]
+            }
+        };
+
+        // 商店商品
+        const shopItems = [
+            // 武器类
+            { type: '武器', rarity: '凡', name: '青锋木剑', desc: '攻击力+5', price: 200, icon: 'assets/items/weapon_青锋木剑.png' },
+            { type: '武器', rarity: '凡', name: '铁骨长矛', desc: '攻击力+8', price: 400, icon: 'assets/items/weapon_铁骨长矛.png' },
+            { type: '武器', rarity: '灵', name: '玄铁重剑', desc: '攻击力+15', price: 800, icon: 'assets/items/weapon_玄铁重剑.png' },
+            { type: '武器', rarity: '灵', name: '银月弯刀', desc: '攻击力+20', price: 1200, icon: 'assets/items/weapon_银月弯刀.png' },
+            { type: '武器', rarity: '宝', name: '紫电飞剑', desc: '攻击力+30', price: 2000, icon: 'assets/items/weapon_紫电飞剑.png' },
+            { type: '武器', rarity: '宝', name: '烈焰神枪', desc: '攻击力+45', price: 3500, icon: 'assets/items/weapon_烈焰神枪.png' },
+            { type: '武器', rarity: '仙', name: '轩辕神剑', desc: '攻击力+80', price: 8000, icon: 'assets/items/weapon_轩辕神剑.png' },
+
+            // 防具类
+            { type: '防具', rarity: '凡', name: '粗布护甲', desc: '防御力+3', price: 150, icon: 'assets/items/armor_粗布护甲.png' },
+            { type: '防具', rarity: '凡', name: '皮甲护身', desc: '防御力+6', price: 350, icon: 'assets/items/armor_皮甲护身.png' },
+            { type: '防具', rarity: '灵', name: '玄铁铠甲', desc: '防御力+10', price: 700, icon: 'assets/items/armor_玄铁铠甲.png' },
+            { type: '防具', rarity: '灵', name: '寒冰战甲', desc: '防御力+18', price: 1100, icon: 'assets/items/armor_寒冰战甲.png' },
+            { type: '防具', rarity: '宝', name: '神龙宝甲', desc: '防御力+25', price: 1800, icon: 'assets/items/armor_神龙宝甲.png' },
+            { type: '防具', rarity: '宝', name: '玄武重盾', desc: '防御力+40', price: 3200, icon: 'assets/items/armor_玄武重盾.png' },
+            { type: '防具', rarity: '仙', name: '太极道袍', desc: '防御力+70', price: 7500, icon: 'assets/items/armor_太极道袍.png' },
+
+            // 坐骑类
+            { type: '坐骑', rarity: '凡', name: '青鬃马', desc: '移动速度+10%', price: 500, icon: 'assets/characters/character_lv1_ride_青鬃马.png' },
+            { type: '坐骑', rarity: '灵', name: '白鹤', desc: '移动速度+25%', price: 1500, icon: 'assets/characters/character_lv1_ride_白鹤.png' },
+            { type: '坐骑', rarity: '灵', name: '黑豹', desc: '移动速度+30%', price: 2000, icon: 'assets/characters/character_lv1_ride_黑豹.png' },
+            { type: '坐骑', rarity: '宝', name: '青龙', desc: '移动速度+50%', price: 3000, icon: 'assets/characters/character_lv1_ride_青龙.png' },
+            { type: '坐骑', rarity: '宝', name: '火凤凰', desc: '移动速度+60%', price: 4500, icon: 'assets/characters/character_lv1_ride_火凤凰.png' },
+            { type: '坐骑', rarity: '仙', name: '九天神鹿', desc: '移动速度+100%', price: 9000, icon: 'assets/characters/character_lv1_ride_九天神鹿.png' },
+
+            // 精灵类
+            { type: '精灵', rarity: '凡', name: '小龙', desc: '灵气收集+10%', price: 600, icon: 'assets/items/spirit_小龙_1.png' },
+            { type: '精灵', rarity: '灵', name: '仙鹤灵', desc: '灵气收集+20%', price: 1200, icon: 'assets/items/spirit_仙鹤灵.png' },
+            { type: '精灵', rarity: '灵', name: '灵猴', desc: '灵气收集+25%', price: 1600, icon: 'assets/items/spirit_灵猴.png' },
+            { type: '精灵', rarity: '宝', name: '九尾灵狐', desc: '灵气收集+40%', price: 2500, icon: 'assets/items/spirit_九尾灵狐.png' },
+            { type: '精灵', rarity: '宝', name: '青龙灵', desc: '灵气收集+55%', price: 3800, icon: 'assets/items/spirit_青龙灵.png' },
+            { type: '精灵', rarity: '仙', name: '凤凰神兽', desc: '灵气收集+90%', price: 8500, icon: 'assets/items/spirit_凤凰神兽.png' }
+        ];
+
+        // 稀有度颜色
+        const rarityColors = {
+            '凡': '#a08040',
+            '灵': '#4a90e2',
+            '宝': '#b8860b',
+            '仙': '#ff6b6b'
+        };
+
+        let currentFilter = 'all';
+
+        let playerGold = 100;
+        let currentSubject = null;
+        const ownedItems = []; // 已拥有的物品列表
+        const equipped = { '武器': null, '防具': null, '坐骑': null, '精灵': null };
+
+        // 加载保存的数据
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('xiuxian_game_data');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    playerGold = data.gold || 100;
+                    ownedItems.length = 0;
+                    ownedItems.push(...(data.owned || []));
+                    Object.assign(equipped, data.equipped || equipped);
+                }
+            } catch (e) {
+                console.log('加载数据失败', e);
+            }
+        }
+
+        // 保存数据
+        function saveData() {
+            try {
+                localStorage.setItem('xiuxian_game_data', JSON.stringify({
+                    gold: playerGold,
+                    owned: ownedItems,
+                    equipped: equipped
+                }));
+            } catch (e) {
+                console.log('保存数据失败', e);
+            }
+        }
+
+        // 页面加载时读取数据
+        loadData();
+        // 同步显示灵石和装备
+        document.addEventListener('DOMContentLoaded', () => {
+            const goldEl = document.querySelector('.currency-amount');
+            if (goldEl) goldEl.textContent = playerGold;
+            // 延迟一帧确保DOM已渲染
+            setTimeout(() => {
+                updateCharacterDisplay();
+                updateMainStats(calculateStats()); // 初始化主页属性
+            }, 50);
+        });
+
+        // 精灵多帧动画配置
+        const spiritFrameMap = {
+            '小龙': [
+                'assets/items/spirit_小龙_1.png',
+                'assets/items/spirit_小龙_2.png',
+                'assets/items/spirit_小龙_3.png',
+                'assets/items/spirit_小龙_4.png'
+            ]
+        };
+
+        // 启动精灵帧动画
+        function startSpiritAnim(imgEl, spiritName) {
+            const frames = spiritFrameMap[spiritName];
+            if (!frames || frames.length < 2) return;
+            let idx = 0;
+            imgEl._spiritTimer = setInterval(() => {
+                idx = (idx + 1) % frames.length;
+                imgEl.src = frames[idx];
+            }, 200);
+        }
+
+        // 基础属性
+        const baseStats = { hp: 100, mp: 50, atk: 15, def: 8, speed: 0, spirit: 0 };
+
+        // 解析装备属性
+        function parseStatBonus(desc) {
+            const result = { hp: 0, mp: 0, atk: 0, def: 0, speed: 0, spirit: 0 };
+            const atkMatch = desc.match(/攻击力\+(\d+)/);
+            const defMatch = desc.match(/防御力\+(\d+)/);
+            const speedMatch = desc.match(/移动速度\+(\d+)%/);
+            const spiritMatch = desc.match(/灵气收集\+(\d+)%/);
+            if (atkMatch) result.atk = parseInt(atkMatch[1]);
+            if (defMatch) result.def = parseInt(defMatch[1]);
+            if (speedMatch) result.speed = parseInt(speedMatch[1]);
+            if (spiritMatch) result.spirit = parseInt(spiritMatch[1]);
+            return result;
+        }
+
+        // 计算总属性
+        function calculateStats() {
+            const total = { ...baseStats };
+            for (const slot in equipped) {
+                const itemName = equipped[slot];
+                if (itemName) {
+                    const item = shopItems.find(i => i.name === itemName);
+                    if (item) {
+                        const bonus = parseStatBonus(item.desc);
+                        total.atk += bonus.atk;
+                        total.def += bonus.def;
+                        total.speed += bonus.speed;
+                        total.spirit += bonus.spirit;
+                    }
+                }
+            }
+            return total;
+        }
+
+        // 更新装备槽位显示
+        function updateEquipSlots() {
+            for (const slot in equipped) {
+                const el = document.getElementById('slot-' + ({'武器':'weapon','防具':'armor','坐骑':'mount','精灵':'spirit'})[slot]);
+                const itemName = equipped[slot];
+                if (itemName) {
+                    const item = shopItems.find(i => i.name === itemName);
+                    if (item && item.icon.endsWith('.png')) {
+                        // 坐骑使用行走动画div，其它装备用普通img
+                        const iconHtml = (slot === '坐骑')
+                            ? `<div class="walking-mount equip-mount-anim" style="background-image:url('${item.icon}?v=2');width:60px;height:60px;display:inline-block;vertical-align:middle;margin-right:10px;border:2px solid ${rarityColors[item.rarity]};border-radius:4px;"></div>`
+                            : `<img src="${item.icon}" style="width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:10px;border:2px solid ${rarityColors[item.rarity]};border-radius:4px;background:rgba(0,0,0,0.3);">`;
+                        el.innerHTML = iconHtml + itemName;
+                    } else {
+                        el.textContent = itemName;
+                    }
+                    el.classList.add('has-item');
+                } else {
+                    el.textContent = '未装备';
+                    el.classList.remove('has-item');
+                }
+            }
+        }
+
+        // 更新属性预览
+        function updateStatsPreview() {
+            const stats = calculateStats();
+            document.getElementById('previewHp').textContent = stats.hp;
+            document.getElementById('previewMp').textContent = stats.mp;
+            document.getElementById('previewAtk').textContent = stats.atk;
+            document.getElementById('previewDef').textContent = stats.def;
+            document.getElementById('previewSpeed').textContent = stats.speed + '%';
+            document.getElementById('previewSpirit').textContent = stats.spirit + '%';
+
+            // 同步更新主页属性
+            updateMainStats(stats);
+
+            // 加成显示
+            const bonusAtk = stats.atk - baseStats.atk;
+            const bonusDef = stats.def - baseStats.def;
+            const bonusHp = stats.hp - baseStats.hp;
+            const bonusMp = stats.mp - baseStats.mp;
+            document.getElementById('bonusAtk').textContent = bonusAtk > 0 ? '(+' + bonusAtk + ')' : '';
+            document.getElementById('bonusDef').textContent = bonusDef > 0 ? '(+' + bonusDef + ')' : '';
+            document.getElementById('bonusSpeed').textContent = stats.speed > 0 ? '(+' + stats.speed + '%)' : '';
+            document.getElementById('bonusSpirit').textContent = stats.spirit > 0 ? '(+' + stats.spirit + '%)' : '';
+            // HP/MP 加成（虽然目前装备不会加HP/MP，但保留兼容）
+            const hpEl = document.getElementById('bonusHp');
+            const mpEl = document.getElementById('bonusMp');
+            if (hpEl) hpEl.textContent = bonusHp > 0 ? '(+' + bonusHp + ')' : '';
+            if (mpEl) mpEl.textContent = bonusMp > 0 ? '(+' + bonusMp + ')' : '';
+        }
+
+        // 同步更新主页属性面板（让主页和装备管理显示一致）
+        function updateMainStats(stats) {
+            const statHpEl = document.getElementById('statHp');
+            const statMpEl = document.getElementById('statMp');
+            const statAtkEl = document.getElementById('statAtk');
+            const statDefEl = document.getElementById('statDef');
+            if (statHpEl) statHpEl.textContent = stats.hp + ' / ' + stats.hp;
+            if (statMpEl) statMpEl.textContent = stats.mp + ' / ' + stats.mp;
+            if (statAtkEl) statAtkEl.textContent = stats.atk;
+            if (statDefEl) statDefEl.textContent = stats.def;
+        }
+
+        // 打开装备管理
+        function openEquipment() {
+            updateEquipSlots();
+            updateStatsPreview();
+            document.getElementById('equipModal').classList.add('active');
+        }
+
+        // 关闭装备管理
+        function closeEquipment() {
+            document.getElementById('equipModal').classList.remove('active');
+        }
+
+        // 更新人物装备图层显示（角色身上仅保留精灵）
+        function updateCharacterDisplay() {
+            const avatar = document.getElementById('characterAvatar');
+            if (!avatar) return;
+
+            // 清除旧的装备图层和光环class
+            avatar.querySelectorAll('.equipment-layer').forEach(el => el.remove());
+            avatar.className = 'character-avatar';
+
+            // 装备类型映射
+            const typeMap = {
+                '武器': 'weapon',
+                '防具': 'armor',
+                '坐骑': 'mount',
+                '精灵': 'spirit'
+            };
+
+            // 防具光环映射
+            const armorAuraMap = {
+                '粗布护甲': 'armor-cloth',
+                '皮甲护身': 'armor-leather',
+                '玄铁铠甲': 'armor-iron',
+                '寒冰战甲': 'armor-ice',
+                '神龙宝甲': 'armor-dragon',
+                '玄武重盾': 'armor-turtle',
+                '太极道袍': 'armor-taiji'
+            };
+
+            // 仅精灵跟随人物
+            const slot = '精灵';
+            const itemName = equipped[slot];
+            if (itemName) {
+                const item = shopItems.find(i => i.name === itemName);
+                if (item && item.icon.endsWith('.png')) {
+                    const layer = document.createElement('img');
+                    layer.src = item.icon;
+                    layer.className = 'equipment-layer ' + typeMap[slot];
+                    layer.alt = itemName;
+                    avatar.appendChild(layer);
+                    // 多帧精灵行走动画
+                    startSpiritAnim(layer, itemName);
+                }
+            }
+
+            // 添加防具护体光环
+            const armorName = equipped['防具'];
+            if (armorName && armorAuraMap[armorName]) {
+                avatar.classList.add(armorAuraMap[armorName]);
+            }
+
+            // 更新右侧独立展示区
+            updateShowcase();
+        }
+
+        // 更新装备独立展示区
+        function updateShowcase() {
+            const slotConfig = {
+                '武器': { icon: 'showcase-weapon', name: 'showcase-weapon-name' },
+                '防具': { icon: 'showcase-armor', name: 'showcase-armor-name' },
+                '精灵': { icon: 'showcase-spirit', name: 'showcase-spirit-name' }
+            };
+
+            for (const slot in slotConfig) {
+                const iconEl = document.getElementById(slotConfig[slot].icon);
+                const nameEl = document.getElementById(slotConfig[slot].name);
+                const itemName = equipped[slot];
+
+                if (itemName) {
+                    const item = shopItems.find(i => i.name === itemName);
+                    if (item && item.icon.endsWith('.png')) {
+                        iconEl.innerHTML = `<img src="${item.icon}" alt="${itemName}">`;
+                        nameEl.innerHTML = itemName;
+                    } else {
+                        iconEl.innerHTML = `<span class="empty">?</span>`;
+                        nameEl.innerHTML = `<span class="empty">未装备</span>`;
+                    }
+                } else {
+                    iconEl.innerHTML = `<span class="empty">?</span>`;
+                    nameEl.innerHTML = `<span class="empty">未装备</span>`;
+                }
+            }
+
+            // 坐骑独立大图展示 - 原地行走动画
+            const mountEl = document.getElementById('showcase-mount');
+            const mountName = equipped['坐骑'];
+            if (mountName) {
+                const item = shopItems.find(i => i.name === mountName);
+                if (item && item.icon.endsWith('.png')) {
+                    // 用div+背景图的方式展示，4帧循环动画
+                    mountEl.innerHTML = `<div class="walking-mount" style="background-image: url('${item.icon}?v=2');" title="${mountName}"></div>`;
+                } else {
+                    mountEl.innerHTML = `<span class="empty">未装备坐骑</span>`;
+                }
+            } else {
+                mountEl.innerHTML = `<span class="empty">未装备坐骑</span>`;
+            }
+        }
+
+        // 更换装备
+        function changeEquip(type) {
+            const ownedOfType = shopItems.filter(i => i.type === type && ownedItems.includes(i.name));
+            if (ownedOfType.length === 0) {
+                showToast('该部位暂无已购装备');
+                return;
+            }
+            const titles = { '武器': '武 器', '防具': '铠 甲', '坐骑': '坐 骑', '精灵': '精 灵' };
+            document.getElementById('selectTitle').textContent = '—  选 择 ' + titles[type] + '  —';
+
+            const content = document.getElementById('selectContent');
+            content.innerHTML = '';
+
+            // "卸下"选项
+            const unequipDiv = document.createElement('div');
+            unequipDiv.className = 'equip-select-item';
+            unequipDiv.style.cursor = 'pointer';
+            unequipDiv.innerHTML = `
+                <div class="equip-select-icon" style="border-color:#a08040;color:#a08040;">—</div>
+                <div class="equip-select-info">
+                    <div class="equip-select-name" style="color:#a08040;">卸 下</div>
+                    <div class="equip-select-desc">不装备任何物品</div>
+                </div>
+            `;
+            unequipDiv.onclick = () => {
+                equipped[type] = null;
+                saveData(); // 保存数据
+                showToast('已卸下');
+                closeSelect();
+                updateEquipSlots();
+                updateStatsPreview();
+                updateCharacterDisplay();
+            };
+            content.appendChild(unequipDiv);
+
+            ownedOfType.forEach(item => {
+                const isEquipped = equipped[type] === item.name;
+                const iconHtml = item.icon.endsWith('.png')
+                    ? `<img src="${item.icon}" style="width:100%;height:100%;object-fit:contain;">`
+                    : item.icon;
+                const div = document.createElement('div');
+                div.className = 'equip-select-item' + (isEquipped ? ' selected' : '');
+                div.innerHTML = `
+                    <div class="equip-select-icon" style="border-color:${rarityColors[item.rarity]};">${iconHtml}</div>
+                    <div class="equip-select-info">
+                        <div class="equip-select-name" style="color:${rarityColors[item.rarity]};">${item.name}</div>
+                        <div class="equip-select-desc">${item.desc}</div>
+                    </div>
+                    <span style="color:#4ade80;font-size:13px;">${isEquipped ? '已装备' : '点击装备'}</span>
+                `;
+                div.onclick = () => {
+                    equipped[type] = item.name;
+                    saveData(); // 保存数据
+                    showToast('已装备 ' + item.name);
+                    closeSelect();
+                    updateEquipSlots();
+                    updateStatsPreview();
+                    updateCharacterDisplay();
+                };
+                content.appendChild(div);
+            });
+
+            document.getElementById('selectModal').classList.add('active');
+        }
+
+        // 关闭装备选择
+        function closeSelect() {
+            document.getElementById('selectModal').classList.remove('active');
+        }
+
+        // 打开录入
+        function openRecord(subject) {
+            currentSubject = subject;
+            document.getElementById('recordTitle').textContent = subject + ' 修 炼';
+            const content = document.getElementById('recordContent');
+            content.innerHTML = '';
+
+            // 顶部添加当前灵石显示
+            const goldDiv = document.createElement('div');
+            goldDiv.className = 'record-gold-display';
+            goldDiv.id = 'recordGoldDisplay';
+            goldDiv.innerHTML = `<span class="record-gold-label">当前灵石</span><span class="record-gold-value">${playerGold}</span>`;
+            content.appendChild(goldDiv);
+
+            subjects[subject].items.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'record-item';
+                div.innerHTML = `
+                    <span class="record-label">${item.name}</span>
+                    <button class="claim-btn" data-reward="${item.reward}" data-name="${item.name}" onclick="claimReward(this)">+${item.reward} 灵石</button>
+                `;
+                content.appendChild(div);
+            });
+
+            // 底部"全部完成"按钮已改为单条奖励按钮，不需要提交
+            document.getElementById('submitRecordBtn').style.display = 'none';
+            document.getElementById('recordModal').classList.add('active');
+        }
+
+        // Z键按下时启用所有奖励按钮
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'z' || e.key === 'Z') {
+                document.querySelectorAll('.claim-btn').forEach(btn => {
+                    btn.classList.add('z-active');
+                });
+            }
+        });
+
+        // Z键松开时禁用所有奖励按钮
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'z' || e.key === 'Z') {
+                document.querySelectorAll('.claim-btn').forEach(btn => {
+                    btn.classList.remove('z-active');
+                });
+            }
+        });
+
+        // 领取单条奖励 - 必须按着Z才能点
+        function claimReward(btn) {
+            // 检查是否按着Z键
+            if (!btn.classList.contains('z-active')) {
+                return; // 不响应，假装没点
+            }
+            // 防止重复点击（短时间冷却）
+            if (btn.classList.contains('claimed')) {
+                return;
+            }
+            const reward = parseInt(btn.dataset.reward);
+            const name = btn.dataset.name;
+            playerGold += reward;
+            // 更新顶部灵石显示
+            const goldEl = document.querySelector('.currency-amount');
+            if (goldEl) goldEl.textContent = playerGold;
+            const goldDisplay = document.getElementById('recordGoldDisplay');
+            if (goldDisplay) {
+                goldDisplay.querySelector('.record-gold-value').textContent = playerGold;
+            }
+            saveData();
+            // 临时反馈：按钮闪一下
+            btn.classList.add('claimed');
+            btn.textContent = '已领取';
+            setTimeout(() => {
+                btn.classList.remove('claimed');
+                btn.textContent = '+' + reward + ' 灵石';
+            }, 800);
+        }
+
+        // 关闭录入
+        function closeRecord() {
+            document.getElementById('recordModal').classList.remove('active');
+        }
+
+        // 提交录入
+        function submitRecord() {
+            const inputs = document.querySelectorAll('#recordContent .record-input');
+            let totalReward = 0;
+            let totalCount = 0;
+            
+            inputs.forEach(input => {
+                const count = parseInt(input.value) || 0;
+                const reward = parseInt(input.dataset.reward);
+                totalReward += count * reward;
+                totalCount += count;
+            });
+            
+            if (totalCount === 0) {
+                showToast('请至少完成一项修炼');
+                return;
+            }
+
+            playerGold += totalReward;
+            document.querySelector('.currency-amount').textContent = playerGold;
+            saveData(); // 保存数据
+            showToast(`修炼完成！获得 ${totalReward} 灵石`);
+            closeRecord();
+        }
+
+        // 打开商店
+        function openShop() {
+            currentFilter = 'all';
+            renderShop();
+            document.getElementById('shopModal').classList.add('active');
+        }
+
+        // 筛选商店
+        function filterShop(type, btn) {
+            currentFilter = type;
+            document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderShop();
+        }
+
+        // 渲染商店
+        function renderShop() {
+            const content = document.getElementById('shopContent');
+            content.innerHTML = '';
+
+            const items = currentFilter === 'all' 
+                ? shopItems 
+                : shopItems.filter(item => item.type === currentFilter);
+
+            if (items.length === 0) {
+                content.innerHTML = '<div style="text-align:center;color:#a08040;padding:30px;">该分类暂无商品</div>';
+                return;
+            }
+
+            // 按价格分组：先按稀有度，再按价格
+            const grouped = {};
+            items.forEach(item => {
+                if (!grouped[item.rarity]) grouped[item.rarity] = [];
+                grouped[item.rarity].push(item);
+            });
+
+            // 稀有度排序：凡 → 灵 → 宝 → 仙
+            const rarityOrder = ['凡', '灵', '宝', '仙'];
+            rarityOrder.forEach(rarity => {
+                if (grouped[rarity]) {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.style.marginBottom = '15px';
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.style.cssText = 'color:' + rarityColors[rarity] + ';font-size:14px;margin-bottom:8px;letter-spacing:2px;';
+                    titleDiv.textContent = '【' + rarity + '品】';
+                    groupDiv.appendChild(titleDiv);
+
+                    grouped[rarity].forEach(item => {
+                        const owned = ownedItems.includes(item.name);
+                        const div = document.createElement('div');
+                        div.className = 'shop-item';
+                        const isAnimSpirit = item.type === '精灵' && spiritFrameMap[item.name];
+                        const iconHtml = item.icon.endsWith('.png')
+                            ? (item.type === '坐骑'
+                                ? `<div class="walking-mount equip-mount-anim" style="background-image:url('${item.icon}?v=2');width:100%;height:100%;"></div>`
+                                : isAnimSpirit
+                                    ? `<img class="spirit-shop-anim" data-spirit="${item.name}" src="${item.icon}" style="width:100%;height:100%;object-fit:contain;">`
+                                    : `<img src="${item.icon}" style="width:100%;height:100%;object-fit:contain;">`)
+                            : item.icon;
+
+                        // 防具护体光环预览色条
+                        let auraBar = '';
+                        if (item.type === '防具') {
+                            const auraColors = {
+                                '粗布护甲': '#b48c50',
+                                '皮甲护身': '#8b6914',
+                                '玄铁铠甲': '#647c8c',
+                                '寒冰战甲': '#5bb5d4',
+                                '神龙宝甲': '#d4af37',
+                                '玄武重盾': '#2d5a3d',
+                                '太极道袍': 'linear-gradient(90deg, #222 50%, #ddd 50%)'
+                            };
+                            const auraColor = auraColors[item.name];
+                            if (auraColor) {
+                                auraBar = `<div style="position:absolute;bottom:0;left:0;right:0;height:3px;background:${auraColor};border-radius:0 0 4px 4px;z-index:1;"></div>`;
+                            }
+                        }
+
+                        div.innerHTML = `
+                            <div class="shop-item-icon" style="border-color:${rarityColors[rarity]};">${iconHtml}</div>
+                            <div class="shop-item-info">
+                                <div class="shop-item-name" style="color:${rarityColors[rarity]};">${item.name}</div>
+                                <div class="shop-item-desc">${item.desc}</div>
+                            </div>
+                            <div class="shop-item-price">${item.price} 灵石</div>
+                            <button class="buy-btn" ${owned ? 'disabled' : ''} onclick="buyItem(${shopItems.indexOf(item)})">${owned ? '已 拥 有' : '购 买'}</button>
+                            ${auraBar}
+                        `;
+                        groupDiv.appendChild(div);
+                    });
+
+                    content.appendChild(groupDiv);
+                }
+            });
+
+            // 启动百宝阁中精灵行走动画
+            document.querySelectorAll('.spirit-shop-anim').forEach(img => {
+                const name = img.dataset.spirit;
+                if (name) startSpiritAnim(img, name);
+            });
+        }
+
+        // 关闭商店
+        function closeShop() {
+            document.getElementById('shopModal').classList.remove('active');
+        }
+
+        // 购买
+        function buyItem(index) {
+            const item = shopItems[index];
+
+            if (ownedItems.includes(item.name)) {
+                showToast('该物品已拥有');
+                return;
+            }
+
+            if (playerGold >= item.price) {
+                playerGold -= item.price;
+                ownedItems.push(item.name);
+                document.querySelector('.currency-amount').textContent = playerGold;
+                saveData(); // 保存数据
+                showToast(`已购入 ${item.name}`);
+                renderShop();
+            } else {
+                showToast('灵石不足');
+            }
+        }
+
+        // 进入修炼地图
+        function enterCultivation() {
+            window.location.href = 'xiuxian-map-demo.html';
+        }
+
+        // 提示
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        }
+    </script>
 </body>
-
 </html>

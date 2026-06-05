@@ -1,0 +1,1846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习修仙 - 地图探索</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #1a1a2e;
+            height: 100vh;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        /* 顶部标题栏 */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            background: linear-gradient(90deg, #f39c12, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .header-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* 全屏地图容器 */
+        .map-container {
+            position: fixed;
+            top: 50px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #2d3436;
+        }
+
+        .map-grid {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            background-image: url('assets/maps/map1.PNG');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+
+        .map-cell {
+            background: transparent;
+        }
+
+        /* 角色 */
+        .player {
+            width: 5vw;
+            height: 5vw;
+            max-width: 64px;
+            max-height: 64px;
+            background-image: url('assets/characters/character_lv1_walk.png');
+            background-size: 200% 200%;
+            background-position: 0 0;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            position: absolute;
+            left: 300px;
+            top: 200px;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            overflow: hidden;
+        }
+
+        .player.flip {
+            transform: scaleX(-1);
+        }
+
+        .player.walking {
+            animation: walk 0.6s steps(1) infinite;
+        }
+
+        @keyframes walk {
+            0% { background-position: 0 0; }
+            25% { background-position: 100% 0; }
+            50% { background-position: 0 100%; }
+            75% { background-position: 100% 100%; }
+        }
+
+        /* 跟随精灵 */
+        .spirit-follower {
+            position: absolute;
+            width: 4vw;
+            height: 4vw;
+            max-width: 48px;
+            max-height: 48px;
+            z-index: 9;
+            pointer-events: none;
+            filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.7));
+            animation: spiritFloat 2s ease-in-out infinite;
+        }
+        .spirit-follower.flip {
+            animation: spiritFloatFlip 2s ease-in-out infinite;
+        }
+
+        @keyframes spiritFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        @keyframes spiritFloatFlip {
+            0%, 100% { transform: scaleX(-1) translateY(0); }
+            50% { transform: scaleX(-1) translateY(-6px); }
+        }
+
+        .player.flip {
+            transform: scaleX(-1);
+        }
+
+        /* 护体光环 */
+        .player-aura {
+            position: absolute;
+            width: 5vw;
+            height: 5vw;
+            max-width: 64px;
+            max-height: 64px;
+            z-index: 9;
+            pointer-events: none;
+        }
+        .player-aura::after {
+            content: '';
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            width: 220%; height: 220%;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        /* 各防具对应光环效果 */
+        .player-aura.armor-cloth::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(200,160,60,0.65) 0%, rgba(180,140,80,0.3) 45%, rgba(180,140,80,0) 70%);
+            box-shadow: 0 0 30px rgba(220,180,80,0.35), inset 0 0 20px rgba(200,160,60,0.2);
+            animation: aura-breathe 2.5s ease-in-out infinite;
+        }
+        .player-aura.armor-leather::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(139,105,20,0.3) 0%, rgba(139,105,20,0) 60%);
+            box-shadow: 0 0 20px rgba(139,105,20,0.15);
+            animation: aura-breathe 3s ease-in-out infinite;
+        }
+        .player-aura.armor-iron::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(100,124,140,0.3) 0%, rgba(100,124,140,0) 60%);
+            box-shadow: 0 0 15px rgba(100,124,140,0.2);
+            animation: aura-iron-pulse 2s ease-in-out infinite;
+        }
+        .player-aura.armor-ice::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(91,181,212,0.3) 0%, rgba(91,181,212,0) 60%);
+            box-shadow: 0 0 20px rgba(91,181,212,0.15);
+            animation: aura-breathe 2s ease-in-out infinite;
+        }
+        .player-aura.armor-dragon::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(212,175,55,0.35) 0%, rgba(212,175,55,0) 60%);
+            box-shadow: 0 0 25px rgba(212,175,55,0.2);
+            animation: aura-dragon 6s linear infinite;
+        }
+        .player-aura.armor-turtle::after {
+            opacity: 1;
+            background: radial-gradient(circle, rgba(45,90,61,0.35) 0%, rgba(45,90,61,0) 60%);
+            box-shadow: 0 0 20px rgba(45,90,61,0.15);
+            animation: aura-breathe 3.5s ease-in-out infinite;
+        }
+        .player-aura.armor-taiji::after {
+            opacity: 1;
+            background: conic-gradient(from 0deg, rgba(0,0,0,0.2), rgba(255,255,255,0.2), rgba(0,0,0,0.2));
+            animation: aura-taiji 4s linear infinite;
+        }
+
+        @keyframes aura-breathe {
+            0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%,-50%) scale(1.2); opacity: 0.9; }
+        }
+        @keyframes aura-iron-pulse {
+            0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; box-shadow: 0 0 10px rgba(100,124,140,0.15); }
+            50% { transform: translate(-50%,-50%) scale(1.15); opacity: 0.85; box-shadow: 0 0 25px rgba(100,124,140,0.3); }
+        }
+        @keyframes aura-dragon {
+            0% { transform: translate(-50%,-50%) rotate(0deg) scale(1); opacity: 0.5; }
+            25% { transform: translate(-50%,-50%) rotate(90deg) scale(1.15); opacity: 0.9; }
+            50% { transform: translate(-50%,-50%) rotate(180deg) scale(1); opacity: 0.5; }
+            75% { transform: translate(-50%,-50%) rotate(270deg) scale(1.15); opacity: 0.9; }
+            100% { transform: translate(-50%,-50%) rotate(360deg) scale(1); opacity: 0.5; }
+        }
+        @keyframes aura-taiji {
+            from { transform: translate(-50%,-50%) rotate(0deg); opacity: 0.55; }
+            to { transform: translate(-50%,-50%) rotate(360deg); opacity: 0.55; }
+        }
+
+        /* 角色状态弹窗 */
+        .status-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-modal.active {
+            display: flex;
+        }
+
+        .status-content {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 20px;
+            padding: 30px;
+            width: 400px;
+            max-width: 90%;
+            border: 3px solid rgba(255,255,255,0.2);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .status-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .status-header h2 {
+            color: #f39c12;
+            font-size: 1.8em;
+        }
+
+        .character-avatar {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .character-avatar img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+        }
+
+        .stat-label { color: #aaa; }
+        .stat-value { color: #f39c12; font-weight: bold; }
+
+        /* 当前装备展示 */
+        .equipment-display {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #6b5526;
+            border-radius: 4px;
+        }
+        .equipment-title {
+            text-align: center;
+            color: #d4af37;
+            font-size: 14px;
+            border-bottom: 1px solid #6b5526;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+        }
+        .equipment-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .equip-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 4px 8px;
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid #4a3a1a;
+            border-radius: 3px;
+        }
+        .equip-label { color: #a08040; }
+        .equip-value { color: #d4af24; }
+
+        .bar-container {
+            margin: 15px 0;
+        }
+
+        .bar-label {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+
+        .bar-bg {
+            height: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .hp-bar { height: 100%; background: linear-gradient(90deg, #e74c3c, #c0392b); border-radius: 10px; transition: width 0.3s; }
+        .mp-bar { height: 100%; background: linear-gradient(90deg, #3498db, #2980b9); border-radius: 10px; transition: width 0.3s; }
+        .exp-bar { height: 100%; background: linear-gradient(90deg, #f1c40f, #f39c12); border-radius: 10px; transition: width 0.3s; }
+
+        .close-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.02);
+        }
+
+        /* 操作提示 */
+        .controls-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #aaa;
+            z-index: 50;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin: 0 2px;
+            color: #fff;
+        }
+
+        /* 敌方区域 - 圆形迷雾 */
+        .enemy-zone {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 5;
+            pointer-events: none;
+            background: radial-gradient(circle, rgba(60,30,60,0.85) 0%, rgba(50,25,50,0.65) 40%, rgba(40,20,45,0.35) 70%, transparent 92%);
+            border: 2px solid rgba(140, 90, 140, 0.45);
+            animation: zonePulse 3s ease-in-out infinite;
+            box-shadow: inset 0 0 40px rgba(100,60,100,0.45), 0 0 30px rgba(80,40,80,0.35);
+        }
+        .enemy-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: repeating-radial-gradient(
+                circle at center,
+                transparent 0px,
+                transparent 8px,
+                rgba(255,255,255,0.03) 9px,
+                transparent 10px
+            );
+            animation: fogRotate 8s linear infinite;
+        }
+        .enemy-zone.cleared {
+            background: radial-gradient(circle, rgba(60,100,60,0.25) 0%, transparent 70%);
+            border-color: rgba(80, 160, 80, 0.2);
+            animation: none;
+            box-shadow: none;
+        }
+        .enemy-zone-label {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(200, 180, 200, 0.7);
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+            letter-spacing: 2px;
+        }
+        .enemy-zone-sprite {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -55%);
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            z-index: 6;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+            pointer-events: none;
+        }
+        @keyframes zonePulse {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.03); }
+        }
+        @keyframes fogRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 战斗弹窗 - 背景为当前地图 */
+        .battle-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background:
+                linear-gradient(rgba(10,10,25,0.55), rgba(10,10,25,0.55)),
+                url('assets/maps/map1.PNG') center/contain no-repeat,
+                #1a1a2e;
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        .battle-modal.active {
+            display: flex;
+        }
+        .battle-content {
+            background: rgba(20, 20, 45, 0.72);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            padding: 24px;
+            width: 620px;
+            max-width: 95%;
+            border: 2px solid rgba(220, 20, 60, 0.4);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .battle-title {
+            text-align: center;
+            color: #e74c3c;
+            font-size: 1.6em;
+            margin-bottom: 16px;
+            letter-spacing: 4px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+        .battle-arena {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 16px;
+            padding: 24px 20px 20px;
+            background: rgba(0,0,0,0.35);
+            border-radius: 12px;
+            position: relative;
+            min-height: 230px;
+        }
+        .battle-side {
+            text-align: center;
+            width: 200px;
+            position: relative;
+        }
+        /* 敌方头像（无框，放大显示） */
+        .battle-side.enemy-side .avatar-wrap {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 8px;
+        }
+        .battle-side.enemy-side .avatar {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+        }
+        .battle-side.enemy-side .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+        /* 战斗中的玩家显示 - 与地图中一模一样，无框 */
+        .battle-player-display {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 8px;
+        }
+        .battle-char-wrap {
+            position: relative;
+            width: 96px;
+            height: 96px;
+        }
+        .battle-map-player {
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
+            background-size: 200% 200%;
+            background-position: 0 0;
+            background-repeat: no-repeat;
+            image-rendering: pixelated;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            overflow: hidden;
+        }
+        .battle-map-player.flip {
+            transform: translate(-50%, -50%) scaleX(-1);
+        }
+        .battle-map-player.walking {
+            animation: walk 0.6s steps(1) infinite;
+        }
+        .battle-player-display .player-aura {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
+            z-index: 9;
+            pointer-events: none;
+        }
+        .battle-player-display .spirit-follower {
+            position: absolute;
+            left: 68%;
+            top: 5%;
+            width: 48px;
+            height: 48px;
+            z-index: 11;
+            pointer-events: none;
+            filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.7));
+            animation: spiritFloat 2s ease-in-out infinite;
+        }
+        .battle-player-display .spirit-follower.flip {
+            animation: spiritFloatFlip 2s ease-in-out infinite;
+        }
+        /* 战斗装备展示 */
+        .battle-gear {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 6px;
+            height: 28px;
+        }
+        .battle-gear .gear-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(212,175,55,0.4);
+        }
+        /* 战斗移动攻击动画 - 角色单独移动，精灵留在原地 */
+        .battle-arena .battle-char-wrap.charge-attack {
+            animation: playerCharge 0.8s ease-in-out;
+        }
+        .battle-arena .battle-enemy-display.charge-attack {
+            animation: enemyCharge 0.8s ease-in-out;
+        }
+        @keyframes playerCharge {
+            0% { transform: translateX(0); }
+            30% { transform: translateX(210px); }
+            70% { transform: translateX(210px); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes enemyCharge {
+            0% { transform: translateX(0); }
+            30% { transform: translateX(-210px); }
+            70% { transform: translateX(-210px); }
+            100% { transform: translateX(0); }
+        }
+        /* 武器飞出攻击效果 */
+        .weapon-fly {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            z-index: 30;
+            pointer-events: none;
+            opacity: 0;
+        }
+        .weapon-fly.active {
+            animation: weaponFlyAtk 0.7s ease-in-out forwards;
+        }
+        @keyframes weaponFlyAtk {
+            0% { opacity: 0; transform: translate(0, 0) rotate(0deg) scale(0.6); }
+            15% { opacity: 1; transform: translate(0, -10px) rotate(-15deg) scale(1); }
+            50% { opacity: 1; transform: translate(220px, -30px) rotate(360deg) scale(1.2); }
+            85% { opacity: 1; transform: translate(0, -10px) rotate(720deg) scale(1); }
+            100% { opacity: 0; transform: translate(0, 0) rotate(720deg) scale(0.6); }
+        }
+        /* 精灵冲刺攻击（优先级需覆盖 spiritFloat） */
+        .battle-player-display .spirit-follower.spirit-charge-attack {
+            animation: spiritCharge 0.7s ease-in-out;
+        }
+        /* 精灵吐火攻击：跑到敌方播放攻击帧 */
+        .battle-player-display .spirit-follower.spirit-attack-anim {
+            animation: spiritRushToEnemy 0.5s ease-in forwards;
+        }
+        .battle-player-display .spirit-follower.spirit-return-anim {
+            animation: spiritRushBack 0.5s ease-in forwards;
+        }
+        @keyframes spiritRushToEnemy {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(220px, 10px); }
+        }
+        @keyframes spiritRushBack {
+            0% { transform: translate(220px, 10px); }
+            100% { transform: translate(0, 0); }
+        }
+        /* 火球粒子特效 */
+        .fireball-effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%) scale(0.3);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 25;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,100,0,0.9) 0%, rgba(255,60,0,0.6) 40%, rgba(255,0,0,0) 70%);
+            box-shadow: 0 0 20px rgba(255,100,0,0.8), 0 0 40px rgba(255,60,0,0.4);
+        }
+        .fireball-effect.active {
+            animation: fireballBurst 0.4s ease-out forwards;
+        }
+        @keyframes fireballBurst {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+            30% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            70% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.5); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+        }
+        @keyframes spiritCharge {
+            0% { transform: translate(0, 0); }
+            40% { transform: translate(220px, -10px); }
+            60% { transform: translate(220px, -10px); }
+            100% { transform: translate(0, 0); }
+        }
+        /* 受击摇晃 */
+        .battle-arena .battle-player-display.take-hit {
+            animation: shakeRight 0.3s ease-in-out;
+        }
+        .battle-arena .battle-enemy-display.take-hit {
+            animation: shakeLeft 0.3s ease-in-out;
+        }
+        @keyframes shakeRight {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-4px); }
+        }
+        @keyframes shakeLeft {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(8px); }
+            50% { transform: translateX(-8px); }
+            75% { transform: translateX(4px); }
+        }
+        /* 攻击特效 - 剑光占位，后续可替换为素材图 */
+        .slash-effect {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 80px;
+            transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .slash-effect.active {
+            animation: slashFlash 0.25s ease-out forwards;
+        }
+        @keyframes slashFlash {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(-20deg); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(10deg); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4) rotate(30deg); }
+        }
+        .slash-effect::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #fff, #ffeb3b, transparent);
+            border-radius: 2px;
+            box-shadow: 0 0 8px #fff, 0 0 16px #ffeb3b;
+            transform: rotate(-35deg);
+        }
+        .slash-effect::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 10%; right: 10%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #fff, transparent);
+            border-radius: 2px;
+            box-shadow: 0 0 6px #fff;
+            transform: rotate(15deg);
+        }
+        .battle-name {
+            font-weight: bold;
+            margin-bottom: 6px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+        }
+        .battle-hp-bar {
+            width: 100%;
+            height: 10px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 4px;
+        }
+        .battle-hp-fill {
+            height: 100%;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+        .battle-hp-text {
+            font-size: 11px;
+            color: #aaa;
+        }
+        .battle-vs {
+            font-size: 2em;
+            color: #f39c12;
+            font-weight: bold;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            align-self: center;
+        }
+        .battle-log {
+            height: 100px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .battle-log .log-damage {
+            color: #e74c3c;
+        }
+        .battle-log .log-heal {
+            color: #2ecc71;
+        }
+        .battle-log .log-system {
+            color: #f39c12;
+        }
+        .battle-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .battle-btn {
+            padding: 10px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+        .battle-btn:hover {
+            transform: scale(1.05);
+        }
+        .battle-btn.attack {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        .battle-btn.skill {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+        .battle-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .battle-result {
+            text-align: center;
+            font-size: 1.3em;
+            margin: 12px 0;
+            min-height: 30px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部标题栏 -->
+    <div class="header">
+        <h1>学习修仙 - 森林探索</h1>
+        <div class="header-buttons">
+            <button class="header-btn" onclick="openStatus()">角色状态</button>
+            <button class="header-btn" onclick="openBag()">背包</button>
+        </div>
+    </div>
+
+    <!-- 全屏地图 -->
+    <div class="map-container">
+        <div class="map-grid" id="mapGrid">
+            <!-- 地图格子由JS生成 -->
+        </div>
+    </div>
+
+    <!-- 操作提示 -->
+    <div class="controls-hint">
+        使用 <span class="key">↑</span><span class="key">↓</span><span class="key">←</span><span class="key">→</span> 或 <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> 移动
+    </div>
+
+    <!-- 角色状态弹窗 -->
+    <div class="status-modal" id="statusModal">
+        <div class="status-content">
+            <div class="status-header">
+                <h2>修仙者：小明</h2>
+                <div class="character-avatar">
+                    <img src="assets/characters/character_lv1_walk.png" alt="角色">
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">境界</span>
+                <span class="stat-value" id="statusRealm">练气期 1层</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">等级</span>
+                <span class="stat-value" id="statusLevel">1</span>
+            </div>
+
+            <div class="bar-container">
+                <div class="bar-label">生命值 <span id="statusHpText">100/100</span></div>
+                <div class="bar-bg">
+                    <div class="hp-bar" id="statusHpBar" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <div class="bar-container">
+                <div class="bar-label">法力值 <span id="statusMpText">50/50</span></div>
+                <div class="bar-bg">
+                    <div class="mp-bar" id="statusMpBar" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <div class="bar-container">
+                <div class="bar-label">修为 <span id="statusExpText">0/100</span></div>
+                <div class="bar-bg">
+                    <div class="exp-bar" id="statusExpBar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">攻击力</span>
+                <span class="stat-value" id="statusAtk">15</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">防御力</span>
+                <span class="stat-value" id="statusDef">8</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">学习积分</span>
+                <span class="stat-value" id="statusScore">0</span>
+            </div>
+
+            <div class="equipment-display" id="equipmentDisplay">
+                <div class="equipment-title">—  当 前 装 备  —</div>
+                <div class="equipment-list">
+                    <div class="equip-item">
+                        <span class="equip-label">武器</span>
+                        <span class="equip-value" id="eqWeapon">未装备</span>
+                    </div>
+                    <div class="equip-item">
+                        <span class="equip-label">防具</span>
+                        <span class="equip-value" id="eqArmor">未装备</span>
+                    </div>
+                    <div class="equip-item">
+                        <span class="equip-label">坐骑</span>
+                        <span class="equip-value" id="eqMount">未装备</span>
+                    </div>
+                    <div class="equip-item">
+                        <span class="equip-label">精灵</span>
+                        <span class="equip-value" id="eqSpirit">未装备</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="close-btn" onclick="closeStatus()">关闭</button>
+        </div>
+    </div>
+
+    <!-- 战斗弹窗 -->
+    <div class="battle-modal" id="battleModal">
+        <div class="battle-content">
+            <div class="battle-title">— 遭 遇 战 斗 —</div>
+            <div class="battle-arena">
+                <div class="battle-side player-side" id="battlePlayerSide">
+                    <div class="battle-gear" id="battlePlayerGear">
+                        <img id="battlePlayerWeapon" class="gear-icon" src="" alt="武器" style="display:none;">
+                        <img id="battlePlayerArmor" class="gear-icon" src="" alt="防具" style="display:none;">
+                    </div>
+                    <div class="battle-player-display" id="battlePlayerDisplay">
+                        <div class="battle-char-wrap" id="battlePlayerCharWrap">
+                            <div class="player-aura" id="battlePlayerAura" style="display:none;"></div>
+                            <div class="battle-map-player" id="battlePlayerChar"></div>
+                        </div>
+                        <img class="spirit-follower" id="battlePlayerSpiritImg2" style="display:none;">
+                        <img class="weapon-fly" id="battleWeaponFly" src="" alt="武器">
+                        <div class="slash-effect" id="battlePlayerSlash"></div>
+                    </div>
+                    <div class="battle-name">修仙者</div>
+                    <div class="battle-hp-bar"><div class="battle-hp-fill" id="battlePlayerHp" style="width:100%;background:#2ecc71;"></div></div>
+                    <div class="battle-hp-text" id="battlePlayerHpText">100/100</div>
+                </div>
+                <div class="battle-vs">VS</div>
+                <div class="battle-side enemy-side" id="battleEnemySide">
+                    <div class="avatar-wrap battle-enemy-display" id="battleEnemyDisplay">
+                        <div class="avatar" id="battleEnemyAvatar">
+                            <img id="battleEnemyChar" src="" alt="" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated;display:none;">
+                        </div>
+                        <div class="slash-effect" id="battleEnemySlash"></div>
+                        <div class="fireball-effect" id="battleFireball"></div>
+                    </div>
+                    <div class="battle-name" id="battleEnemyName">野狗妖</div>
+                    <div class="battle-hp-bar"><div class="battle-hp-fill" id="battleEnemyHp" style="width:100%;background:#e74c3c;"></div></div>
+                    <div class="battle-hp-text" id="battleEnemyHpText">30/30</div>
+                </div>
+            </div>
+            <div class="battle-log" id="battleLog"></div>
+            <div class="battle-result" id="battleResult"></div>
+            <div class="battle-actions" id="battleActions">
+                <button class="battle-btn attack" id="btnAttack" onclick="playerAttack()">攻击</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 地图配置
+        const MAP_WIDTH = 8;
+        const MAP_HEIGHT = 6;
+
+        // 读取主页装备数据
+        let equipped = { '武器': null, '防具': null, '坐骑': null, '精灵': null };
+        try {
+            const saved = localStorage.getItem('xiuxian_game_data');
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.equipped) {
+                    equipped = Object.assign(equipped, data.equipped);
+                }
+            }
+        } catch (e) {
+            console.log('读取装备数据失败', e);
+        }
+
+        // 精灵多帧动画配置
+        const spiritFrameMap = {
+            '小龙': [
+                'assets/items/spirit_小龙_1.png',
+                'assets/items/spirit_小龙_2.png',
+                'assets/items/spirit_小龙_3.png',
+                'assets/items/spirit_小龙_4.png'
+            ]
+        };
+        // 精灵攻击素材配置（9帧吐火等）
+        const spiritAttackMap = {
+            '小龙': [
+                'assets/items/spirit_小龙_attack_1.png',
+                'assets/items/spirit_小龙_attack_2.png',
+                'assets/items/spirit_小龙_attack_3.png',
+                'assets/items/spirit_小龙_attack_4.png',
+                'assets/items/spirit_小龙_attack_5.png',
+                'assets/items/spirit_小龙_attack_6.png',
+                'assets/items/spirit_小龙_attack_7.png',
+                'assets/items/spirit_小龙_attack_8.png',
+                'assets/items/spirit_小龙_attack_9.png'
+            ]
+        };
+
+        // 敌方多帧素材配置（行走+攻击）
+        const enemyFrameMap = {
+            '蜥蜴妖': {
+                walk: [
+                    'assets/enemies/lizard/Walk1.png',
+                    'assets/enemies/lizard/Walk2.png',
+                    'assets/enemies/lizard/Walk3.png',
+                    'assets/enemies/lizard/Walk4.png',
+                    'assets/enemies/lizard/Walk5.png',
+                    'assets/enemies/lizard/Walk6.png'
+                ],
+                attack: [
+                    'assets/enemies/lizard/Attack1.png',
+                    'assets/enemies/lizard/Attack2.png',
+                    'assets/enemies/lizard/Attack3.png',
+                    'assets/enemies/lizard/Attack4.png',
+                    'assets/enemies/lizard/Attack5.png'
+                ]
+            }
+        };
+
+        // 启动精灵帧动画
+        function startSpiritAnim(imgEl, spiritName) {
+            const frames = spiritFrameMap[spiritName];
+            if (!frames || frames.length < 2) return;
+            let idx = 0;
+            imgEl._spiritTimer = setInterval(() => {
+                idx = (idx + 1) % frames.length;
+                imgEl.src = frames[idx];
+            }, 200);
+        }
+
+        // 玩家数据
+        let player = {
+            x: 3,
+            y: 2,
+            level: 1,
+            realm: '练气期',
+            realmLevel: 1,
+            hp: 100,
+            maxHp: 100,
+            mp: 50,
+            maxMp: 50,
+            atk: 15,
+            def: 8,
+            exp: 0,
+            maxExp: 100,
+            score: 0
+        };
+
+        // 初始化地图
+        function initMap() {
+            const grid = document.getElementById('mapGrid');
+            grid.innerHTML = '';
+
+            // 生成透明格子
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'map-cell';
+                    grid.appendChild(cell);
+                }
+            }
+
+            // 添加玩家角色
+            const playerEl = document.createElement('div');
+            playerEl.className = 'player';
+            playerEl.id = 'player';
+            // 根据坐骑装备切换角色图
+            if (equipped['坐骑']) {
+                playerEl.style.backgroundImage = `url('assets/characters/character_lv1_ride_${equipped['坐骑']}.png')`;
+                playerEl.style.width = '6vw';
+                playerEl.style.height = '6vw';
+                playerEl.style.maxWidth = '80px';
+                playerEl.style.maxHeight = '80px';
+            }
+            grid.appendChild(playerEl);
+
+            // 添加护体光环（根据装备防具）
+            const armorAuraMap = {
+                '粗布护甲': 'armor-cloth',
+                '皮甲护身': 'armor-leather',
+                '玄铁铠甲': 'armor-iron',
+                '寒冰战甲': 'armor-ice',
+                '神龙宝甲': 'armor-dragon',
+                '玄武重盾': 'armor-turtle',
+                '太极道袍': 'armor-taiji'
+            };
+            if (equipped['防具'] && armorAuraMap[equipped['防具']]) {
+                const auraEl = document.createElement('div');
+                auraEl.className = `player-aura ${armorAuraMap[equipped['防具']]}`;
+                auraEl.id = 'playerAura';
+                grid.appendChild(auraEl);
+            }
+
+            // 添加跟随精灵
+            if (equipped['精灵']) {
+                const spiritName = equipped['精灵'];
+                const spiritEl = document.createElement('img');
+                spiritEl.className = 'spirit-follower';
+                spiritEl.id = 'spiritFollower';
+                // 多帧精灵取第一帧，单帧精灵用默认路径
+                const frames = spiritFrameMap[spiritName];
+                spiritEl.src = frames ? frames[0] : `assets/items/spirit_${spiritName}.png`;
+                spiritEl.onerror = function() {
+                    this.style.display = 'none';
+                };
+                grid.appendChild(spiritEl);
+                // 多帧精灵行走动画
+                startSpiritAnim(spiritEl, spiritName);
+            }
+
+            // 初始化玩家、光环、精灵位置到地图中心
+            const mapContainer = document.getElementById('mapGrid');
+            const startX = Math.max(0, (mapContainer.clientWidth - playerEl.offsetWidth) / 2);
+            const startY = Math.max(0, (mapContainer.clientHeight - playerEl.offsetHeight) / 2);
+            playerEl.style.left = startX + 'px';
+            playerEl.style.top = startY + 'px';
+
+            const auraEl = document.getElementById('playerAura');
+            if (auraEl) {
+                auraEl.style.left = startX + 'px';
+                auraEl.style.top = startY + 'px';
+            }
+            const spiritFollower = document.getElementById('spiritFollower');
+            if (spiritFollower) {
+                spiritFollower.style.left = (startX + playerEl.offsetWidth - 12) + 'px';
+                spiritFollower.style.top = (startY - 8) + 'px';
+            }
+
+            // 生成并渲染敌方区
+            generateEnemyZones();
+            renderEnemyZones();
+        }
+
+        // 敌方区数据
+        let enemyZones = [];
+        let currentBattleZone = null;
+        let inBattle = false;
+        let battleEnemy = null;
+        let battlePlayer = null;
+
+        // 生成敌方区
+        function generateEnemyZones() {
+            if (enemyZones.length > 0) return; // 已生成则不再重复
+            const mapContainer = document.getElementById('mapGrid');
+            const mapW = mapContainer.clientWidth;
+            const mapH = mapContainer.clientHeight;
+            const zoneDefs = [
+                { name: '野狗妖', icon: 'assets/enemies/enemy_野狗妖.png', hp: 35, maxHp: 35, atk: 8, rewardGold: 25, rewardExp: 20 },
+                { name: '蜥蜴妖', icon: 'assets/enemies/lizard/Walk1.png', hp: 55, maxHp: 55, atk: 12, rewardGold: 40, rewardExp: 35 }
+            ];
+            const minGap = 120; // 两个区域最小间距
+            for (let i = 0; i < 2; i++) {
+                let size, x, y, cx, cy, overlap;
+                let attempts = 0;
+                do {
+                    size = 110 + Math.random() * 60;
+                    x = Math.random() * (mapW - size - 100) + 50;
+                    y = Math.random() * (mapH - size - 100) + 50;
+                    cx = x + size / 2;
+                    cy = y + size / 2;
+                    overlap = false;
+                    for (const z of enemyZones) {
+                        const zx = z.x + z.width / 2;
+                        const zy = z.y + z.height / 2;
+                        const dist = Math.sqrt((cx - zx) ** 2 + (cy - zy) ** 2);
+                        if (dist < (size / 2 + z.width / 2 + minGap)) {
+                            overlap = true;
+                            break;
+                        }
+                    }
+                    attempts++;
+                } while (overlap && attempts < 50);
+                enemyZones.push({
+                    x, y, width: size, height: size,
+                    cleared: false,
+                    cooldownUntil: 0,
+                    ...zoneDefs[i]
+                });
+            }
+        }
+
+        // 渲染敌方区
+        function renderEnemyZones() {
+            document.querySelectorAll('.enemy-zone').forEach(el => el.remove());
+            const grid = document.getElementById('mapGrid');
+            enemyZones.forEach((zone) => {
+                const el = document.createElement('div');
+                el.className = 'enemy-zone' + (zone.cleared ? ' cleared' : '');
+                el.style.left = zone.x + 'px';
+                el.style.top = zone.y + 'px';
+                el.style.width = zone.width + 'px';
+                el.style.height = zone.height + 'px';
+
+                let spriteHtml = '';
+                const eFrames = enemyFrameMap[zone.name];
+                if (!zone.cleared && eFrames && eFrames.walk) {
+                    spriteHtml = `<img class="enemy-zone-sprite" data-zone-sprite="${zone.name}" src="${eFrames.walk[0]}" alt="${zone.name}">`;
+                }
+
+                el.innerHTML = `
+                    ${spriteHtml}
+                    <div class="enemy-zone-label">${zone.cleared ? '已清除' : zone.name + '营地'}</div>
+                `;
+                grid.appendChild(el);
+            });
+
+            // 启动地图上敌方的行走帧动画
+            document.querySelectorAll('.enemy-zone-sprite').forEach(img => {
+                const name = img.dataset.zoneSprite;
+                const frames = enemyFrameMap[name];
+                if (frames && frames.walk) {
+                    let idx = 0;
+                    img._zoneTimer = setInterval(() => {
+                        idx = (idx + 1) % frames.walk.length;
+                        img.src = frames.walk[idx];
+                    }, 180);
+                }
+            });
+        }
+
+        // 检测碰撞
+        function checkEnemyZoneCollision() {
+            if (inBattle) return;
+            const playerEl = document.getElementById('player');
+            if (!playerEl) return;
+            const pLeft = parseFloat(playerEl.style.left) || 0;
+            const pTop = parseFloat(playerEl.style.top) || 0;
+            const pW = playerEl.offsetWidth;
+            const pH = playerEl.offsetHeight;
+            const pCx = pLeft + pW / 2;
+            const pCy = pTop + pH / 2;
+
+            for (const zone of enemyZones) {
+                if (zone.cleared) continue;
+                if (Date.now() < zone.cooldownUntil) continue;
+                if (pCx >= zone.x && pCx <= zone.x + zone.width &&
+                    pCy >= zone.y && pCy <= zone.y + zone.height) {
+                    enterBattle(zone);
+                    break;
+                }
+            }
+        }
+
+        // 装备图标路径映射
+        const equipIconPaths = {
+            '武器': name => `assets/items/weapon_${name}.png`,
+            '防具': name => `assets/items/armor_${name}.png`
+        };
+
+        // 进入战斗
+        function enterBattle(zone) {
+            inBattle = true;
+            currentBattleZone = zone;
+            battleEnemy = { ...zone, hp: zone.maxHp };
+            battlePlayer = { ...player };
+
+            // 加载玩家角色图（与地图中完全一致：坐骑、大小、行走帧）
+            const playerChar = document.getElementById('battlePlayerChar');
+            const playerAura = document.getElementById('battlePlayerAura');
+            const spiritImg = document.getElementById('battlePlayerSpiritImg2');
+
+            // 坐骑同步
+            if (equipped['坐骑']) {
+                playerChar.style.backgroundImage = `url('assets/characters/character_lv1_ride_${equipped['坐骑']}.png')`;
+                playerChar.style.width = '80px';
+                playerChar.style.height = '80px';
+            } else {
+                playerChar.style.backgroundImage = `url('assets/characters/character_lv1_walk.png')`;
+                playerChar.style.width = '64px';
+                playerChar.style.height = '64px';
+            }
+            playerChar.classList.remove('walking', 'flip');
+
+            // 护体光环同步
+            const armorAuraMap = {
+                '粗布护甲': 'armor-cloth',
+                '皮甲护身': 'armor-leather',
+                '玄铁铠甲': 'armor-iron',
+                '寒冰战甲': 'armor-ice',
+                '神龙宝甲': 'armor-dragon',
+                '玄武重盾': 'armor-turtle',
+                '太极道袍': 'armor-taiji'
+            };
+            if (equipped['防具'] && armorAuraMap[equipped['防具']]) {
+                playerAura.className = 'player-aura ' + armorAuraMap[equipped['防具']];
+                playerAura.style.display = 'block';
+            } else {
+                playerAura.className = 'player-aura';
+                playerAura.style.display = 'none';
+            }
+
+            // 精灵同步
+            if (equipped['精灵']) {
+                const spiritName = equipped['精灵'];
+                const frames = spiritFrameMap[spiritName];
+                spiritImg.src = frames ? frames[0] : `assets/items/spirit_${spiritName}.png`;
+                spiritImg.style.display = 'block';
+                startSpiritAnim(spiritImg, spiritName);
+            } else {
+                spiritImg.style.display = 'none';
+            }
+
+            // 加载已装备武器/防具图标
+            const weaponImg = document.getElementById('battlePlayerWeapon');
+            const armorImg = document.getElementById('battlePlayerArmor');
+            const weaponFly = document.getElementById('battleWeaponFly');
+            if (equipped['武器']) {
+                const wpath = equipIconPaths['武器'](equipped['武器']);
+                weaponImg.src = wpath;
+                weaponImg.style.display = 'inline-block';
+                weaponFly.src = wpath;
+            } else {
+                weaponImg.style.display = 'none';
+                weaponFly.src = '';
+            }
+            if (equipped['防具']) {
+                armorImg.src = equipIconPaths['防具'](equipped['防具']);
+                armorImg.style.display = 'inline-block';
+            } else {
+                armorImg.style.display = 'none';
+            }
+
+            // 加载敌人图（多帧素材优先）
+            const enemyAvatar = document.getElementById('battleEnemyAvatar');
+            const enemyChar = document.getElementById('battleEnemyChar');
+            const enemyFrames = enemyFrameMap[zone.name];
+            if (enemyFrames && enemyFrames.walk) {
+                // 使用多帧行走图
+                enemyChar.src = enemyFrames.walk[0];
+                enemyChar.style.display = 'block';
+                enemyChar.onerror = function() { this.style.display = 'none'; };
+                // 启动行走帧动画
+                let eIdx = 0;
+                enemyChar._walkTimer = setInterval(() => {
+                    eIdx = (eIdx + 1) % enemyFrames.walk.length;
+                    enemyChar.src = enemyFrames.walk[eIdx];
+                }, 150);
+            } else {
+                // 静态图回退
+                enemyChar.style.display = 'none';
+                enemyAvatar.innerHTML = `<img src="${zone.icon}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated;" onerror="this.parentElement.innerHTML='<span style=\\'color:#aaa;font-size:12px;\\'>${zone.name}</span>'">`;
+            }
+
+            document.getElementById('battleEnemyName').textContent = zone.name;
+            document.getElementById('battleLog').innerHTML = '';
+            document.getElementById('battleResult').textContent = '';
+            addBattleLog(`你遭遇了 ${zone.name}！战斗开始！`, 'system');
+            updateBattleUI();
+
+            document.getElementById('btnAttack').style.display = '';
+            document.getElementById('btnAttack').disabled = false;
+            document.getElementById('battleModal').classList.add('active');
+        }
+
+        // 更新战斗UI
+        function updateBattleUI() {
+            const php = Math.max(0, battlePlayer.hp);
+            const ehp = Math.max(0, battleEnemy.hp);
+            document.getElementById('battlePlayerHp').style.width = (php / battlePlayer.maxHp * 100) + '%';
+            document.getElementById('battlePlayerHpText').textContent = `${php}/${battlePlayer.maxHp}`;
+            document.getElementById('battleEnemyHp').style.width = (ehp / battleEnemy.maxHp * 100) + '%';
+            document.getElementById('battleEnemyHpText').textContent = `${ehp}/${battleEnemy.maxHp}`;
+        }
+
+        // 添加战斗日志
+        function addBattleLog(text, type = '') {
+            const log = document.getElementById('battleLog');
+            const div = document.createElement('div');
+            div.className = type ? 'log-' + type : '';
+            div.textContent = text;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // 播放移动攻击动画：冲到对方面前 → 特效 → 退回
+        function playAttackAnim(attackerSide, defenderSide, options = {}) {
+            const attacker = document.getElementById(attackerSide === 'Player' ? 'battlePlayerCharWrap' : 'battleEnemyDisplay');
+            const defender = document.getElementById(defenderSide === 'Player' ? 'battlePlayerDisplay' : 'battleEnemyDisplay');
+            const slash = document.getElementById('battle' + defenderSide + 'Slash');
+            const attackerChar = document.getElementById(attackerSide === 'Player' ? 'battlePlayerChar' : null);
+            const enemyChar = document.getElementById('battleEnemyChar');
+            if (!attacker || !defender) return;
+
+            attacker.classList.add('charge-attack');
+            if (attackerChar) attackerChar.classList.add('walking');
+
+            // 敌方冲过来时，如果有多帧行走素材，加速行走帧切换
+            let enemyFastTimer = null;
+            if (attackerSide === 'Enemy' && battleEnemy && enemyFrameMap[battleEnemy.name] && enemyChar) {
+                const eFrames = enemyFrameMap[battleEnemy.name].walk;
+                let eIdx = 0;
+                enemyFastTimer = setInterval(() => {
+                    eIdx = (eIdx + 1) % eFrames.length;
+                    if (enemyChar) enemyChar.src = eFrames[eIdx];
+                }, 80);
+            }
+
+            // 冲到对方面前时（约30%动画，240ms）触发特效与受击，并停止行走
+            setTimeout(() => {
+                if (slash) {
+                    slash.classList.add('active');
+                    setTimeout(() => slash.classList.remove('active'), 260);
+                }
+                defender.classList.add('take-hit');
+                setTimeout(() => defender.classList.remove('take-hit'), 300);
+                if (attackerChar) attackerChar.classList.remove('walking');
+                if (enemyFastTimer) clearInterval(enemyFastTimer);
+            }, 240);
+
+            // 动画结束清理
+            setTimeout(() => {
+                attacker.classList.remove('charge-attack');
+                if (options.onComplete) options.onComplete();
+            }, 800);
+        }
+
+        // 播放武器飞出攻击
+        function playWeaponFlyAttack() {
+            const weaponFly = document.getElementById('battleWeaponFly');
+            if (!weaponFly || !weaponFly.src || weaponFly.src === window.location.href) return;
+            weaponFly.classList.remove('active');
+            void weaponFly.offsetWidth; // reflow
+            weaponFly.classList.add('active');
+            setTimeout(() => weaponFly.classList.remove('active'), 720);
+        }
+
+        // 播放精灵攻击：跑到敌方 → 播放9帧吐火 → 火球特效+伤害 → 跑回来
+        function playSpiritAttack(spiritName, onHit, onComplete) {
+            const spirit = document.getElementById('battlePlayerSpiritImg2');
+            const attackFrames = spiritAttackMap[spiritName];
+            if (!spirit || spirit.style.display === 'none' || !attackFrames || attackFrames.length === 0) {
+                if (onComplete) onComplete();
+                return;
+            }
+
+            // 暂停浮动动画，避免transform冲突
+            spirit.style.animation = 'none';
+
+            // 第1步：精灵跑到敌方位置
+            spirit.classList.add('spirit-attack-anim');
+
+            setTimeout(() => {
+                // 第2步：到达后切换攻击素材，逐帧播放
+                spirit.classList.remove('spirit-attack-anim');
+                spirit.style.transform = 'translate(220px, 10px)'; // 保持在敌方位置
+
+                let frameIdx = 0;
+                const frameInterval = 80; // 每帧80ms
+                spirit.src = attackFrames[0];
+
+                const timer = setInterval(() => {
+                    frameIdx++;
+                    if (frameIdx < attackFrames.length) {
+                        spirit.src = attackFrames[frameIdx];
+                        // 第5帧（中间帧）触发伤害和火球特效
+                        if (frameIdx === 4) {
+                            const fireball = document.getElementById('battleFireball');
+                            const enemyDisplay = document.getElementById('battleEnemyDisplay');
+                            if (fireball) {
+                                fireball.classList.remove('active');
+                                void fireball.offsetWidth;
+                                fireball.classList.add('active');
+                                setTimeout(() => fireball.classList.remove('active'), 420);
+                            }
+                            if (enemyDisplay) {
+                                enemyDisplay.classList.add('take-hit');
+                                setTimeout(() => enemyDisplay.classList.remove('take-hit'), 300);
+                            }
+                            if (onHit) onHit();
+                        }
+                    } else {
+                        // 第3步：攻击帧播放完毕，切回行走图，跑回来
+                        clearInterval(timer);
+                        const normalFrames = spiritFrameMap[spiritName];
+                        spirit.src = normalFrames ? normalFrames[0] : spirit.src;
+                        spirit.classList.add('spirit-return-anim');
+                        setTimeout(() => {
+                            spirit.classList.remove('spirit-return-anim');
+                            spirit.style.transform = '';
+                            spirit.style.animation = ''; // 恢复浮动动画
+                            if (onComplete) onComplete();
+                        }, 500);
+                    }
+                }, frameInterval);
+            }, 500);
+        }
+
+        // 玩家普通攻击（人物冲过去 → 武器飞出 → 精灵跑出去吐火攻击 → 敌方回合）
+        function playerAttack() {
+            if (!inBattle || battleEnemy.hp <= 0) return;
+            document.getElementById('btnAttack').disabled = true;
+
+            playAttackAnim('Player', 'Enemy', {
+                onComplete: () => {
+                    // 人物退回后，精灵接着跑出去播放9帧吐火攻击
+                    playSpiritAttack(equipped['精灵'], () => {
+                        // 第5帧触发伤害
+                        const dmg2 = Math.max(1, Math.floor(battlePlayer.atk * 0.5) + Math.floor(Math.random() * 3));
+                        battleEnemy.hp -= dmg2;
+                        addBattleLog(`${equipped['精灵']}对${battleEnemy.name}造成 ${dmg2} 点伤害！`, 'damage');
+                        updateBattleUI();
+                    }, () => {
+                        // 精灵跑回来后
+                        if (battleEnemy.hp <= 0) {
+                            setTimeout(() => winBattle(), 300);
+                            return;
+                        }
+                        setTimeout(() => enemyTurn(), 300);
+                    });
+                }
+            });
+
+            // 冲到对方面前时造成伤害，并触发武器飞出
+            setTimeout(() => {
+                const dmg = Math.max(1, battlePlayer.atk + Math.floor(Math.random() * 5) - 2);
+                battleEnemy.hp -= dmg;
+                addBattleLog(`你对${battleEnemy.name}造成 ${dmg} 点伤害！`, 'damage');
+                updateBattleUI();
+
+                if (equipped['武器']) {
+                    playWeaponFlyAttack();
+                }
+
+                if (battleEnemy.hp <= 0) {
+                    // 敌人已死，等待精灵攻击后结算
+                    return;
+                }
+            }, 240);
+        }
+
+        // 玩家法术攻击（已废弃，保留兼容）
+        function playerSkill() {
+            if (!inBattle || battleEnemy.hp <= 0 || battlePlayer.mp < 5) return;
+            document.getElementById('btnAttack').disabled = true;
+
+            playAttackAnim('Player', 'Enemy');
+
+            setTimeout(() => {
+                battlePlayer.mp -= 5;
+                const dmg = Math.max(1, Math.floor(battlePlayer.atk * 1.5) + Math.floor(Math.random() * 6) - 2);
+                battleEnemy.hp -= dmg;
+                addBattleLog(`你施放法术，对${battleEnemy.name}造成 ${dmg} 点伤害！`, 'damage');
+                updateBattleUI();
+
+                if (battleEnemy.hp <= 0) {
+                    setTimeout(() => winBattle(), 500);
+                    return;
+                }
+                setTimeout(() => enemyTurn(), 500);
+            }, 240);
+        }
+
+        // 敌方回合
+        function enemyTurn() {
+            if (!inBattle || battleEnemy.hp <= 0) return;
+
+            playAttackAnim('Enemy', 'Player');
+
+            setTimeout(() => {
+                // 播放敌方攻击帧动画（5帧），第3帧触发伤害
+                const enemyChar = document.getElementById('battleEnemyChar');
+                const eFrames = enemyFrameMap[battleEnemy.name];
+                if (eFrames && eFrames.attack && enemyChar) {
+                    // 先停止行走定时器
+                    if (enemyChar._walkTimer) {
+                        clearInterval(enemyChar._walkTimer);
+                        enemyChar._walkTimer = null;
+                    }
+                    let aIdx = 0;
+                    enemyChar.src = eFrames.attack[0];
+                    const atkTimer = setInterval(() => {
+                        aIdx++;
+                        if (aIdx < eFrames.attack.length) {
+                            enemyChar.src = eFrames.attack[aIdx];
+                            // 第3帧（index 2）触发伤害
+                            if (aIdx === 2) {
+                                applyEnemyDamage();
+                            }
+                        } else {
+                            clearInterval(atkTimer);
+                            // 切回行走图并恢复行走动画
+                            enemyChar.src = eFrames.walk[0];
+                            let eIdx = 0;
+                            enemyChar._walkTimer = setInterval(() => {
+                                eIdx = (eIdx + 1) % eFrames.walk.length;
+                                enemyChar.src = eFrames.walk[eIdx];
+                            }, 150);
+                        }
+                    }, 100);
+                } else {
+                    // 没有攻击素材，直接触发伤害
+                    applyEnemyDamage();
+                }
+            }, 240);
+        }
+
+        // 敌方造成伤害
+        function applyEnemyDamage() {
+            const dmg = Math.max(1, battleEnemy.atk - Math.floor(battlePlayer.def / 4) + Math.floor(Math.random() * 3) - 1);
+            battlePlayer.hp -= dmg;
+            addBattleLog(`${battleEnemy.name}对你造成 ${dmg} 点伤害！`, 'damage');
+            updateBattleUI();
+
+            if (battlePlayer.hp <= 0) {
+                battlePlayer.hp = 0;
+                updateBattleUI();
+                setTimeout(() => loseBattle(), 500);
+                return;
+            }
+
+            document.getElementById('btnAttack').disabled = false;
+        }
+
+        // 胜利（无奖励，奖励由家长在日常任务页面发放）
+        function winBattle() {
+            const zone = currentBattleZone;
+            addBattleLog(`战斗胜利！`, 'system');
+            document.getElementById('battleResult').innerHTML = `<span style="color:#2ecc71;">战斗胜利！</span>`;
+
+            zone.cleared = true;
+            renderEnemyZones();
+
+            document.getElementById('btnAttack').style.display = 'none';
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'battle-btn attack';
+            closeBtn.textContent = '继续探索';
+            closeBtn.onclick = closeBattle;
+            document.getElementById('battleActions').appendChild(closeBtn);
+        }
+
+        // 失败
+        function loseBattle() {
+            addBattleLog('你被打败了... 但修仙者不会轻易陨落！', 'system');
+            document.getElementById('battleResult').innerHTML = `<span style="color:#e74c3c;">战斗失败</span>`;
+
+            // 复活，但扣一半血
+            player.hp = Math.max(1, Math.floor(player.maxHp / 2));
+            // 给冷却时间，避免立刻再次触发
+            if (currentBattleZone) {
+                currentBattleZone.cooldownUntil = Date.now() + 5000;
+            }
+
+            document.getElementById('btnAttack').style.display = 'none';
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'battle-btn attack';
+            closeBtn.textContent = '撤退休整';
+            closeBtn.onclick = closeBattle;
+            document.getElementById('battleActions').appendChild(closeBtn);
+        }
+
+        // 关闭战斗
+        function closeBattle() {
+            document.getElementById('battleModal').classList.remove('active');
+            document.getElementById('btnAttack').style.display = '';
+            document.querySelectorAll('#battleActions .battle-btn').forEach((btn, idx) => {
+                if (idx >= 1) btn.remove(); // 只剩一个攻击按钮
+            });
+            // 清理战斗中精灵的帧动画定时器
+            const battleSpiritImg = document.getElementById('battlePlayerSpiritImg2');
+            if (battleSpiritImg && battleSpiritImg._spiritTimer) {
+                clearInterval(battleSpiritImg._spiritTimer);
+                battleSpiritImg._spiritTimer = null;
+            }
+            // 清理敌方行走动画定时器
+            const battleEnemyChar = document.getElementById('battleEnemyChar');
+            if (battleEnemyChar && battleEnemyChar._walkTimer) {
+                clearInterval(battleEnemyChar._walkTimer);
+                battleEnemyChar._walkTimer = null;
+            }
+            inBattle = false;
+            currentBattleZone = null;
+            battleEnemy = null;
+            battlePlayer = null;
+        }
+
+        // 移动玩家 - 像素级平滑移动
+        const playerSpeed = 1; // 每帧移动的像素
+        const keysPressed = {};
+
+        function updatePlayerPosition() {
+            const playerEl = document.getElementById('player');
+            if (!playerEl) return;
+
+            let dx = 0, dy = 0;
+            if (keysPressed['ArrowUp'] || keysPressed['w'] || keysPressed['W']) dy -= playerSpeed;
+            if (keysPressed['ArrowDown'] || keysPressed['s'] || keysPressed['S']) dy += playerSpeed;
+            if (keysPressed['ArrowLeft'] || keysPressed['a'] || keysPressed['A']) dx -= playerSpeed;
+            if (keysPressed['ArrowRight'] || keysPressed['d'] || keysPressed['D']) dx += playerSpeed;
+
+            if (dx === 0 && dy === 0) {
+                playerEl.classList.remove('walking');
+                return;
+            }
+
+            playerEl.classList.add('walking');
+
+            if (dx < 0) {
+                playerEl.classList.add('flip');
+            } else if (dx > 0) {
+                playerEl.classList.remove('flip');
+            }
+
+            // 获取当前像素位置（处理初始值）
+            const currentLeft = parseFloat(playerEl.style.left);
+            const currentTop = parseFloat(playerEl.style.top);
+            const startLeft = isNaN(currentLeft) ? 300 : currentLeft;
+            const startTop = isNaN(currentTop) ? 200 : currentTop;
+
+            // 地图容器尺寸
+            const mapContainer = document.querySelector('.map-grid');
+            const maxX = mapContainer.clientWidth - playerEl.offsetWidth;
+            const maxY = mapContainer.clientHeight - playerEl.offsetHeight;
+
+            // 限制在边界内
+            const newLeft = Math.max(0, Math.min(maxX, startLeft + dx));
+            const newTop = Math.max(0, Math.min(maxY, startTop + dy));
+
+            playerEl.style.left = newLeft + 'px';
+            playerEl.style.top = newTop + 'px';
+
+            // 精灵跟随玩家（位于玩家右上角）
+            const spiritEl = document.getElementById('spiritFollower');
+            if (spiritEl) {
+                const offsetX = newLeft + playerEl.offsetWidth - 4;
+                const offsetY = newTop - 16;
+                spiritEl.style.left = offsetX + 'px';
+                spiritEl.style.top = offsetY + 'px';
+                // 精灵随人物左右翻转
+                if (dx < 0) {
+                    spiritEl.classList.add('flip');
+                } else if (dx > 0) {
+                    spiritEl.classList.remove('flip');
+                }
+            }
+
+            // 护体光环跟随玩家
+            const auraEl = document.getElementById('playerAura');
+            if (auraEl) {
+                auraEl.style.left = newLeft + 'px';
+                auraEl.style.top = newTop + 'px';
+            }
+
+            // 检测是否进入敌方区
+            checkEnemyZoneCollision();
+        }
+
+        // 每帧更新
+        function gameLoop() {
+            updatePlayerPosition();
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            keysPressed[e.key] = true;
+            if (e.key === 'Escape') closeStatus();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+        });
+
+        // 打开角色状态
+        function openStatus() {
+            document.getElementById('statusModal').classList.add('active');
+            updateStatusUI();
+            // 填充当前装备
+            document.getElementById('eqWeapon').textContent = equipped['武器'] || '未装备';
+            document.getElementById('eqArmor').textContent = equipped['防具'] || '未装备';
+            document.getElementById('eqMount').textContent = equipped['坐骑'] || '未装备';
+            document.getElementById('eqSpirit').textContent = equipped['精灵'] || '未装备';
+        }
+
+        // 关闭角色状态
+        function closeStatus() {
+            document.getElementById('statusModal').classList.remove('active');
+        }
+
+        // 打开背包（待实现）
+        function openBag() {
+            alert('背包功能开发中...');
+        }
+
+        // 更新状态弹窗UI
+        function updateStatusUI() {
+            document.getElementById('statusRealm').textContent = `${player.realm} ${player.realmLevel}层`;
+            document.getElementById('statusLevel').textContent = player.level;
+            document.getElementById('statusHpText').textContent = `${player.hp}/${player.maxHp}`;
+            document.getElementById('statusHpBar').style.width = `${(player.hp / player.maxHp) * 100}%`;
+            document.getElementById('statusMpText').textContent = `${player.mp}/${player.maxMp}`;
+            document.getElementById('statusMpBar').style.width = `${(player.mp / player.maxMp) * 100}%`;
+            document.getElementById('statusExpText').textContent = `${player.exp}/${player.maxExp}`;
+            document.getElementById('statusExpBar').style.width = `${(player.exp / player.maxExp) * 100}%`;
+            document.getElementById('statusAtk').textContent = player.atk;
+            document.getElementById('statusDef').textContent = player.def;
+            document.getElementById('statusScore').textContent = player.score;
+        }
+
+        // 点击弹窗外部关闭
+        document.getElementById('statusModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('statusModal')) {
+                closeStatus();
+            }
+        });
+
+        // 初始化
+        initMap();
+    </script>
+</body>
+</html>
