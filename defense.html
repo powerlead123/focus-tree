@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>御灵守卫战</title>
+    <link rel="stylesheet" href="defense.css">
+</head>
+<body>
+<!-- ============ 主菜单 / 备战 ============ -->
+<div id="menuScreen" class="screen active">
+    <div class="menu-wrap">
+        <header class="menu-header">
+            <button class="btn-back" onclick="location.href='home.html'">← 首页</button>
+            <h1>御灵守卫战</h1>
+            <div class="points-badge">积分 <span id="menuPoints">0</span></div>
+        </header>
+
+        <div class="menu-body">
+            <!-- 左：关卡选择 -->
+            <section class="panel level-panel">
+                <h2>选择关卡</h2>
+                <div id="levelGrid" class="level-grid"></div>
+            </section>
+
+            <!-- 右：武器商店 -->
+            <section class="panel armory-panel">
+                <h2>武器商店</h2>
+                <p class="armory-hint">用积分购买武器，出战时摆到底部两排迎敌</p>
+                <div id="armoryGrid" class="armory-grid"></div>
+            </section>
+        </div>
+
+        <div class="menu-foot">
+            <button class="btn-primary btn-big" id="startBattleBtn" onclick="enterBattle()">出战</button>
+            <button class="btn-ghost" onclick="openParentGate()">家长录入</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 战斗 ============ -->
+<div id="battleScreen" class="screen">
+    <div class="battle-hud">
+        <div class="hud-left">
+            <span class="hud-chip">关卡 <b id="hudLevel">1</b></span>
+        </div>
+        <div class="hud-center">
+            <div class="lives-wrap"><span class="lives-label">家园</span> <div class="lives-bar"><div id="livesFill" class="lives-fill"></div></div></div>
+        </div>
+        <div class="hud-right">
+            <span class="hud-chip">敌 <b id="hudKill">0</b>/<b id="hudTotal">0</b></span>
+            <button class="btn-exit" onclick="quitBattle()">退出</button>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- 底部武器托盘 -->
+    <div class="weapon-tray" id="weaponTray"></div>
+</div>
+
+<!-- ============ 结算 ============ -->
+<div id="resultScreen" class="screen">
+    <div class="result-card">
+        <div class="result-icon" id="resultIcon">🏆</div>
+        <h1 id="resultTitle">守卫成功！</h1>
+        <div class="result-stats" id="resultStats"></div>
+        <div class="result-reward" id="resultReward"></div>
+        <div class="result-btns">
+            <button class="btn-primary" id="resultNextBtn" onclick="nextLevel()">下一关 →</button>
+            <button class="btn-ghost" onclick="backToMenu()">返回备战</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 家长录入(密码门) ============ -->
+<div id="parentScreen" class="screen">
+    <div class="parent-wrap">
+        <header class="menu-header">
+            <button class="btn-back" onclick="backToMenu()">← 返回</button>
+            <h1>家长录入</h1>
+            <div class="points-badge">积分 <span id="parentPoints">0</span></div>
+        </header>
+        <p class="parent-tip">点击项目即可为孩子记录今日表现</p>
+        <div class="parent-cols">
+            <section class="panel">
+                <h2>✅ 今日奖励</h2>
+                <div id="rewardList" class="reward-list"></div>
+            </section>
+            <section class="panel">
+                <h2>❌ 今日扣分</h2>
+                <div id="penaltyList" class="reward-list"></div>
+                <h2 style="margin-top:18px;">📋 记录</h2>
+                <div id="historyList" class="history-list"></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- 密码锁 -->
+<div class="lock-overlay" id="lockOverlay">
+    <div class="lock-box">
+        <div class="lock-icon">🔒</div>
+        <div class="lock-title">家长验证</div>
+        <div class="lock-sub">请输入今日密码</div>
+        <input type="password" id="lockInput" class="lock-input" placeholder="输入密码..." onkeydown="if(event.key==='Enter')lockVerify()">
+        <div class="lock-error" id="lockError"></div>
+        <button class="btn-primary" onclick="lockVerify()">确认</button>
+        <button class="btn-ghost" onclick="closeLock()">取消</button>
+    </div>
+</div>
+
+<!-- 提示 -->
+<div class="toast" id="toast"></div>
+
+<script src="defense-data.js"></script>
+<script src="defense.js"></script>
+</body>
+</html>
