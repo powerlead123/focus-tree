@@ -139,6 +139,25 @@ kbd {
 
 #gameCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
+/* 本关敌人预览 */
+.enemy-preview {
+    position: absolute; top: 44px; left: 0; right: 0; z-index: 9;
+    display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap;
+    padding: 4px 10px; pointer-events: none;
+}
+.enemy-preview .ep-label {
+    font-size: 12px; color: #cbd5e1; background: rgba(15,23,42,.65);
+    border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px;
+}
+.ep-item {
+    display: flex; flex-direction: column; align-items: center;
+    background: rgba(15,23,42,.55); border: 1px solid var(--line);
+    border-radius: 10px; padding: 2px 6px 3px;
+}
+.ep-item.boss { border-color: rgba(251,191,36,.6); background: rgba(251,191,36,.12); }
+.ep-item canvas { display: block; }
+.ep-item .ep-name { font-size: 10px; color: #cbd5e1; margin-top: 1px; }
+
 /* 武器托盘 */
 .weapon-tray {
     position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
