@@ -50,6 +50,24 @@ kbd {
     background: rgba(239,68,68,.2); color: #fca5a5; border: 1px solid rgba(239,68,68,.4);
     border-radius: 8px; padding: 6px 14px; font-size: 14px; cursor: pointer;
 }
+.btn-pause {
+    background: rgba(99,102,241,.25); color: #c7d2fe; border: 1px solid rgba(99,102,241,.5);
+    border-radius: 8px; padding: 6px 14px; font-size: 14px; cursor: pointer; white-space: nowrap;
+}
+.btn-pause.paused { background: linear-gradient(135deg,#22c55e,#15803d); color: #fff; border-color: #22c55e; }
+.prep-banner {
+    position: absolute; top: 38%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 11; text-align: center; pointer-events: none; display: none;
+}
+.prep-banner.show { display: block; }
+.prep-banner .pb-big {
+    font-size: 40px; font-weight: 800; color: #fbbf24;
+    text-shadow: 0 0 20px rgba(251,191,36,.7), 0 3px 8px rgba(0,0,0,.6); letter-spacing: 4px;
+}
+.prep-banner .pb-sub {
+    font-size: 17px; color: #e2e8f0; margin-top: 8px;
+    background: rgba(15,23,42,.7); border: 1px solid var(--line); padding: 8px 18px; border-radius: 999px; display: inline-block;
+}
 
 /* ---------- 菜单 ---------- */
 .menu-wrap {
