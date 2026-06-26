@@ -4,7 +4,7 @@
 // ============================================================
 
 // ---------- 资源 ----------
-const ASSETS = { lizardWalk: [], dragonIdle: [], dragonAttack: [], warriorWalk: null, warriorAttack: null };
+const ASSETS = { lizardWalk: [], dragonIdle: [], dragonAttack: [], warriorWalk: null, warriorAttack: null, warrior2Walk: null, warrior2Attack: null };
 let assetsReady = false;
 
 function loadImg(src) {
@@ -16,15 +16,19 @@ async function loadAssets() {
     for (let i = 1; i <= 4; i++) di.push(loadImg(`assets/items/spirit_小龙_${i}.png`));
     for (let i = 1; i <= 9; i++) da.push(loadImg(`assets/items/spirit_小龙_attack_${i}.png`));
     const wpath = 'warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_1/';
-    const [lizard, dragonI, dragonA, wWalk, wAtk] = await Promise.all([
+    const w2path = 'warrior-sprites/craftpix-net-589520-free-warrior-pixel-art-sprite-sheets/Warrior_2/';
+    const [lizard, dragonI, dragonA, wWalk, wAtk, w2Walk, w2Atk] = await Promise.all([
         Promise.all(lw), Promise.all(di), Promise.all(da),
         loadImg(wpath + 'Walk.png'), loadImg(wpath + 'Attack_1.png'),
+        loadImg(w2path + 'Walk.png'), loadImg(w2path + 'Attack_1.png'),
     ]);
     ASSETS.lizardWalk = lizard.filter(Boolean);
     ASSETS.dragonIdle = dragonI.filter(Boolean);
     ASSETS.dragonAttack = dragonA.filter(Boolean);
     if (wWalk) ASSETS.warriorWalk = { img: wWalk, frames: 8 };
     if (wAtk) ASSETS.warriorAttack = { img: wAtk, frames: 6 };
+    if (w2Walk) ASSETS.warrior2Walk = { img: w2Walk, frames: 8 };
+    if (w2Atk) ASSETS.warrior2Attack = { img: w2Atk, frames: 6 };
     assetsReady = true;
 }
 
@@ -68,6 +72,12 @@ function drawTurret(c, type, x, y, size, opts = {}) {
         case 'fissure': drawFissure(c, s, opts); break;
         case 'doublegun': drawDoubleGun(c, s, atk); break;
         case 'flamer': drawFlamer(c, s, atk); break;
+        case 'crossbomb': drawCrossbomb(c, s, opts.frame || 0); break;
+        case 'convert': drawConvertTurret(c, s, opts); break;
+        case 'ring': drawRing(c, s, opts.frame || 0); break;
+        case 'onion': drawOnion(c, s, atk); break;
+        case 'spikeburst': drawSpikeBurst(c, s, atk); break;
+        case 'lemon': drawLemon(c, s, atk); break;
     }
     c.restore();
 }
@@ -563,6 +573,162 @@ function drawFlamer(c, s, atk) {
         c.globalAlpha = 0.4 + 0.3 * Math.sin(Date.now() * 0.01 + i);
         c.beginPath(); c.arc(Math.cos(ang) * s * 0.06, -s * 0.42 + Math.sin(ang) * s * 0.04, s * 0.02, 0, 7); c.fill();
         c.globalAlpha = 1;
+    }
+}
+
+function drawCrossbomb(c, s, frame) {
+    drawBase(c, s, '#78350f', '#451a03');
+    // 十字架主体
+    c.strokeStyle = '#a16207'; c.lineWidth = s * 0.07; c.lineCap = 'round';
+    // 竖杆
+    c.beginPath(); c.moveTo(0, -s * 0.4); c.lineTo(0, s * 0.2); c.stroke();
+    // 横杆
+    c.beginPath(); c.moveTo(-s * 0.34, -s * 0.16); c.lineTo(s * 0.34, -s * 0.16); c.stroke();
+    // 十字连接点
+    const g = c.createRadialGradient(0, -s * 0.16, 1, 0, -s * 0.16, s * 0.1);
+    g.addColorStop(0, '#fde047'); g.addColorStop(1, '#b45309');
+    c.fillStyle = g; c.beginPath(); c.arc(0, -s * 0.16, s * 0.09, 0, 7); c.fill();
+    // 引线（顶部，燃烧特效）
+    const fuseLife = 1 - Math.min(1, Math.max(0, (frame % 70) / 70));
+    c.strokeStyle = '#452a0a'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, -s * 0.44); c.lineTo(0, -s * 0.52); c.stroke();
+    // 火花闪烁
+    if (fuseLife > 0) {
+        const sparkY = -s * 0.44 - fuseLife * s * 0.1;
+        const sparkSize = 3 + Math.sin(frame * 0.5) * 1.5;
+        c.fillStyle = '#fbbf24'; c.shadowColor = '#f59e0b'; c.shadowBlur = 8;
+        c.beginPath(); c.arc(0, sparkY, sparkSize, 0, 7); c.fill();
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(0, sparkY, sparkSize * 0.4, 0, 7); c.fill();
+        c.shadowBlur = 0;
+        // 火星
+        for (let i = 0; i < 2; i++) {
+            c.fillStyle = i ? '#f97316' : '#fde047';
+            c.globalAlpha = 0.5 + 0.3 * Math.sin(frame * 0.3 + i);
+            c.beginPath(); c.arc(Math.cos(frame * 0.2 + i) * s * 0.03, sparkY - i * 3, 1.5, 0, 7); c.fill();
+            c.globalAlpha = 1;
+        }
+    }
+    // 倒计时闪烁
+    const blink = 1 - (frame % 70) / 70;
+    if (blink < 0.25 && Math.floor(frame / 5) % 2) {
+        c.save(); c.globalAlpha = 0.3; c.fillStyle = '#ef4444';
+        c.beginPath(); c.arc(0, -s * 0.16, s * 0.16, 0, 7); c.fill(); c.restore();
+    }
+    c.lineCap = 'butt';
+}
+
+function drawConvertTurret(c, s, opts) {
+    drawBase(c, s, '#4c1d95', '#2e1065');
+    // 充能晶体
+    const charge = (opts && opts.charge || 0);
+    const chargeMax = (opts && opts.chargeMax || 180);
+    const ratio = Math.min(1, charge / chargeMax);
+    // 发光底座
+    const glow = 0.3 + ratio * 0.5;
+    c.save();
+    const gl = c.createRadialGradient(0, -s * 0.05, 2, 0, -s * 0.05, s * 0.35 * (1 + ratio * 0.5));
+    gl.addColorStop(0, `rgba(192,132,252,${glow})`); gl.addColorStop(1, 'rgba(147,51,234,0)');
+    c.fillStyle = gl; c.beginPath(); c.arc(0, -s * 0.05, s * 0.35 * (1 + ratio * 0.5), 0, 7); c.fill();
+    c.restore();
+    // 核心晶体
+    const g = c.createRadialGradient(0, -s * 0.08, 2, 0, -s * 0.08, s * 0.22 * (0.6 + ratio * 0.4));
+    g.addColorStop(0, '#e9d5ff'); g.addColorStop(0.6, '#a855f7'); g.addColorStop(1, '#6b21a8');
+    c.fillStyle = g; c.strokeStyle = '#c084fc'; c.lineWidth = 2;
+    // 菱形晶体
+    c.beginPath(); c.moveTo(0, -s * 0.34); c.lineTo(s * 0.2, -s * 0.08); c.lineTo(0, s * 0.16); c.lineTo(-s * 0.2, -s * 0.08); c.closePath();
+    c.fill(); c.stroke();
+    // 充能条
+    const barY = -s * 0.4, barW = s * 0.6, barH = s * 0.06;
+    c.fillStyle = 'rgba(0,0,0,0.5)'; roundRectPath(c, -barW / 2, barY, barW, barH, barH / 2); c.fill();
+    const cg = c.createLinearGradient(-barW / 2, 0, barW / 2, 0);
+    cg.addColorStop(0, '#8b5cf6'); cg.addColorStop(1, '#d8b4fe');
+    c.fillStyle = cg; roundRectPath(c, -barW / 2, barY, barW * ratio, barH, barH / 2); c.fill();
+    // 充能到顶的脉冲
+    if (ratio >= 1) {
+        c.fillStyle = 'rgba(196,181,253,0.6)'; c.shadowColor = '#a855f7'; c.shadowBlur = 12;
+        c.beginPath(); c.arc(0, -s * 0.08, s * 0.25 * (1 + 0.2 * Math.sin((Date.now() || 0) * 0.01)), 0, 7); c.fill(); c.shadowBlur = 0;
+    }
+}
+
+function drawRing(c, s, frame) {
+    drawBase(c, s, '#0e7490', '#083344');
+    // 发射台
+    c.fillStyle = '#155e75'; roundRectPath(c, -s * 0.08, -s * 0.2, s * 0.16, s * 0.3, s * 0.04); c.fill();
+    // 旋转套圈（待发射）
+    c.save(); c.translate(0, -s * 0.34);
+    const rot = frame * 0.1;
+    c.rotate(rot);
+    c.strokeStyle = '#22d3ee'; c.lineWidth = s * 0.05;
+    c.shadowColor = '#67e8f9'; c.shadowBlur = 10;
+    c.beginPath(); c.ellipse(0, 0, s * 0.22, s * 0.08, 0, 0, Math.PI * 2); c.stroke();
+    c.shadowBlur = 0;
+    // 内圈亮点
+    c.fillStyle = '#cffafe'; c.beginPath(); c.arc(s * 0.18, 0, s * 0.03, 0, 7); c.fill();
+    c.fillStyle = '#67e8f9'; c.beginPath(); c.arc(-s * 0.18, 0, s * 0.02, 0, 7); c.fill();
+    c.restore();
+}
+
+function drawOnion(c, s, atk) {
+    drawBase(c, s, '#7c2d12', '#431407');
+    // 洋葱主体（多层椭圆）
+    const g = c.createRadialGradient(0, -s * 0.03, 2, 0, s * 0.05, s * 0.38);
+    g.addColorStop(0, '#fdba74'); g.addColorStop(0.3, '#f97316'); g.addColorStop(0.6, '#c2410c'); g.addColorStop(1, '#7c2d12');
+    c.fillStyle = g; c.strokeStyle = '#9a3412'; c.lineWidth = 1.5;
+    c.beginPath(); c.ellipse(0, s * 0.02, s * 0.3, s * 0.36, 0, 0, 7); c.fill(); c.stroke();
+    // 层纹
+    c.strokeStyle = 'rgba(255,255,255,0.15)'; c.lineWidth = 1;
+    for (let i = 1; i <= 4; i++) {
+        const rr = s * 0.3 * (0.3 + i * 0.17);
+        c.beginPath(); c.arc(0, s * 0.02, rr, Math.PI + 0.2, -0.2); c.stroke();
+    }
+    // 顶部芽
+    c.strokeStyle = '#15803d'; c.lineWidth = s * 0.04; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, -s * 0.32); c.quadraticCurveTo(s * 0.06, -s * 0.38, s * 0.02, -s * 0.44); c.stroke();
+    c.beginPath(); c.moveTo(0, -s * 0.32); c.quadraticCurveTo(-s * 0.04, -s * 0.39, -s * 0.06, -s * 0.46); c.stroke();
+    c.lineCap = 'butt';
+    // 攻击时散发刺激气味
+    if (atk) {
+        c.save(); c.globalAlpha = 0.3 + 0.2 * Math.sin((Date.now() || 0) * 0.008);
+        c.fillStyle = '#fde047'; c.beginPath(); c.arc(-s * 0.2, -s * 0.36, s * 0.04, 0, 7); c.fill();
+        c.fillStyle = '#f97316'; c.beginPath(); c.arc(s * 0.18, -s * 0.38, s * 0.035, 0, 7); c.fill();
+        c.restore();
+    }
+}
+
+function drawSpikeBurst(c, s, atk) {
+    drawBase(c, s, '#334155', '#0f172a');
+    // 金属发射管
+    c.fillStyle = '#475569'; c.strokeStyle = '#64748b'; c.lineWidth = 1.5;
+    roundRectPath(c, -s * 0.06, -s * 0.38, s * 0.12, s * 0.44, s * 0.03); c.fill(); c.stroke();
+    // 预装的尖刺弹（扇形排列）
+    for (let i = 0; i < 6; i++) {
+        const a = -Math.PI * 0.7 + i * Math.PI * 0.28;
+        const tipX = Math.cos(a) * s * 0.34, tipY = -s * 0.38 + Math.sin(a) * s * 0.2;
+        c.strokeStyle = '#cbd5e1'; c.lineWidth = s * 0.03; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(0, -s * 0.34); c.lineTo(tipX, tipY); c.stroke();
+        c.fillStyle = '#e2e8f0'; c.beginPath(); c.arc(tipX, tipY, s * 0.025, 0, 7); c.fill();
+    }
+    c.lineCap = 'butt';
+    // 攻击时尖刺弹出
+    if (atk) {
+        c.fillStyle = 'rgba(255,255,255,0.5)';
+        c.beginPath(); c.arc(0, -s * 0.46, s * 0.06, 0, 7); c.fill();
+    }
+}
+
+function drawLemon(c, s, atk) {
+    drawBase(c, s, '#365314', '#1a2e05');
+    const g = c.createRadialGradient(0, -s * 0.04, 2, 0, s * 0.04, s * 0.32);
+    g.addColorStop(0, '#fef08a'); g.addColorStop(0.4, '#eab308'); g.addColorStop(1, '#854d0e');
+    c.fillStyle = g; c.strokeStyle = '#a16207'; c.lineWidth = 1.5;
+    c.beginPath(); c.ellipse(0, 0, s * 0.28, s * 0.34, 0, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.25)';
+    c.beginPath(); c.ellipse(-s * 0.06, -s * 0.1, s * 0.06, s * 0.14, 0.1, 0, 7); c.fill();
+    c.strokeStyle = '#15803d'; c.lineWidth = s * 0.03; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, -s * 0.34); c.lineTo(s * 0.02, -s * 0.42); c.stroke(); c.lineCap = 'butt';
+    if (atk || Math.random() > 0.5) {
+        c.fillStyle = '#fef08a'; c.globalAlpha = 0.6;
+        c.beginPath(); c.arc(0, -s * 0.38, s * 0.03, 0, 7); c.fill(); c.globalAlpha = 1;
     }
 }
 
@@ -1131,7 +1297,7 @@ let enemyLaneW, colW, cellSize, gridBottom, rowsY = [], baseLineY, enemyBaseSize
 function computeLayout() {
     enemyLaneW = W / DEF_LANES;
     colW = W / DEF_COLS;
-    const maxGridH = H * 0.62;
+    const maxGridH = H * 0.71;
     cellSize = Math.min(colW * 0.92, maxGridH / DEF_PLACE_ROWS);
     gridBottom = H - TRAY_H - 8;
     rowsY = [];
@@ -1164,7 +1330,7 @@ function startLevel(level) {
     const queue = buildSpawnQueue(cfg);
     G = {
         level, cfg, data,
-        enemies: [], units: {}, projectiles: [], particles: [], warriors: [], arcs: [], clouds: [],
+        enemies: [], units: {}, projectiles: [], particles: [], warriors: [], arcs: [], clouds: [], blastLines: [],
         stock: { ...data.arsenal },
         lives: 5, maxLives: 5,
         killed: 0, total: queue.length, spawned: 0,
@@ -1265,10 +1431,13 @@ function placeUnit(col, row, id) {
         hp: w.hp, maxHp: w.hp, atk: w.atk, cd: 0, cooldown: w.cooldown,
         frame: Math.random() * 100, attacking: 0, hitFlash: 0,
         spawnTimer: w.spawnInterval || 0,
-        arm: w.armTime || 0, fuse: w.fuse || 0, chew: 0,
+        arm: w.armTime || 0, fuse: w.special === 'crossbomb' ? w.fuse : (w.fuse || 0), chew: 0,
         drained: w.special === 'vortex' ? new Set() : null,
         fissurePhase: w.special === 'fissure' ? 'closed' : null,
         fissureTimer: w.special === 'fissure' ? w.closeTime : 0,
+        charge: w.special === 'convert' ? 0 : undefined,
+        chargeRatio: w.special === 'convert' ? 0 : undefined,
+        chargeMax: w.special === 'convert' ? w.chargeTime : undefined,
     };
     spawnParticles(colX(col), rowsY[row], w.color, 12);
 }
@@ -1297,7 +1466,7 @@ function update() {
     } else if (G.spawned < G.queue.length) {
         if (--G.spawnTimer <= 0) { spawnEnemy(G.queue[G.spawned]); G.spawned++; G.spawnTimer = G.cfg.spawnGap; }
     }
-    updateUnits(); updateWarriors(); updateEnemies(); updateProjectiles(); updateParticles(); updateArcs(); updateClouds();
+    updateUnits(); updateWarriors(); updateEnemies(); updateProjectiles(); updateParticles(); updateArcs(); updateBlastLines(); updateClouds();
     if (!G.ended && G.prep <= 0) {
         if (G.lives <= 0) endBattle(false);
         else if (G.spawned >= G.queue.length && G.enemies.length === 0) endBattle(true);
@@ -1349,6 +1518,9 @@ function updateUnits() {
         if (sp === 'chomper') { chomperTick(u, w); continue; }
         if (sp === 'vortex') { vortexTick(u, w); continue; }
         if (sp === 'fissure') { fissureTick(u, w); continue; }
+        if (sp === 'crossbomb') { crossbombTick(u, w, key); continue; }
+        if (sp === 'convert') { convertTick(u, w); continue; }
+        if (sp === 'ring') { ringTick(u, w); continue; }
         if (!u.atk) continue;   // 石墙等纯肉盾
         if (w.doubleDir) {       // 双头炮：前后两个方向
             if (u.cd <= 0 && (findTargetInLane(u.lane, u.y) || findTargetBelowInLane(u.lane, u.y))) {
@@ -1409,6 +1581,8 @@ function bombFuseTick(u, w, key, laneClear) {
                 G.particles.push({ x: x + (Math.random() - 0.5) * colW * 0.7, y: yy, vx: (Math.random() - 0.5) * 2, vy: -3 - Math.random() * 3, life: 26 + Math.random() * 20, color: Math.random() < 0.5 ? '#f97316' : '#fbbf24', size: 5 + Math.random() * 6 });
             }
             G.particles.push({ x, y: baseLineY * 0.5, vx: 0, vy: 0, life: 24, color: '#fdba74', size: colW * 0.6, fireball: true });
+            // 整条通道爆炸线
+            G.blastLines.push({ kind: 'v', x: x, y1: 0, y2: baseLineY, life: 32, maxLife: 32 });
             G.flash = Math.max(G.flash, 0.4); G.shake = Math.max(G.shake, 14);
         } else {
             aoeDamage(u.x, u.y, w.explodeRadius, w.explodeDmg, '#ef4444');
@@ -1492,6 +1666,74 @@ function fissureTick(u, w) {
         }
     }
 }
+// 自爆十字架：引线倒计时→所在列+所在排十字形爆炸
+function crossbombTick(u, w, key) {
+    u.fuse--;
+    if (u.fuse <= 0) {
+        const bombLane = u.lane, bombY = u.y, rowBand = cellSize * 0.8;
+        const targets = new Set();
+        for (const e of G.enemies) if (e.lane === bombLane) targets.add(e);
+        for (const e of G.enemies) if (Math.abs(e.y - bombY) < rowBand) targets.add(e);
+        for (const e of targets) damageEnemy(e, w.crossDmg);
+        crossExplosion(bombLane, bombY);
+        delete G.units[key];
+    }
+}
+function crossExplosion(lane, y) {
+    const cx = laneX(lane), cy = y;
+    for (let yy = 0; yy < baseLineY; yy += cellSize * 0.25) {
+        if (Math.random() > 0.3) continue;
+        G.particles.push({ x: cx + (Math.random() - 0.5) * colW * 0.3, y: yy, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3, life: 30 + Math.random() * 20, color: Math.random() < 0.5 ? '#fbbf24' : '#f97316', size: 4 + Math.random() * 6 });
+    }
+    for (let l = 0; l < DEF_LANES; l++) {
+        const x = laneX(l);
+        for (let k = 0; k < 6; k++) {
+            if (Math.random() > 0.4) continue;
+            G.particles.push({ x: x + (Math.random() - 0.5) * colW * 0.4, y: cy + (Math.random() - 0.5) * cellSize * 0.8, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3, life: 30 + Math.random() * 20, color: Math.random() < 0.5 ? '#fbbf24' : '#f97316', size: 4 + Math.random() * 6 });
+        }
+    }
+    G.particles.push({ x: cx, y: cy, vx: 0, vy: 0, life: 36, max: 36, color: '#fff7ed', size: cellSize * 1.8, fireball: true });
+    G.particles.push({ x: cx, y: cy, vx: 0, vy: 0, life: 40, max: 40, color: '#f97316', size: colW * 1.5, ring: true });
+    G.particles.push({ x: cx, y: cy, vx: 0, vy: 0, life: 50, max: 50, color: '#fb923c', size: colW * 2, ring: true });
+    for (let i = 0; i < 80; i++) {
+        const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 8;
+        G.particles.push({ x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 25, color: i % 3 === 0 ? '#fef08a' : (i % 3 === 1 ? '#f97316' : '#dc2626'), size: 3 + Math.random() * 5 });
+    }
+    // 十字爆炸线：竖线 + 横线
+    G.blastLines.push({ kind: 'v', x: cx, y1: 0, y2: baseLineY, life: 36, maxLife: 36 });
+    G.blastLines.push({ kind: 'h', y: cy, x1: 0, x2: W, life: 36, maxLife: 36 });
+    G.flash = Math.max(G.flash, 0.8); G.shake = Math.max(G.shake, 22);
+}
+// 化敌为友弹：充能→发射转化弹
+function convertTick(u, w) {
+    if (!u.charge) u.charge = 0;
+    u.charge++;
+    if (u.charge >= w.chargeTime) {
+        // 找本通道目标
+        const target = findTargetInLane(u.lane, u.y);
+        if (target) {
+            G.projectiles.push({
+                kind: 'convert', x: u.x, y: u.y - cellSize * 0.4, vx: 0, vy: -w.projSpeed,
+                lane: u.lane, r: 8, free: false,
+                allyHp: w.allyHp, allyAtk: w.allyAtk, allySpeed: w.allySpeed,
+            });
+            u.charge = 0; u.attacking = 14;
+        }
+    }
+    // 更新充能比率给绘制用
+    u.chargeRatio = u.charge;
+    u.chargeMax = w.chargeTime;
+}
+// 套圈弹：冷却后发射套圈满场乱飞
+function ringTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 12;
+    G.projectiles.push({
+        kind: 'ring', x: u.x, y: u.y - cellSize * 0.4, vx: (Math.random() - 0.5) * 6, vy: -2 - Math.random() * 3,
+        r: 14, free: true, wanderTime: w.wanderTime, shrinkTime: w.shrinkTime, target: null,
+    });
+}
 // 查找本通道中位于炮台下方的最近敌人（用于双头炮反向）
 function findTargetBelowInLane(lane, aboveY) {
     let best = null, bestY = Infinity;
@@ -1538,6 +1780,23 @@ function findTargetInLane(lane, belowY) {
 }
 
 // ---------- 勇士（军队） ----------
+// 化敌为友：将敌人转化为我方反向武士
+function convertEnemyToAlly(e, p) {
+    const idx = G.enemies.indexOf(e);
+    if (idx >= 0) G.enemies.splice(idx, 1);
+    G.killed++;
+    spawnParticles(e.x, e.y, '#c084fc', 20);
+    // 转化闪光环
+    G.particles.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 24, max: 24, color: '#d8b4fe', size: e.size * 1.2, ring: true });
+    // 生成反向武士
+    G.warriors.push({
+        owner: '_converted', lane: e.lane, x: e.x, y: e.y,
+        hp: p.allyHp, maxHp: p.allyHp, atk: p.allyAtk,
+        speed: p.allySpeed, frame: Math.random() * 8, atkCd: 0,
+        state: 'walk', converted: true,
+    });
+    updateHud();
+}
 function spawnWarrior(u, w) {
     G.warriors.push({
         owner: u.key, lane: u.lane, x: u.x + (Math.random() - 0.5) * colW * 0.4, y: u.y - cellSize * 0.4,
@@ -1549,19 +1808,42 @@ function updateWarriors() {
     const wSize = cellSize * 1.25;
     for (let i = G.warriors.length - 1; i >= 0; i--) {
         const wr = G.warriors[i];
-        if (wr.hp <= 0) { spawnParticles(wr.x, wr.y, '#eab308', 12); G.warriors.splice(i, 1); continue; }
+        if (wr.hp <= 0) { spawnParticles(wr.x, wr.y, wr.converted ? '#c084fc' : '#eab308', 12); G.warriors.splice(i, 1); continue; }
         wr.frame += 0.25;
         const range = wSize * 0.5 + 8;
-        const target = nearestEnemyInLane(wr.lane, wr.y, false);
-        if (target && Math.abs(target.y - wr.y) < range + target.size * 0.4) {
-            wr.state = 'attack';
-            if (--wr.atkCd <= 0) { damageEnemy(target, wr.atk); wr.atkCd = 38; target.hitFlash = 4; }
+        if (wr.converted) {
+            // 转化武士：向上走，攻击上方的敌人
+            const target = nearestEnemyAboveInLane(wr.lane, wr.y);
+            if (target && Math.abs(target.y - wr.y) < range + target.size * 0.4) {
+                wr.state = 'attack';
+                if (--wr.atkCd <= 0) { damageEnemy(target, wr.atk); wr.atkCd = 38; target.hitFlash = 4; }
+            } else {
+                wr.state = 'walk';
+                wr.y -= wr.speed;
+                if (wr.y < enemyBaseSize * 0.5) wr.y = enemyBaseSize * 0.5;
+            }
         } else {
-            wr.state = 'walk';
-            wr.y -= wr.speed;
-            if (wr.y < enemyBaseSize * 0.6) wr.y = enemyBaseSize * 0.6;
+            const target = nearestEnemyInLane(wr.lane, wr.y, false);
+            if (target && Math.abs(target.y - wr.y) < range + target.size * 0.4) {
+                wr.state = 'attack';
+                if (--wr.atkCd <= 0) { damageEnemy(target, wr.atk); wr.atkCd = 38; target.hitFlash = 4; }
+            } else {
+                wr.state = 'walk';
+                wr.y -= wr.speed;
+                if (wr.y < enemyBaseSize * 0.6) wr.y = enemyBaseSize * 0.6;
+            }
         }
     }
+}
+function nearestEnemyAboveInLane(lane, refY) {
+    let best = null, bestD = Infinity;
+    for (const e of G.enemies) {
+        if (e.lane !== lane) continue;
+        if (e.y > refY) continue;
+        const d = refY - e.y;
+        if (d < bestD) { bestD = d; best = e; }
+    }
+    return best;
 }
 
 function updateEnemies() {
@@ -1570,6 +1852,94 @@ function updateEnemies() {
         const e = G.enemies[i];
         e.frame += 0.15;
         if (e.hitFlash > 0) e.hitFlash--;
+        if (e.shrinking) {
+            e.shrinkTimer--;
+            if (e.shrinkTimer <= 0) {
+                damageEnemy(e, e.hp + 9999);
+                spawnParticles(e.x, e.y, '#67e8f9', 24);
+            }
+            continue;
+        }
+        // 洋葱混乱效果
+        if (e.onionTimer) {
+            e.onionTimer--;
+            if (e.onionTimer <= 0) {
+                // 倒计时结束，自爆
+                aoeDamage(e.x, e.y, e.explodeRadius || 160, e.explodeDmg || 500, '#f97316');
+                damageEnemy(e, e.hp + 9999);
+                spawnParticles(e.x, e.y, '#c2410c', 30);
+                continue;
+            }
+            // 随机方向乱跑
+            if (G.frame % 20 === 0 || Math.random() < 0.03) {
+                e.chaosDir = (Math.random() - 0.5) * 2;
+            }
+            const chaosSpeed = e.speed * 2.5;
+            const oldY = e.y;
+            e.y += e.chaosDir * chaosSpeed;
+            // 平滑横向漂移（不瞬移）
+            const driftTarget = laneX(e.lane);
+            e.x += (driftTarget - e.x) * 0.08;
+            // 偶尔跳到相邻通道
+            if (Math.random() < 0.01 && DEF_LANES > 1) {
+                const offset = Math.random() < 0.5 ? -1 : 1;
+                e.lane = Math.max(0, Math.min(DEF_LANES - 1, e.lane + offset));
+            }
+            // 边界限制
+            if (e.y < 10) { e.y = 10; e.chaosDir = Math.abs(e.chaosDir); }
+            if (e.y > baseLineY - 5) { e.y = baseLineY - 5; e.chaosDir = -Math.abs(e.chaosDir); }
+            // 攻击附近的敌人和炮台
+            if (--e.chaosCd <= 0) {
+                e.chaosCd = e.chaosInterval;
+                // 攻击附近所有敌人
+                for (const oe of G.enemies) {
+                    if (oe === e || oe._dead) continue;
+                    if (Math.hypot(oe.x - e.x, oe.y - e.y) < cellSize * 2) {
+                        damageEnemy(oe, e.chaosAtk);
+                        spawnParticles(oe.x, oe.y, '#c2410c', 2);
+                    }
+                }
+                // 攻击我方炮台
+                for (const key in G.units) {
+                    const u = G.units[key];
+                    if (Math.hypot(u.x - e.x, u.y - e.y) < cellSize * 2) {
+                        u.hp -= e.chaosAtk;
+                        u.hitFlash = 6;
+                        spawnParticles(u.x, u.y - cellSize * 0.2, '#c2410c', 3);
+                        if (u.hp <= 0) {
+                            spawnParticles(u.x, u.y, DEF_WEAPONS[u.id].color, 16);
+                            delete G.units[key];
+                        }
+                    }
+                }
+                // 攻击我方武士
+                for (const wr of G.warriors) {
+                    if (Math.hypot(wr.x - e.x, wr.y - e.y) < cellSize * 2) {
+                        wr.hp -= e.chaosAtk;
+                    }
+                }
+            }
+            e.frame += 0.3;
+            continue;
+        }
+        // 柠檬酸液腐蚀：持续掉血 + 留下酸液尾迹
+        if (e.acidTimer) {
+            e.acidTimer--;
+            if (--e.acidCd <= 0) {
+                e.acidCd = e.acidInterval;
+                damageEnemy(e, e.acidDmg);
+                // 身后留下酸液云
+                G.clouds.push({
+                    x: e.x, y: e.y + e.size * 0.3, r: 55, dmg: 6,
+                    life: 180, tick: 0, acid: true,
+                });
+                spawnParticles(e.x, e.y + e.size * 0.3, '#eab308', 3);
+            }
+            if (e.acidTimer <= 0) {
+                e.acidTimer = 0;
+                e.slowFactor = 1; e.slowTimer = 0;
+            }
+        }
         if (e.slowTimer > 0) e.slowTimer--; else e.slowFactor = 1;
 
         const blocker = findBlocker(e, wSize);
@@ -1601,7 +1971,7 @@ function findBlocker(e, wSize) {
         if (Math.abs(wr.y - e.y) < (e.size * 0.4 + wSize * 0.4) && wr.y < bestY) { best = { kind: 'warrior', obj: wr }; bestY = wr.y; }
     }
     // 炮台阻挡（地刺/地雷/炸弹类不阻挡）
-    const nonBlock = { spike: 1, mine: 1, cherry: 1, jalapeno: 1, fissure: 1, taichi: 1 };
+    const nonBlock = { spike: 1, mine: 1, cherry: 1, jalapeno: 1, fissure: 1, taichi: 1, crossbomb: 1, convert: 1, ring: 1 };
     for (const key in G.units) {
         const u = G.units[key];
         if (u.lane !== e.lane || nonBlock[u.render]) continue;
@@ -1625,6 +1995,11 @@ function fireProjectile(u, target, laneOverride) {
         bounces: w.bounces || 0, hitSet: null, r: w.proj === 'bounce' ? 9 : (w.splash ? 8 : 6),
         cloudRadius: w.cloudRadius || 0, cloudDmg: w.cloudDmg || 0, cloudLife: w.cloudLife || 0,
         burnDmg: w.burnDmg || 0, burnDuration: w.burnDuration || 0,
+        onionTime: w.onionTime || 0, chaosAtk: w.chaosAtk || 0, chaosInterval: w.chaosInterval || 0,
+        explodeDmg: w.explodeDmg || 0, explodeRadius: w.explodeRadius || 0,
+        spikeCount: w.spikeCount || 0, spikeDmg: w.spikeDmg || 0, spikeRange: w.spikeRange || 0,
+        acidDmg: w.acidDmg || 0, acidInterval: w.acidInterval || 0, acidDuration: w.acidDuration || 0,
+        acidSlow: w.acidSlow || 0, trailDmg: w.trailDmg || 0, trailLife: w.trailLife || 0, trailRadius: w.trailRadius || 0,
     };
     if (w.proj === 'bounce') { p.free = true; p.vx = (Math.random() * 2 - 1) * sp * 0.7; p.hitSet = new Set(); }
     if (w.proj === 'boomerang') { p.hitSet = new Set(); p.startY = y0; p.maxUp = H * 0.55; p.returning = false; }
@@ -1634,6 +2009,57 @@ function updateProjectiles() {
     for (let i = G.projectiles.length - 1; i >= 0; i--) {
         const p = G.projectiles[i];
         p.x += p.vx; p.y += p.vy;
+        if (p.kind === 'spike') {
+            p.traveled += Math.hypot(p.vx, p.vy);
+            if (p.traveled >= (p.range || 140) || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+                G.projectiles.splice(i, 1); continue;
+            }
+            for (const e of G.enemies) {
+                if (p.hitSet && p.hitSet.has(e)) continue;
+                if (Math.hypot(e.x - p.x, e.y - p.y) < e.size * 0.45 + p.r) {
+                    damageEnemy(e, p.dmg);
+                    p.hitSet.add(e);
+                    spawnParticles(p.x, p.y, '#e2e8f0', 4);
+                }
+            }
+            continue;
+        }
+        if (p.kind === 'ring') {
+            if (p.wanderTime > 0) {
+                p.wanderTime--;
+                // 随机漂移
+                p.vx += (Math.random() - 0.5) * 1.2;
+                p.vy += (Math.random() - 0.5) * 1.2;
+                const speed = Math.hypot(p.vx, p.vy);
+                const maxSpeed = 5;
+                if (speed > maxSpeed) { p.vx = p.vx / speed * maxSpeed; p.vy = p.vy / speed * maxSpeed; }
+                // 边界反弹
+                if (p.x < p.r) { p.x = p.r; p.vx = Math.abs(p.vx); }
+                if (p.x > W - p.r) { p.x = W - p.r; p.vx = -Math.abs(p.vx); }
+                if (p.y < p.r) { p.y = p.r; p.vy = Math.abs(p.vy); }
+                if (p.y > baseLineY) { p.y = baseLineY; p.vy = -Math.abs(p.vy); }
+            } else {
+                // 选中目标
+                if (!p.target || p.target._dead) {
+                    if (!G.enemies.length) { G.projectiles.splice(i, 1); continue; }
+                    p.target = G.enemies[Math.floor(Math.random() * G.enemies.length)];
+                }
+                // 飞向目标
+                const dx = p.target.x - p.x, dy = p.target.y - p.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                const homingSpeed = 4 + (1 - dist / 500) * 4;
+                p.vx += (dx / dist) * 0.6;
+                p.vy += (dy / dist) * 0.6;
+                const s = Math.hypot(p.vx, p.vy);
+                if (s > homingSpeed) { p.vx = p.vx / s * homingSpeed; p.vy = p.vy / s * homingSpeed; }
+                // 碰撞检测
+                if (dist < p.target.size * 0.4 + p.r) {
+                    handleHit(p, p.target);
+                    G.projectiles.splice(i, 1);
+                }
+            }
+            continue;
+        }
         if (p.kind === 'bounce') {
             if (p.x < p.r) { p.x = p.r; p.vx = Math.abs(p.vx); p.bounces--; p.hitSet.clear(); }
             else if (p.x > W - p.r) { p.x = W - p.r; p.vx = -Math.abs(p.vx); p.bounces--; p.hitSet.clear(); }
@@ -1697,14 +2123,62 @@ function handleHit(p, e) {
             damageEnemy(e, p.dmg); p.hitSet.add(e); spawnParticles(p.x, p.y, p.color, 5); return false;
         case 'fire':
             damageEnemy(e, p.dmg);
-            // 火焰灼烧区域
             G.clouds.push({ x: p.x, y: p.y, r: p.splash || 120, dmg: p.burnDmg || 8, life: p.burnDuration || 90, tick: 0, fire: true });
-            // 爆炸火花
             for (let k = 0; k < 20; k++) {
                 const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 5;
                 G.particles.push({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, life: 26 + Math.random() * 20, color: k % 3 === 0 ? '#fde047' : (k % 3 === 1 ? '#f97316' : '#ef4444'), size: 3 + Math.random() * 5 });
             }
             G.flash = Math.max(G.flash, 0.25); G.shake = Math.max(G.shake, 4);
+            return true;
+        case 'convert':
+            convertEnemyToAlly(e, p);
+            return true;
+        case 'ring':
+            if (!e.shrinking) {
+                e.shrinking = true; e.shrinkTimer = p.shrinkTime; e.shrinkMax = p.shrinkTime;
+                e.shrinkX = e.x; e.shrinkY = e.y; e.shrinkSize = e.size;
+                spawnParticles(e.x, e.y, '#67e8f9', 16);
+            }
+            return true;
+        case 'onion':
+            damageEnemy(e, p.dmg);
+            if (!e.onionTimer) {
+                e.onionTimer = p.onionTime || 300;
+                e.onionMax = p.onionTime || 300;
+                e.chaosAtk = p.chaosAtk || 18;
+                e.chaosInterval = p.chaosInterval || 35;
+                e.chaosCd = 0;
+                e.chaosDir = (Math.random() - 0.5) * 2;
+                spawnParticles(e.x, e.y, '#c2410c', 18);
+            }
+            return true;
+        case 'spikeburst':
+            damageEnemy(e, p.dmg);
+            // 尖刺爆裂：从命中点向8个方向射出尖刺
+            for (let i = 0; i < (p.spikeCount || 8); i++) {
+                const angle = i * Math.PI * 2 / (p.spikeCount || 8);
+                const spd = 6 + Math.random() * 2;
+                G.projectiles.push({
+                    kind: 'spike', x: p.x, y: p.y,
+                    vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd,
+                    dmg: p.spikeDmg || 35, color: '#cbd5e1',
+                    free: true, hitSet: new Set(),
+                    r: 4, range: p.spikeRange || 140, traveled: 0,
+                });
+            }
+            spawnParticles(p.x, p.y, '#e2e8f0', 20);
+            return true;
+        case 'lemon':
+            damageEnemy(e, p.dmg);
+            if (!e.acidTimer) {
+                e.acidTimer = p.acidDuration || 600;
+                e.acidDmg = p.acidDmg || 4;
+                e.acidInterval = p.acidInterval || 12;
+                e.acidCd = 0;
+                e.slowFactor = 1 - (p.acidSlow || 0.3);
+                e.slowTimer = p.acidDuration || 600;
+            }
+            spawnParticles(e.x, e.y, '#fef08a', 14);
             return true;
         default:
             damageEnemy(e, p.dmg); spawnParticles(p.x, p.y, p.color, 6); return true;
@@ -1775,6 +2249,7 @@ function updateParticles() {
     }
 }
 function updateArcs() { for (let i = G.arcs.length - 1; i >= 0; i--) if (--G.arcs[i].life <= 0) G.arcs.splice(i, 1); }
+function updateBlastLines() { for (let i = G.blastLines.length - 1; i >= 0; i--) if (--G.blastLines[i].life <= 0) G.blastLines.splice(i, 1); }
 
 function updateHud() {
     document.getElementById('hudLevel').textContent = G.level;
@@ -1789,7 +2264,7 @@ function updateHud() {
 function render() {
     ctx.save();
     if (G.shake > 0.5) ctx.translate((Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake);
-    drawBackground(); drawGrid(); drawClouds(); drawLasers(); drawUnits(); drawWarriors(); drawEnemies(); drawProjectiles(); drawArcs(); drawParticles();
+    drawBackground(); drawGrid(); drawClouds(); drawLasers(); drawUnits(); drawWarriors(); drawEnemies(); drawProjectiles(); drawArcs(); drawBlastLines(); drawParticles();
     ctx.restore();
     if (G.flash > 0) { ctx.fillStyle = `rgba(239,68,68,${G.flash * 0.4})`; ctx.fillRect(0, 0, W, H); }
 }
@@ -1797,7 +2272,16 @@ function drawClouds() {
     for (const cl of G.clouds) {
         const a = Math.min(0.45, cl.life / 260 + 0.1);
         const g = ctx.createRadialGradient(cl.x, cl.y, 2, cl.x, cl.y, cl.r);
-        if (cl.fire) {
+        if (cl.acid) {
+            // 酸液云
+            g.addColorStop(0, `rgba(250,204,21,${a * 1.1})`); g.addColorStop(0.6, `rgba(161,98,7,${a * 0.6})`); g.addColorStop(1, 'rgba(113,63,18,0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r, 0, 7); ctx.fill();
+            for (let k = 0; k < 4; k++) {
+                const ang = (G.frame * 0.03 + k * 1.6), rr = cl.r * (0.2 + 0.3 * ((k + G.frame * 0.1) % 10) / 10);
+                ctx.fillStyle = `rgba(234,179,8,${a * 0.7})`;
+                ctx.beginPath(); ctx.arc(cl.x + Math.cos(ang) * rr, cl.y + Math.sin(ang) * rr, cl.r * 0.08, 0, 7); ctx.fill();
+            }
+        } else if (cl.fire) {
             // 火焰云
             g.addColorStop(0, `rgba(249,115,22,${a * 1.2})`); g.addColorStop(0.6, `rgba(239,68,68,${a * 0.7})`); g.addColorStop(1, 'rgba(185,28,28,0)');
             ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r, 0, 7); ctx.fill();
@@ -1873,6 +2357,10 @@ function drawUnits() {
             turretOpts.fissureTimer = u.fissureTimer;
             turretOpts.fissureTotal = u.fissurePhase === 'open' ? w.openTime : w.closeTime;
         }
+        if (u.render === 'convert') {
+            turretOpts.charge = u.chargeRatio || 0;
+            turretOpts.chargeMax = u.chargeMax || 180;
+        }
         drawTurret(ctx, u.render, u.x + jit, u.y, cellSize * 0.92, turretOpts);
         if (u.hitFlash > 0) { ctx.save(); ctx.globalAlpha = u.hitFlash / 8 * 0.5; ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(u.x, u.y, cellSize * 0.46, 0, 7); ctx.fill(); ctx.restore(); }
         if (u.hp < u.maxHp) drawHpRing(u.x, u.y, cellSize * 0.5, u.hp / u.maxHp);
@@ -1892,13 +2380,30 @@ function drawHpRing(cx, cy, radius, ratio) {
 function drawWarriors() {
     const wSize = cellSize * 1.5;
     for (const wr of G.warriors) {
-        const anim = wr.state === 'attack' ? ASSETS.warriorAttack : ASSETS.warriorWalk;
+        const anim = wr.converted
+            ? (wr.state === 'attack' ? ASSETS.warrior2Attack : ASSETS.warrior2Walk)
+            : (wr.state === 'attack' ? ASSETS.warriorAttack : ASSETS.warriorWalk);
         drawWarriorFrame(ctx, anim, wr.frame, wr.x, wr.y, wSize, false);
         if (wr.hp < wr.maxHp) drawHpRing(wr.x, wr.y, wSize * 0.32, wr.hp / wr.maxHp);
     }
 }
 function drawEnemies() {
     for (const e of G.enemies) {
+        // 被套圈缩小中
+        if (e.shrinking) {
+            const ratio = e.shrinkTimer / e.shrinkMax;
+            const scale = 0.1 + ratio * 0.9;
+            ctx.save(); ctx.translate(e.x, e.y); ctx.scale(scale, scale);
+            drawEnemyArt(ctx, e.def.render, 0, 0, e.shrinkSize || e.size, e.frame, 0);
+            // 套圈光环
+            ctx.strokeStyle = '#67e8f9'; ctx.lineWidth = 3 + (1 - ratio) * 2;
+            ctx.shadowColor = '#22d3ee'; ctx.shadowBlur = 10 + (1 - ratio) * 6;
+            ctx.beginPath(); ctx.arc(0, 0, (e.shrinkSize || e.size) * 0.55, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+            drawBar(e.x, e.y - e.size * 0.58, e.size * 0.7, e.hp / e.maxHp, '#ef4444');
+            continue;
+        }
         if (e.def.render === 'lizard') {
             const frames = ASSETS.lizardWalk;
             if (frames && frames.length) {
@@ -1907,6 +2412,35 @@ function drawEnemies() {
                 drawSprite(img, e.x, e.y, e.size); ctx.restore();
             }
         } else { drawEnemyArt(ctx, e.def.render, e.x, e.y, e.size, e.frame, e.hitFlash); }
+        // 柠檬酸液腐蚀视觉
+        if (e.acidTimer) {
+            ctx.save(); ctx.globalAlpha = 0.2 + 0.1 * Math.sin(G.frame * 0.15);
+            ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.48, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#eab308'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.5, 0, 7); ctx.stroke();
+            ctx.restore();
+        }
+        // 洋葱混乱特效：橙色迷雾 + 倒计时数字
+        if (e.onionTimer) {
+            const oratio = e.onionTimer / (e.onionMax || 300);
+            ctx.save();
+            ctx.globalAlpha = 0.3 + 0.15 * Math.sin(G.frame * 0.2);
+            ctx.fillStyle = '#c2410c'; ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.55, 0, 7); ctx.fill();
+            const glow = ctx.createRadialGradient(e.x, e.y, e.size * 0.2, e.x, e.y, e.size * 0.6);
+            glow.addColorStop(0, 'rgba(249,115,22,0.6)'); glow.addColorStop(1, 'rgba(194,65,12,0)');
+            ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.6, 0, 7); ctx.fill();
+            ctx.restore();
+            // 倒计时环
+            ctx.save(); ctx.globalAlpha = 0.8;
+            ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.52, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * oratio); ctx.stroke();
+            ctx.lineCap = 'butt'; ctx.restore();
+            // 倒计时数字
+            const sec = Math.ceil(e.onionTimer / 60);
+            ctx.save();
+            ctx.fillStyle = '#fff'; ctx.font = `bold ${e.size * 0.28}px sans-serif`; ctx.textAlign = 'center';
+            ctx.fillText(sec, e.x, e.y + e.size * 0.05);
+            ctx.restore();
+        }
         // 被冰冻/减速时的蓝色霜冻覆盖
         if (e.slowTimer > 0) {
             ctx.save();
@@ -1950,6 +2484,44 @@ function drawProjectiles() {
             ctx.globalAlpha = 0.5; ctx.fillStyle = '#fbbf24';
             ctx.beginPath(); ctx.arc(p.x, p.y + p.r, p.r * 0.7, 0, 7); ctx.fill();
             ctx.globalAlpha = 1;
+        } else if (p.kind === 'convert') {
+            ctx.shadowBlur = 16; ctx.shadowColor = '#a855f7';
+            const pulse = 0.8 + 0.2 * Math.sin((Date.now() || 0) * 0.02);
+            ctx.fillStyle = '#e9d5ff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5 * pulse, 0, 7); ctx.fill();
+            ctx.fillStyle = '#c084fc'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.8, 0, 7); ctx.fill();
+            ctx.globalAlpha = 0.5; ctx.fillStyle = '#a855f7'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.2, 0, 7); ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (p.kind === 'ring') {
+            ctx.shadowBlur = 16; ctx.shadowColor = '#22d3ee';
+            const spin = (Date.now() || 0) * 0.005;
+            ctx.strokeStyle = '#67e8f9'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 0.9, p.r * 0.35, spin, 0, Math.PI * 2); ctx.stroke();
+        } else if (p.kind === 'spike') {
+            ctx.shadowBlur = 6; ctx.shadowColor = '#94a3b8';
+            ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+            const tailX = p.x - p.vx * 1.5, tailY = p.y - p.vy * 1.5;
+            ctx.beginPath(); ctx.moveTo(tailX, tailY); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.6, 0, 7); ctx.fill();
+            ctx.lineCap = 'butt';
+        } else if (p.kind === 'lemon') {
+            ctx.shadowBlur = 12; ctx.shadowColor = '#eab308';
+            const w = (Date.now() || 0) * 0.01;
+            ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ca8a04'; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 0.6, p.r * 0.45, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 0.4; ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(p.x, p.y + p.r, p.r * 0.5, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+            ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+            const tailX = p.x - p.vx * 1.5, tailY = p.y - p.vy * 1.5;
+            ctx.beginPath(); ctx.moveTo(tailX, tailY); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.6, 0, 7); ctx.fill();
+            ctx.lineCap = 'butt';
+        } else if (p.kind === 'onion') {
+            ctx.shadowBlur = 12; ctx.shadowColor = '#f97316';
+            const w = (Date.now() || 0) * 0.01;
+            ctx.fillStyle = '#fdba74'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.6, 0, 7); ctx.fill();
+            ctx.fillStyle = '#c2410c'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.9, 0, 7); ctx.fill();
+            ctx.globalAlpha = 0.5 + 0.3 * Math.sin(w * 2);
+            ctx.fillStyle = '#7c2d12'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.2, 0, 7); ctx.fill();
+            ctx.globalAlpha = 1;
         } else {
             ctx.shadowBlur = 10; ctx.shadowColor = p.color; ctx.fillStyle = p.color;
             ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
@@ -1965,6 +2537,37 @@ function drawArcs() {
         ctx.beginPath(); ctx.moveTo(a.x1, a.y1);
         const mx = (a.x1 + a.x2) / 2 + (Math.random() - 0.5) * 20, my = (a.y1 + a.y2) / 2 + (Math.random() - 0.5) * 20;
         ctx.lineTo(mx, my); ctx.lineTo(a.x2, a.y2); ctx.stroke(); ctx.restore();
+    }
+}
+function drawBlastLines() {
+    for (const bl of G.blastLines) {
+        const progress = bl.life / bl.maxLife;
+        // 内层粗线
+        ctx.save();
+        ctx.globalAlpha = progress * 0.7;
+        ctx.strokeStyle = '#fef08a'; ctx.shadowColor = '#fbbf24'; ctx.shadowBlur = 18;
+        ctx.lineWidth = 6 + progress * 8;
+        ctx.beginPath();
+        if (bl.kind === 'v') { ctx.moveTo(bl.x, bl.y1); ctx.lineTo(bl.x, bl.y2); }
+        else { ctx.moveTo(bl.x1, bl.y); ctx.lineTo(bl.x2, bl.y); }
+        ctx.stroke();
+        // 中层扩散线
+        ctx.globalAlpha = progress * 0.5;
+        ctx.strokeStyle = '#f97316'; ctx.shadowColor = '#f97316'; ctx.shadowBlur = 28;
+        ctx.lineWidth = 14 + progress * 20;
+        ctx.beginPath();
+        if (bl.kind === 'v') { ctx.moveTo(bl.x, bl.y1); ctx.lineTo(bl.x, bl.y2); }
+        else { ctx.moveTo(bl.x1, bl.y); ctx.lineTo(bl.x2, bl.y); }
+        ctx.stroke();
+        // 外层光晕
+        ctx.globalAlpha = progress * 0.25;
+        ctx.strokeStyle = '#dc2626'; ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 40;
+        ctx.lineWidth = 24 + progress * 32;
+        ctx.beginPath();
+        if (bl.kind === 'v') { ctx.moveTo(bl.x, bl.y1); ctx.lineTo(bl.x, bl.y2); }
+        else { ctx.moveTo(bl.x1, bl.y); ctx.lineTo(bl.x2, bl.y); }
+        ctx.stroke();
+        ctx.restore();
     }
 }
 function drawParticles() {

@@ -164,6 +164,43 @@ const DEF_WEAPONS = {
         price: 260, color: '#f97316', hp: 120, atk: 55, cooldown: 82, projSpeed: 9, proj: 'fire',
         burnDmg: 8, burnDuration: 90, splashRadius: 100, desc: '喷射火球，命中后产生火海持续灼烧',
     },
+    crossbomb: {
+        id: 'crossbomb', name: '自爆十字架', role: 'bomb', render: 'crossbomb',
+        price: 350, color: '#fbbf24', hp: 140, atk: 0, special: 'crossbomb',
+        fuse: 70, crossDmg: 3000, desc: '引线燃尽后所在整列和整排同时爆炸，十字形毁灭打击，一次性',
+    },
+    convert: {
+        id: 'convert', name: '化敌为友弹', role: 'control', render: 'convert',
+        price: 320, color: '#c084fc', hp: 150, atk: 0, special: 'convert',
+        chargeTime: 600, projSpeed: 7,
+        allyHp: 300, allyAtk: 45, allySpeed: 1.2,
+        desc: '充能后发射，被击中的敌人变成我方武士，回头反向杀敌',
+    },
+    ring: {
+        id: 'ring', name: '套圈弹', role: 'control', render: 'ring',
+        price: 280, color: '#22d3ee', hp: 140, atk: 0, special: 'ring',
+        cooldown: 180, wanderTime: 90, shrinkTime: 25,
+        desc: '每3秒发射套圈满场乱飞，随机套住敌人将其缩小消灭',
+    },
+    onion: {
+        id: 'onion', name: '洋葱弹', role: 'control', render: 'onion',
+        price: 300, color: '#c2410c', hp: 150, atk: 28, cooldown: 120, projSpeed: 8, proj: 'onion',
+        onionTime: 300, explodeDmg: 500, explodeRadius: 160, chaosAtk: 18, chaosInterval: 35,
+        desc: '击中后敌人陷入混乱随机乱跑，攻击友敌所有人，5秒倒计时后自爆',
+    },
+    spikeburst: {
+        id: 'spikeburst', name: '冒刺弹', role: 'aoe', render: 'spikeburst',
+        price: 250, color: '#94a3b8', hp: 120, atk: 55, cooldown: 110, projSpeed: 10, proj: 'spikeburst',
+        spikeCount: 8, spikeDmg: 35, spikeRange: 140,
+        desc: '击中敌人后尖刺从体内爆出，穿刺四面八方其他敌人',
+    },
+    lemon: {
+        id: 'lemon', name: '柠檬腐蚀弹', role: 'aoe', render: 'lemon',
+        price: 250, color: '#a3e635', hp: 120, atk: 35, cooldown: 90, projSpeed: 9, proj: 'lemon',
+        acidDmg: 4, acidInterval: 12, acidDuration: 600, acidSlow: 0.3,
+        trailDmg: 6, trailLife: 200, trailRadius: 55,
+        desc: '击中后敌人被柠檬酸液腐蚀，持续掉血减速，留下酸液尾迹灼伤追兵',
+    },
 };
 
 // ===== 敌人定义（蜥蜴用像素帧，其余手绘矢量）=====
@@ -230,7 +267,7 @@ function getLevelConfig(level) {
 // ===== 网格布局 =====
 const DEF_LANES = 6;                  // 6 条均匀通道（每列即一条通道）
 const DEF_COLS = 6;                   // 6 列均匀分布
-const DEF_PLACE_ROWS = 7;             // 每列 7 排 → 共 42 格
+const DEF_PLACE_ROWS = 8;             // 每列 8 排 → 共 48 格
 function laneOfCol(col) { return col; }
 
 // ===== 数据存取 =====
