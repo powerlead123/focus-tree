@@ -201,6 +201,123 @@ const DEF_WEAPONS = {
         trailDmg: 6, trailLife: 200, trailRadius: 55,
         desc: '击中后敌人被柠檬酸液腐蚀，持续掉血减速，留下酸液尾迹灼伤追兵',
     },
+    // ===== 修仙系列武器 =====
+    flyingSword: {
+        id: 'flyingSword', name: '飞剑', role: 'dps', render: 'flyingSword',
+        price: 280, color: '#38bdf8', hp: 130, atk: 60, cooldown: 100, projSpeed: 16, proj: 'pierce',
+        desc: '御剑术，飞剑贯穿整条通道所有敌人，修仙者必备',
+    },
+    thunder: {
+        id: 'thunder', name: '天雷符', role: 'sniper', render: 'thunder',
+        price: 350, color: '#fde047', hp: 140, atk: 0, special: 'thunder',
+        cooldown: 200, thunderDmg: 300, desc: '引天雷降世，随机轰击场上任意敌人，无视通道',
+    },
+    bagua: {
+        id: 'bagua', name: '八卦阵', role: 'aoe', render: 'bagua',
+        price: 260, color: '#2dd4bf', hp: 160, atk: 0, special: 'bagua',
+        cooldown: 80, pulseRadius: 150, pulseDmg: 30, desc: '以八卦之力周期性震荡四周，群伤震退敌人',
+    },
+    talisman: {
+        id: 'talisman', name: '定身符', role: 'control', render: 'talisman',
+        price: 200, color: '#fbbf24', hp: 110, atk: 20, cooldown: 70, projSpeed: 11, proj: 'talisman',
+        freezeTime: 150, desc: '符箓击中后封印敌人，使其完全动弹不得',
+    },
+    soulBanner: {
+        id: 'soulBanner', name: '引魂幡', role: 'aoe', render: 'soulBanner',
+        price: 280, color: '#a855f7', hp: 140, atk: 0, special: 'soulBanner',
+        cooldown: 130, ghostDmg: 120, ghostSpeed: 5, ghostLife: 200,
+        desc: '招魂引鬼，放出追踪鬼魂扑向敌人，触之即炸',
+    },
+    // ===== 西方魔幻系列武器 =====
+    holySmite: {
+        id: 'holySmite', name: '圣光裁决', role: 'sniper', render: 'holySmite',
+        price: 360, color: '#fef08a', hp: 150, atk: 0, special: 'smite',
+        cooldown: 160, smiteDmg: 200, smiteCount: 3,
+        desc: '圣光从天而降，同时惩戒场上血量最高的3个敌人',
+    },
+    arcaneMissile: {
+        id: 'arcaneMissile', name: '魔法飞弹', role: 'dps', render: 'arcaneMissile',
+        price: 300, color: '#c084fc', hp: 130, atk: 0, special: 'missiles',
+        cooldown: 120, missileDmg: 55, missileCount: 5, missileSpeed: 6, missileLife: 180,
+        desc: '奥术飞弹齐射，5枚魔法弹各自追踪不同敌人',
+    },
+    frostNova: {
+        id: 'frostNova', name: '冰霜新星', role: 'control', render: 'frostNova',
+        price: 280, color: '#67e8f9', hp: 160, atk: 0, special: 'frostNova',
+        cooldown: 300, novaRadius: 220, freezeTime: 200,
+        desc: '蓄能释放冰霜新星，冻结大范围内所有敌人',
+    },
+    meteor: {
+        id: 'meteor', name: '陨石术', role: 'aoe', render: 'meteor',
+        price: 360, color: '#ef4444', hp: 140, atk: 0, special: 'meteor',
+        cooldown: 220, meteorDmg: 400, craterRadius: 160, craterLife: 220,
+        desc: '召唤陨石从天而降，砸出火焰陨坑持续灼烧',
+    },
+    shadowBolt: {
+        id: 'shadowBolt', name: '暗影箭', role: 'control', render: 'shadowBolt',
+        price: 240, color: '#7c3aed', hp: 120, atk: 40, cooldown: 65, projSpeed: 12, proj: 'shadow',
+        curseMult: 1.5, curseTime: 300,
+        desc: '击中后诅咒敌人，使其受到的所有伤害增加50%',
+    },
+    // ===== 古风系列武器 =====
+    needleStorm: {
+        id: 'needleStorm', name: '暴雨梨花针', role: 'aoe', render: 'needleStorm',
+        price: 280, color: '#94a3b8', hp: 130, atk: 0, special: 'needleStorm',
+        cooldown: 90, needleCount: 8, needleDmg: 28, needleSpeed: 10, needleRange: 200,
+        desc: '暗器之王，扇形射出8根毒针覆盖前方一片区域',
+    },
+    meteorHammer: {
+        id: 'meteorHammer', name: '流星锤', role: 'aoe', render: 'meteorHammer',
+        price: 260, color: '#78716c', hp: 160, atk: 0, special: 'meteorHammer',
+        cooldown: 70, hammerDmg: 42, hammerRange: 260,
+        desc: '铁链横扫，本通道260px内所有敌人无一幸免',
+    },
+    fireLance: {
+        id: 'fireLance', name: '火铳', role: 'aoe', render: 'fireLance',
+        price: 320, color: '#dc2626', hp: 110, atk: 160, cooldown: 160, projSpeed: 7, proj: 'splash',
+        splashRadius: 240, desc: '大明火铳，一炮轰去大范围爆炸，威力惊人',
+    },
+    sleeveDart: {
+        id: 'sleeveDart', name: '袖箭', role: 'sniper', render: 'sleeveDart',
+        price: 220, color: '#65a30d', hp: 110, atk: 25, cooldown: 35, projSpeed: 18, proj: 'dart',
+        dartDmg: 12, dartInterval: 8, dartDuration: 400,
+        desc: '淬毒暗器，极速连射，剧毒持续腐蚀敌人',
+    },
+    goldenBow: {
+        id: 'goldenBow', name: '金乌神弓', role: 'dps', render: 'goldenBow',
+        price: 320, color: '#fbbf24', hp: 120, atk: 0, special: 'goldenBow',
+        cooldown: 110, arrowDmg: 55, arrowCount: 3, arrowSpeed: 8, arrowLife: 200,
+        desc: '射日神弓，3支金乌箭追踪不同敌人，例不虚发',
+    },
+    // ===== 现代科技系列武器 =====
+    laserCannon: {
+        id: 'laserCannon', name: '激光炮', role: 'beam', render: 'laserCannon',
+        price: 360, color: '#ef4444', hp: 140, atk: 90, cooldown: 90, projSpeed: 20, proj: 'pierce',
+        desc: '高能激光束贯穿整条通道，一击穿透所有敌人',
+    },
+    emp: {
+        id: 'emp', name: '电磁脉冲', role: 'control', render: 'emp',
+        price: 340, color: '#3b82f6', hp: 150, atk: 0, special: 'emp',
+        cooldown: 260, empDmg: 20, empFreeze: 120,
+        desc: '全屏EMP冲击波，瞬间瘫痪场上所有敌人',
+    },
+    blackHole: {
+        id: 'blackHole', name: '量子黑洞', role: 'aoe', render: 'blackHole',
+        price: 350, color: '#1c1917', hp: 160, atk: 0, special: 'blackHole',
+        cooldown: 200, holeRadius: 180, holeDmg: 20, holeLife: 150, pullForce: 3,
+        desc: '制造引力奇点，将敌人吸入黑洞中心碾压',
+    },
+    nanoSwarm: {
+        id: 'nanoSwarm', name: '纳米蜂群', role: 'aoe', render: 'nanoSwarm',
+        price: 300, color: '#06b6d4', hp: 130, atk: 0, special: 'nanoSwarm',
+        cooldown: 120, nanoDmg: 10, nanoInterval: 10, nanoLife: 300, nanoRadius: 100,
+        desc: '释放纳米机器人追踪敌人，持续分解周围一切',
+    },
+    railgun: {
+        id: 'railgun', name: '轨道炮', role: 'sniper', render: 'railgun',
+        price: 380, color: '#22d3ee', hp: 120, atk: 220, cooldown: 180, projSpeed: 30, proj: 'pierce',
+        desc: '电磁轨道加速，超高速弹丸一击贯穿整个战场',
+    },
 };
 
 // ===== 敌人定义（蜥蜴用像素帧，其余手绘矢量）=====

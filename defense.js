@@ -78,6 +78,26 @@ function drawTurret(c, type, x, y, size, opts = {}) {
         case 'onion': drawOnion(c, s, atk); break;
         case 'spikeburst': drawSpikeBurst(c, s, atk); break;
         case 'lemon': drawLemon(c, s, atk); break;
+        case 'flyingSword': drawFlyingSword(c, s, atk); break;
+        case 'thunder': drawThunder(c, s, opts.frame || 0); break;
+        case 'bagua': drawBagua(c, s, opts.frame || 0); break;
+        case 'talisman': drawTalismanTurret(c, s, atk); break;
+        case 'soulBanner': drawSoulBanner(c, s, opts.frame || 0); break;
+        case 'holySmite': drawHolySmite(c, s, opts.frame || 0); break;
+        case 'arcaneMissile': drawArcaneMissile(c, s, opts.frame || 0); break;
+        case 'frostNova': drawFrostNovaTurret(c, s, opts.frame || 0); break;
+        case 'meteor': drawMeteorTurret(c, s, opts.frame || 0); break;
+        case 'shadowBolt': drawShadowBoltTurret(c, s, atk); break;
+        case 'needleStorm': drawNeedleStorm(c, s, atk); break;
+        case 'meteorHammer': drawMeteorHammer(c, s, opts.frame || 0); break;
+        case 'fireLance': drawFireLanceTurret(c, s, atk); break;
+        case 'sleeveDart': drawSleeveDart(c, s, atk); break;
+        case 'goldenBow': drawGoldenBow(c, s, opts.frame || 0); break;
+        case 'laserCannon': drawLaserCannon(c, s, atk); break;
+        case 'emp': drawEMP(c, s, opts.frame || 0); break;
+        case 'blackHole': drawBlackHole(c, s, opts.frame || 0); break;
+        case 'nanoSwarm': drawNanoSwarm(c, s, opts.frame || 0); break;
+        case 'railgun': drawRailgun(c, s, atk); break;
     }
     c.restore();
 }
@@ -730,6 +750,338 @@ function drawLemon(c, s, atk) {
         c.fillStyle = '#fef08a'; c.globalAlpha = 0.6;
         c.beginPath(); c.arc(0, -s * 0.38, s * 0.03, 0, 7); c.fill(); c.globalAlpha = 1;
     }
+}
+
+function drawFlyingSword(c, s, atk) {
+    drawBase(c, s, '#1e3a5f', '#0f172a');
+    // 剑鞘/底座
+    c.fillStyle = '#334155'; roundRectPath(c, -s * 0.04, -s * 0.22, s * 0.08, s * 0.28, s * 0.02); c.fill();
+    // 剑身（浮在底座上方）
+    const floatY = atk ? 0 : Math.sin((Date.now() || 0) * 0.004) * s * 0.04;
+    c.save(); c.translate(0, -s * 0.3 + floatY);
+    c.fillStyle = '#e0f2fe'; c.strokeStyle = '#38bdf8'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(0, -s * 0.22); c.lineTo(-s * 0.04, s * 0.14); c.lineTo(0, s * 0.1); c.lineTo(s * 0.04, s * 0.14); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#bae6fd'; c.beginPath(); c.moveTo(-s * 0.015, s * 0.1); c.lineTo(0, -s * 0.18); c.lineTo(s * 0.015, s * 0.1); c.fill();
+    c.strokeStyle = '#7dd3fc'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, -s * 0.2); c.lineTo(0, s * 0.08); c.stroke();
+    // 剑柄
+    c.fillStyle = '#fbbf24'; c.strokeStyle = '#b45309'; c.lineWidth = 1;
+    roundRectPath(c, -s * 0.03, s * 0.12, s * 0.06, s * 0.06, 1); c.fill(); c.stroke();
+    c.restore();
+}
+function drawThunder(c, s, frame) {
+    drawBase(c, s, '#713f12', '#422006');
+    // 符纸
+    c.fillStyle = '#fef3c7'; c.strokeStyle = '#d97706'; c.lineWidth = 2;
+    roundRectPath(c, -s * 0.22, -s * 0.34, s * 0.44, s * 0.52, s * 0.04); c.fill(); c.stroke();
+    // 雷字
+    c.fillStyle = '#b91c1c'; c.font = `bold ${s * 0.25}px serif`; c.textAlign = 'center';
+    c.fillText('雷', 0, -s * 0.04);
+    // 符文边框纹
+    c.strokeStyle = '#d97706'; c.lineWidth = 1;
+    roundRectPath(c, -s * 0.18, -s * 0.3, s * 0.36, s * 0.44, s * 0.02); c.stroke();
+    // 顶部电弧
+    const arc = 0.5 + 0.5 * Math.sin(frame * 0.15);
+    c.strokeStyle = '#fde047'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(-s * 0.06, -s * 0.38); c.lineTo(s * 0.02, -s * 0.44); c.lineTo(s * 0.06, -s * 0.46); c.stroke();
+    if (arc > 0.7) { c.fillStyle = '#fef08a'; c.beginPath(); c.arc(s * 0.06, -s * 0.46, s * 0.03, 0, 7); c.fill(); }
+}
+function drawBagua(c, s, frame) {
+    drawBase(c, s, '#134e4a', '#042f2e');
+    const rot = frame * 0.04;
+    // 外圈
+    c.strokeStyle = '#2dd4bf'; c.lineWidth = 3;
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.36, 0, Math.PI * 2); c.stroke();
+    // 八卦纹
+    c.save(); c.translate(0, -s * 0.02); c.rotate(rot);
+    for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        c.strokeStyle = i % 2 ? '#5eead4' : '#fde047'; c.lineWidth = 2;
+        const x1 = Math.cos(a) * s * 0.28, y1 = Math.sin(a) * s * 0.28;
+        const x2 = Math.cos(a) * s * 0.34, y2 = Math.sin(a) * s * 0.34;
+        const mx = Math.cos(a + 0.2) * s * 0.31, my = Math.sin(a + 0.2) * s * 0.31;
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(mx, my); c.lineTo(x2, y2); c.stroke();
+    }
+    c.restore();
+    // 中心太极图
+    c.fillStyle = '#0d9488'; c.beginPath(); c.arc(0, -s * 0.02, s * 0.15, 0, Math.PI * 2); c.fill();
+    const tRot = rot * 1.5;
+    c.save(); c.translate(0, -s * 0.02); c.rotate(tRot);
+    c.fillStyle = '#ccfbf1'; c.beginPath(); c.arc(0, 0, s * 0.12, 0, Math.PI, true); c.fill();
+    c.fillStyle = '#0f766e'; c.beginPath(); c.arc(0, 0, s * 0.12, 0, Math.PI, false); c.fill();
+    c.fillStyle = '#0f766e'; c.beginPath(); c.arc(0, -s * 0.05, s * 0.025, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#ccfbf1'; c.beginPath(); c.arc(0, s * 0.05, s * 0.025, 0, Math.PI * 2); c.fill();
+    c.restore();
+    // 脉动光环
+    const pulse = 0.3 + 0.2 * Math.sin(frame * 0.12);
+    c.strokeStyle = `rgba(45,212,191,${pulse})`; c.lineWidth = 2;
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.4, 0, Math.PI * 2); c.stroke();
+}
+function drawTalismanTurret(c, s, atk) {
+    drawBase(c, s, '#713f12', '#422006');
+    // 符纸堆
+    c.fillStyle = '#fef3c7'; c.strokeStyle = '#d97706'; c.lineWidth = 1.5;
+    roundRectPath(c, -s * 0.24, s * 0.02, s * 0.48, s * 0.16, s * 0.03); c.fill(); c.stroke();
+    roundRectPath(c, -s * 0.2, -s * 0.08, s * 0.4, s * 0.18, s * 0.03); c.fill(); c.stroke();
+    // 顶上一张符
+    c.fillStyle = '#fef3c7'; c.strokeStyle = '#b45309'; c.lineWidth = 1.5;
+    roundRectPath(c, -s * 0.14, -s * 0.34, s * 0.28, s * 0.34, s * 0.03); c.fill(); c.stroke();
+    // 定字
+    c.fillStyle = '#dc2626'; c.font = `bold ${s * 0.18}px serif`; c.textAlign = 'center';
+    c.fillText('定', 0, -s * 0.1);
+    // 攻击时符纸发光
+    if (atk) { c.fillStyle = 'rgba(253,224,71,0.5)'; c.beginPath(); c.arc(0, -s * 0.34, s * 0.1, 0, 7); c.fill(); }
+}
+function drawSoulBanner(c, s, frame) {
+    drawBase(c, s, '#3b0764', '#1e1b4b');
+    // 幡杆
+    c.strokeStyle = '#78716c'; c.lineWidth = s * 0.04; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, s * 0.24); c.lineTo(0, -s * 0.34); c.stroke(); c.lineCap = 'butt';
+    // 幡旗
+    c.fillStyle = '#4c1d95'; c.strokeStyle = '#7c3aed'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, -s * 0.32); c.quadraticCurveTo(s * 0.28, -s * 0.16, s * 0.12, s * 0.04);
+    c.lineTo(0, s * 0.02); c.closePath(); c.fill(); c.stroke();
+    // 魂字
+    c.fillStyle = '#d8b4fe'; c.font = `bold ${s * 0.16}px serif`; c.textAlign = 'center';
+    c.fillText('魂', s * 0.06, -s * 0.08);
+    // 飘出鬼魂
+    const ghostX = Math.sin(frame * 0.1) * s * 0.12;
+    const ghostY = -s * 0.36 + Math.sin(frame * 0.15) * s * 0.06;
+    c.fillStyle = 'rgba(167,139,250,0.7)'; c.beginPath(); c.arc(s * 0.05 + ghostX, ghostY, s * 0.06, 0, 7); c.fill();
+    c.fillStyle = 'rgba(233,213,255,0.5)'; c.beginPath(); c.arc(s * 0.08 + ghostX, ghostY - s * 0.02, s * 0.03, 0, 7); c.fill();
+}
+
+function drawHolySmite(c, s, frame) {
+    drawBase(c, s, '#92400e', '#451a03');
+    const pulse = 0.5 + 0.5 * Math.sin(frame * 0.1);
+    // 圣光十字
+    c.fillStyle = '#fef08a'; c.strokeStyle = '#f59e0b'; c.lineWidth = 2.5;
+    c.beginPath(); c.rect(-s * 0.06, -s * 0.36, s * 0.12, s * 0.48); c.fill(); c.stroke();
+    c.beginPath(); c.rect(-s * 0.24, -s * 0.22, s * 0.48, s * 0.12); c.fill(); c.stroke();
+    c.fillStyle = '#fff'; c.beginPath(); c.rect(-s * 0.04, -s * 0.32, s * 0.08, s * 0.4); c.fill();
+    c.beginPath(); c.rect(-s * 0.2, -s * 0.2, s * 0.4, s * 0.08); c.fill();
+    // 光晕
+    c.globalAlpha = pulse * 0.4; c.fillStyle = '#fef08a';
+    c.beginPath(); c.arc(0, -s * 0.1, s * 0.3, 0, 7); c.fill(); c.globalAlpha = 1;
+}
+function drawArcaneMissile(c, s, frame) {
+    drawBase(c, s, '#3b0764', '#1e1b4b');
+    // 魔法书 / 符文台
+    c.fillStyle = '#4c1d95'; c.strokeStyle = '#8b5cf6'; c.lineWidth = 2;
+    roundRectPath(c, -s * 0.28, -s * 0.16, s * 0.56, s * 0.32, s * 0.05); c.fill(); c.stroke();
+    // 奥术符文
+    c.strokeStyle = '#c084fc'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(0, -s * 0.1); c.lineTo(s * 0.08, s * 0.06); c.lineTo(-s * 0.08, s * 0.06); c.closePath(); c.stroke();
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.04, 0, Math.PI * 2); c.stroke();
+    // 漂浮飞弹
+    const t = frame * 0.1;
+    for (let i = 0; i < 3; i++) {
+        const a = t + i * 2.1;
+        const px = Math.cos(a) * s * 0.2, py = -s * 0.3 + Math.sin(a * 1.5) * s * 0.06;
+        c.fillStyle = '#c084fc'; c.beginPath(); c.arc(px, py, s * 0.035, 0, 7); c.fill();
+        c.fillStyle = '#e9d5ff'; c.beginPath(); c.arc(px, py, s * 0.02, 0, 7); c.fill();
+    }
+}
+function drawFrostNovaTurret(c, s, frame) {
+    drawBase(c, s, '#0c4a6e', '#082f49');
+    // 冰晶核心
+    const g = c.createRadialGradient(0, -s * 0.05, 2, 0, -s * 0.05, s * 0.3);
+    g.addColorStop(0, '#e0f2fe'); g.addColorStop(0.4, '#38bdf8'); g.addColorStop(1, '#0369a1');
+    c.fillStyle = g; c.strokeStyle = '#bae6fd'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(0, -s * 0.36); c.lineTo(s * 0.22, -s * 0.02); c.lineTo(0, s * 0.22); c.lineTo(-s * 0.22, -s * 0.02); c.closePath(); c.fill(); c.stroke();
+    // 冰霜光辉
+    const glow = 0.3 + 0.2 * Math.sin(frame * 0.08);
+    c.globalAlpha = glow; c.strokeStyle = '#7dd3fc'; c.lineWidth = 3;
+    c.beginPath(); c.arc(0, -s * 0.06, s * 0.34, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
+}
+function drawMeteorTurret(c, s, frame) {
+    drawBase(c, s, '#7c2d12', '#431407');
+    // 陨石球
+    const g = c.createRadialGradient(-s * 0.04, -s * 0.08, 2, 0, s * 0.02, s * 0.36);
+    g.addColorStop(0, '#d6d3d1'); g.addColorStop(0.3, '#78716c'); g.addColorStop(0.7, '#44403c'); g.addColorStop(1, '#1c1917');
+    c.fillStyle = g; c.strokeStyle = '#57534e'; c.lineWidth = 2;
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.32, 0, Math.PI * 2); c.fill(); c.stroke();
+    // 陨石坑纹理
+    c.strokeStyle = '#292524'; c.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+        c.beginPath(); c.arc(-s * 0.08 + i * s * 0.06, -s * 0.05 + i * s * 0.03, s * 0.04, 0, Math.PI * 2); c.stroke();
+    }
+    // 发光裂纹
+    c.strokeStyle = `rgba(239,68,68,${0.3 + 0.2 * Math.sin(frame * 0.1)})`; c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(-s * 0.12, -s * 0.22); c.lineTo(-s * 0.04, -s * 0.1); c.lineTo(-s * 0.1, s * 0.08); c.stroke();
+    c.beginPath(); c.moveTo(s * 0.1, -s * 0.18); c.lineTo(s * 0.02, -s * 0.02); c.lineTo(s * 0.14, s * 0.14); c.stroke();
+}
+function drawShadowBoltTurret(c, s, atk) {
+    drawBase(c, s, '#2e1065', '#1c1917');
+    // 暗影法杖
+    c.fillStyle = '#4c1d95'; c.strokeStyle = '#7c3aed'; c.lineWidth = 1.5;
+    roundRectPath(c, -s * 0.06, -s * 0.2, s * 0.12, s * 0.3, s * 0.03); c.fill(); c.stroke();
+    // 暗影球
+    const g = c.createRadialGradient(0, -s * 0.3, 2, 0, -s * 0.3, s * 0.16);
+    g.addColorStop(0, '#c084fc'); g.addColorStop(1, '#3b0764');
+    c.fillStyle = g; c.strokeStyle = '#a855f7'; c.lineWidth = 2;
+    c.beginPath(); c.arc(0, -s * 0.3, s * 0.14 * (atk ? 1.2 : 1), 0, 7); c.fill(); c.stroke();
+    // 暗影光环
+    c.globalAlpha = 0.3 + 0.15 * Math.sin((Date.now() || 0) * 0.01);
+    c.strokeStyle = '#8b5cf6'; c.lineWidth = 2; c.beginPath(); c.arc(0, -s * 0.3, s * 0.2, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
+}
+function drawNeedleStorm(c, s, atk) {
+    drawBase(c, s, '#292524', '#1c1917');
+    c.fillStyle = '#44403c'; c.strokeStyle = '#78716c'; c.lineWidth = 1.5;
+    roundRectPath(c, -s * 0.16, -s * 0.1, s * 0.32, s * 0.24, s * 0.04); c.fill(); c.stroke();
+    // 扇形排列的针
+    const spread = atk ? -0.6 : -0.3;
+    for (let i = 0; i < 7; i++) {
+        const a = spread + i * 0.18;
+        const tipX = Math.cos(a) * s * 0.32, tipY = -s * 0.2 + Math.sin(a) * s * 0.22;
+        c.strokeStyle = '#cbd5e1'; c.lineWidth = 1.2; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(0, -s * 0.16); c.lineTo(tipX, tipY); c.stroke();
+        c.fillStyle = '#e2e8f0'; c.beginPath(); c.arc(tipX, tipY, 1.5, 0, 7); c.fill();
+    }
+    c.lineCap = 'butt';
+}
+function drawMeteorHammer(c, s, frame) {
+    drawBase(c, s, '#44403c', '#292524');
+    const swing = Math.sin(frame * 0.2) * s * 0.12;
+    // 铁链
+    c.strokeStyle = '#78716c'; c.lineWidth = s * 0.04; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, s * 0.05); c.quadraticCurveTo(s * 0.2 + swing, -s * 0.1, s * 0.15 + swing, -s * 0.3); c.stroke();
+    // 锤头
+    c.fillStyle = '#57534e'; c.strokeStyle = '#44403c'; c.lineWidth = 2;
+    c.beginPath(); c.arc(s * 0.15 + swing, -s * 0.3, s * 0.15, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = '#78716c'; c.beginPath(); c.arc(s * 0.17 + swing, -s * 0.32, s * 0.04, 0, 7); c.fill();
+    // 突刺
+    for (let i = 0; i < 6; i++) {
+        const a = i * Math.PI / 3;
+        const px = s * 0.15 + swing + Math.cos(a) * s * 0.12;
+        const py = -s * 0.3 + Math.sin(a) * s * 0.12;
+        c.strokeStyle = '#a8a29e'; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(s * 0.15 + swing + Math.cos(a) * s * 0.06, -s * 0.3 + Math.sin(a) * s * 0.06);
+        c.lineTo(px, py); c.stroke();
+    }
+    c.lineCap = 'butt';
+}
+function drawFireLanceTurret(c, s, atk) {
+    drawBase(c, s, '#7c2d12', '#431407');
+    c.fillStyle = '#78350f'; c.strokeStyle = '#9a3412'; c.lineWidth = 2;
+    roundRectPath(c, -s * 0.1, -s * 0.1, s * 0.2, s * 0.44, s * 0.05); c.fill(); c.stroke();
+    // 铳口
+    c.fillStyle = '#451a03'; c.beginPath(); c.arc(0, -s * 0.3, s * 0.14, 0, 7); c.fill();
+    c.fillStyle = atk ? '#fbbf24' : '#7c2d12'; c.beginPath(); c.arc(0, -s * 0.3, s * 0.08, 0, 7); c.fill();
+    if (atk) { c.fillStyle = 'rgba(253,224,71,0.6)'; c.beginPath(); c.arc(0, -s * 0.45, s * 0.12, 0, 7); c.fill(); }
+    // 引线孔
+    c.fillStyle = '#1c1917'; c.beginPath(); c.arc(s * 0.06, s * 0.1, s * 0.025, 0, 7); c.fill();
+}
+function drawSleeveDart(c, s, atk) {
+    drawBase(c, s, '#1a2e05', '#0f172a');
+    c.fillStyle = '#292524'; roundRectPath(c, -s * 0.1, -s * 0.08, s * 0.2, s * 0.3, s * 0.04); c.fill();
+    // 三支毒镖
+    for (let i = -1; i <= 1; i++) {
+        const dx = i * s * 0.1, dy = -s * 0.2 + Math.abs(i) * s * 0.06;
+        c.strokeStyle = '#a3e635'; c.lineWidth = s * 0.03; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(dx, dy + s * 0.06); c.lineTo(dx, dy - s * 0.06); c.stroke();
+        c.fillStyle = '#84cc16'; c.beginPath(); c.moveTo(dx, dy - s * 0.06); c.lineTo(dx - s * 0.03, dy - s * 0.01); c.lineTo(dx + s * 0.03, dy - s * 0.01); c.fill();
+    }
+    c.lineCap = 'butt';
+    if (atk) { c.fillStyle = 'rgba(163,230,53,0.5)'; c.beginPath(); c.arc(0, -s * 0.36, s * 0.05, 0, 7); c.fill(); }
+}
+function drawGoldenBow(c, s, frame) {
+    drawBase(c, s, '#92400e', '#451a03');
+    // 弓身
+    c.strokeStyle = '#fbbf24'; c.lineWidth = s * 0.05; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-s * 0.26, s * 0.14); c.quadraticCurveTo(0, -s * 0.36, s * 0.26, s * 0.14); c.stroke();
+    // 弓弦
+    c.strokeStyle = '#fef3c7'; c.lineWidth = s * 0.018;
+    c.beginPath(); c.moveTo(-s * 0.3, s * 0.1); c.lineTo(s * 0.3, s * 0.1); c.stroke();
+    c.lineCap = 'butt';
+    // 三支金箭
+    const pull = 0.7 + 0.3 * Math.sin(frame * 0.15);
+    for (let i = -1; i <= 1; i++) {
+        const sy = s * 0.1 + i * s * 0.04;
+        const tx = i * s * 0.06, ty = -s * 0.2 + i * s * 0.02;
+        c.strokeStyle = '#fde047'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(tx, ty + s * 0.1); c.lineTo(tx, ty); c.stroke();
+        c.fillStyle = '#fef08a'; c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx - s * 0.02, ty + s * 0.04); c.lineTo(tx + s * 0.02, ty + s * 0.04); c.fill();
+    }
+}
+
+function drawLaserCannon(c, s, atk) {
+    drawBase(c, s, '#450a0a', '#1c1917');
+    c.fillStyle = '#78350f'; roundRectPath(c, -s * 0.1, -s * 0.05, s * 0.2, s * 0.4, s * 0.06); c.fill();
+    // 激光发射口
+    c.fillStyle = atk ? '#fff' : '#dc2626';
+    c.beginPath(); c.arc(0, -s * 0.3, s * 0.1, 0, 7); c.fill();
+    c.fillStyle = '#ef4444'; c.beginPath(); c.arc(0, -s * 0.3, s * 0.06, 0, 7); c.fill();
+    // 蓄能光环
+    c.strokeStyle = `rgba(239,68,68,${0.3 + 0.2 * Math.sin((Date.now()||0)*0.02)})`; c.lineWidth = 2;
+    c.beginPath(); c.arc(0, -s * 0.3, s * 0.16, 0, Math.PI * 2); c.stroke();
+    // 冷却管
+    c.strokeStyle = '#64748b'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(-s * 0.2, s * 0.1); c.lineTo(-s * 0.28, s * 0.2); c.moveTo(s * 0.2, s * 0.1); c.lineTo(s * 0.28, s * 0.2); c.stroke();
+}
+function drawEMP(c, s, frame) {
+    drawBase(c, s, '#1e3a5f', '#0f172a');
+    // 电磁线圈
+    c.strokeStyle = '#3b82f6'; c.lineWidth = 3;
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.28, 0, Math.PI); c.stroke();
+    c.strokeStyle = '#60a5fa'; c.lineWidth = 2;
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.2, Math.PI, Math.PI * 1.5); c.stroke();
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.2, Math.PI * 1.5, 0); c.stroke();
+    // 中心电球
+    const g = c.createRadialGradient(0, -s * 0.02, 2, 0, -s * 0.02, s * 0.18);
+    g.addColorStop(0, '#eff6ff'); g.addColorStop(0.5, '#3b82f6'); g.addColorStop(1, '#1e3a5f');
+    c.fillStyle = g; c.beginPath(); c.arc(0, -s * 0.02, s * 0.16, 0, 7); c.fill();
+    // 电火花
+    for (let i = 0; i < 4; i++) {
+        const a = frame * 0.3 + i * 1.6;
+        c.strokeStyle = '#93c5fd'; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(0, -s * 0.02); c.lineTo(Math.cos(a) * s * 0.22, -s * 0.02 + Math.sin(a) * s * 0.22); c.stroke();
+    }
+}
+function drawBlackHole(c, s, frame) {
+    drawBase(c, s, '#0f172a', '#020617');
+    // 黑洞视界
+    c.fillStyle = '#020617'; c.strokeStyle = '#1e293b'; c.lineWidth = 3;
+    c.beginPath(); c.arc(0, -s * 0.02, s * 0.22, 0, Math.PI * 2); c.fill(); c.stroke();
+    // 吸积盘
+    c.strokeStyle = '#a855f7'; c.lineWidth = 2;
+    c.beginPath(); c.ellipse(0, -s * 0.02, s * 0.3, s * 0.08, frame * 0.05, 0, Math.PI * 2); c.stroke();
+    c.strokeStyle = '#c084fc'; c.lineWidth = 1; c.globalAlpha = 0.5;
+    c.beginPath(); c.ellipse(0, -s * 0.02, s * 0.34, s * 0.1, -frame * 0.03, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
+    // 奇点辉光
+    const g = c.createRadialGradient(0, -s * 0.02, 2, 0, -s * 0.02, s * 0.16);
+    g.addColorStop(0, '#c084fc'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, -s * 0.02, s * 0.18, 0, 7); c.fill();
+}
+function drawNanoSwarm(c, s, frame) {
+    drawBase(c, s, '#164e63', '#042f2e');
+    // 发射舱
+    c.fillStyle = '#155e75'; c.strokeStyle = '#06b6d4'; c.lineWidth = 2;
+    roundRectPath(c, -s * 0.16, -s * 0.04, s * 0.32, s * 0.22, s * 0.05); c.fill(); c.stroke();
+    // 管线
+    c.strokeStyle = '#22d3ee'; c.lineWidth = 1;
+    for (let i = 0; i < 3; i++) c.beginPath(), c.moveTo(-s * 0.1 + i * s * 0.1, s * 0.06), c.lineTo(-s * 0.1 + i * s * 0.1, s * 0.2), c.stroke();
+    // 纳米粒子云雾
+    for (let i = 0; i < 8; i++) {
+        const a = frame * 0.1 + i * 0.8, rr = s * 0.14 + Math.sin(frame * 0.15 + i) * s * 0.04;
+        const px = Math.cos(a) * rr, py = -s * 0.22 + Math.sin(a * 1.3) * rr * 0.5;
+        c.fillStyle = '#67e8f9'; c.globalAlpha = 0.5 + 0.3 * Math.sin(frame * 0.2 + i);
+        c.beginPath(); c.arc(px, py, 1.5 + Math.sin(frame * 0.1 + i) * 0.5, 0, 7); c.fill();
+        c.globalAlpha = 1;
+    }
+}
+function drawRailgun(c, s, atk) {
+    drawBase(c, s, '#1e293b', '#0f172a');
+    // 双轨
+    c.strokeStyle = '#64748b'; c.lineWidth = s * 0.04; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-s * 0.14, -s * 0.1); c.lineTo(-s * 0.14, -s * 0.42); c.stroke();
+    c.beginPath(); c.moveTo(s * 0.14, -s * 0.1); c.lineTo(s * 0.14, -s * 0.42); c.stroke();
+    // 电磁弧
+    for (let i = 0; i < 4; i++) {
+        const yy = -s * 0.12 - i * s * 0.08;
+        c.strokeStyle = i % 2 ? '#22d3ee' : '#3b82f6'; c.lineWidth = 1.5;
+        c.beginPath(); c.moveTo(-s * 0.14, yy); c.lineTo(s * 0.14, yy); c.stroke();
+    }
+    c.lineCap = 'butt';
+    if (atk) { c.fillStyle = 'rgba(34,211,238,0.6)'; c.beginPath(); c.arc(0, -s * 0.44, s * 0.08, 0, 7); c.fill(); }
 }
 
 function makeIcon(id, px = 54) {
@@ -1476,6 +1828,17 @@ function updateClouds() {
     for (let i = G.clouds.length - 1; i >= 0; i--) {
         const cl = G.clouds[i];
         cl.life--;
+        if (cl.gravity) {
+            // 引力拉扯
+            for (const e of G.enemies) {
+                const dx = cl.x - e.x, dy = cl.y - e.y;
+                const d = Math.hypot(dx, dy) || 1;
+                if (d < cl.r) {
+                    e.x += (dx / d) * (cl.pullForce || 3);
+                    e.y += (dy / d) * (cl.pullForce || 3);
+                }
+            }
+        }
         if (cl.tick-- <= 0) {
             cl.tick = 18;
             for (const e of G.enemies) if (Math.hypot(e.x - cl.x, e.y - cl.y) < cl.r) damageEnemy(e, cl.dmg);
@@ -1521,6 +1884,19 @@ function updateUnits() {
         if (sp === 'crossbomb') { crossbombTick(u, w, key); continue; }
         if (sp === 'convert') { convertTick(u, w); continue; }
         if (sp === 'ring') { ringTick(u, w); continue; }
+        if (sp === 'thunder') { thunderTick(u, w); continue; }
+        if (sp === 'bagua') { baguaTick(u, w); continue; }
+        if (sp === 'soulBanner') { soulBannerTick(u, w); continue; }
+        if (sp === 'smite') { smiteTick(u, w); continue; }
+        if (sp === 'missiles') { missilesTick(u, w); continue; }
+        if (sp === 'frostNova') { frostNovaTick(u, w); continue; }
+        if (sp === 'meteor') { meteorTick(u, w); continue; }
+        if (sp === 'needleStorm') { needleStormTick(u, w); continue; }
+        if (sp === 'meteorHammer') { meteorHammerTick(u, w); continue; }
+        if (sp === 'goldenBow') { goldenBowTick(u, w); continue; }
+        if (sp === 'emp') { empTick(u, w); continue; }
+        if (sp === 'blackHole') { blackHoleTick(u, w); continue; }
+        if (sp === 'nanoSwarm') { nanoSwarmTick(u, w); continue; }
         if (!u.atk) continue;   // 石墙等纯肉盾
         if (w.doubleDir) {       // 双头炮：前后两个方向
             if (u.cd <= 0 && (findTargetInLane(u.lane, u.y) || findTargetBelowInLane(u.lane, u.y))) {
@@ -1734,6 +2110,226 @@ function ringTick(u, w) {
         r: 14, free: true, wanderTime: w.wanderTime, shrinkTime: w.shrinkTime, target: null,
     });
 }
+// 天雷符：随机轰击场上任意敌人
+function thunderTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 16;
+    const target = G.enemies[Math.floor(Math.random() * G.enemies.length)];
+    // 天雷从天空劈下
+    for (let yy = 0; yy < target.y; yy += 8) {
+        if (Math.random() > 0.5) G.particles.push({ x: target.x + (Math.random() - 0.5) * 10, y: yy, vx: 0, vy: 0, life: 8 + Math.random() * 6, color: '#fef08a', size: 3 + Math.random() * 4 });
+    }
+    G.particles.push({ x: target.x, y: target.y, vx: 0, vy: 0, life: 24, max: 24, color: '#fff', size: 60, fireball: true });
+    G.particles.push({ x: target.x, y: target.y, vx: 0, vy: 0, life: 32, max: 32, color: '#fde047', size: 80, ring: true });
+    for (let i = 0; i < 30; i++) {
+        const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 6;
+        G.particles.push({ x: target.x, y: target.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 20 + Math.random() * 18, color: i % 2 ? '#fef08a' : '#fde047', size: 3 + Math.random() * 5 });
+    }
+    damageEnemy(target, w.thunderDmg);
+    G.flash = Math.max(G.flash, 0.6); G.shake = Math.max(G.shake, 12);
+}
+// 八卦阵：周期性震荡四周
+function baguaTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    let hit = false;
+    for (const e of G.enemies) {
+        if (Math.hypot(e.x - u.x, e.y - u.y) < w.pulseRadius) {
+            damageEnemy(e, w.pulseDmg);
+            hit = true;
+        }
+    }
+    if (hit) {
+        u.cd = w.cooldown; u.attacking = 10;
+        G.particles.push({ x: u.x, y: u.y, vx: 0, vy: 0, life: 20, max: 20, color: '#2dd4bf', size: w.pulseRadius, ring: true });
+        G.particles.push({ x: u.x, y: u.y, vx: 0, vy: 0, life: 28, max: 28, color: '#5eead4', size: w.pulseRadius * 1.2, ring: true });
+        for (let i = 0; i < 12; i++) {
+            const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 3;
+            G.particles.push({ x: u.x, y: u.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 16 + Math.random() * 10, color: '#ccfbf1', size: 3 + Math.random() * 3 });
+        }
+    }
+}
+// 引魂幡：放出追踪鬼魂
+function soulBannerTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 12;
+    G.projectiles.push({
+        kind: 'ghost', x: u.x - cellSize * 0.3, y: u.y - cellSize * 0.5,
+        vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2,
+        r: 12, free: true, ghostLife: w.ghostLife, ghostDmg: w.ghostDmg, ghostSpeed: w.ghostSpeed,
+        target: null, color: '#a855f7',
+    });
+}
+// 圣光裁决：同时打击场上血量最高的N个敌人
+function smiteTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 18;
+    const sorted = [...G.enemies].sort((a, b) => b.maxHp - a.maxHp);
+    const targets = sorted.slice(0, w.smiteCount);
+    targets.forEach(t => {
+        // 圣光从天而降
+        for (let yy = 0; yy < t.y; yy += 6) {
+            G.particles.push({ x: t.x, y: yy, vx: 0, vy: 0, life: 10, color: '#fef08a', size: 3 + Math.random() * 3 });
+        }
+        G.particles.push({ x: t.x, y: t.y, vx: 0, vy: 0, life: 26, max: 26, color: '#fff', size: 50, fireball: true });
+        G.particles.push({ x: t.x, y: t.y, vx: 0, vy: 0, life: 34, max: 34, color: '#fef08a', size: 70, ring: true });
+        for (let i = 0; i < 25; i++) {
+            const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 5;
+            G.particles.push({ x: t.x, y: t.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 20 + Math.random() * 15, color: i % 2 ? '#fef08a' : '#fff', size: 3 + Math.random() * 4 });
+        }
+        damageEnemy(t, w.smiteDmg);
+    });
+    G.flash = Math.max(G.flash, 0.5); G.shake = Math.max(G.shake, 10);
+}
+// 魔法飞弹：一次发射5枚追踪不同敌人
+function missilesTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 14;
+    const chosen = new Set();
+    for (let i = 0; i < w.missileCount; i++) {
+        let target = null;
+        for (const e of G.enemies) { if (!chosen.has(e)) { target = e; break; } }
+        if (!target && G.enemies.length) target = G.enemies[Math.floor(Math.random() * G.enemies.length)];
+        if (target) {
+            chosen.add(target);
+            G.projectiles.push({
+                kind: 'missile', x: u.x + (Math.random() - 0.5) * cellSize, y: u.y - cellSize * 0.5,
+                vx: (Math.random() - 0.5) * 3, vy: -2, r: 8, free: true,
+                missileDmg: w.missileDmg, missileSpeed: w.missileSpeed, missileLife: w.missileLife,
+                target, color: '#c084fc',
+            });
+        }
+    }
+}
+// 冰霜新星：冻结大范围敌人
+function frostNovaTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    let hit = false;
+    for (const e of G.enemies) {
+        if (Math.hypot(e.x - u.x, e.y - u.y) < w.novaRadius) {
+            if (!e.frozen) { e.frozen = true; e.frozenTimer = w.freezeTime; e.slowFactor = 0; e.slowTimer = 9999; }
+            hit = true;
+        }
+    }
+    if (hit) {
+        u.cd = w.cooldown; u.attacking = 20;
+        freezeBurst(u.x, u.y, w.novaRadius);
+    }
+}
+// 陨石术：召唤陨石砸在随机位置
+function meteorTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 22;
+    const target = G.enemies[Math.floor(Math.random() * G.enemies.length)];
+    const tx = target.x + (Math.random() - 0.5) * cellSize * 2;
+    const ty = target.y;
+    // 陨石坠落轨迹
+    for (let yy = 0; yy < ty; yy += 4) {
+        G.particles.push({ x: tx + (Math.random() - 0.5) * 20, y: yy, vx: 0, vy: 0, life: 10 + Math.random() * 6, color: '#f97316', size: 3 + Math.random() * 5 });
+    }
+    // 落地爆炸
+    bigExplosion(tx, ty, w.craterRadius, '#ef4444');
+    // 火焰陨坑
+    G.clouds.push({ x: tx, y: ty, r: w.craterRadius, dmg: 12, life: w.craterLife, tick: 0, fire: true });
+    for (const e of G.enemies) {
+        if (Math.hypot(e.x - tx, e.y - ty) < w.craterRadius) damageEnemy(e, w.meteorDmg);
+    }
+    G.flash = Math.max(G.flash, 0.9); G.shake = Math.max(G.shake, 18);
+}
+// 暴雨梨花针：扇形射出8根毒针
+function needleStormTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    u.cd = w.cooldown; u.attacking = 10;
+    for (let i = 0; i < w.needleCount; i++) {
+        const a = -Math.PI / 2 + (i - (w.needleCount - 1) / 2) * 0.18;
+        G.projectiles.push({
+            kind: 'needle', x: u.x, y: u.y - cellSize * 0.4,
+            vx: Math.cos(a) * w.needleSpeed, vy: Math.sin(a) * w.needleSpeed,
+            dmg: w.needleDmg, color: '#94a3b8', r: 3, free: true,
+            range: w.needleRange, traveled: 0, hitSet: new Set(),
+        });
+    }
+}
+// 流星锤：横扫本通道范围内所有敌人
+function meteorHammerTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    let hit = false;
+    for (const e of G.enemies) {
+        if (e.lane === u.lane && e.y < u.y + cellSize * 0.5 && Math.abs(e.y - u.y) < w.hammerRange) {
+            damageEnemy(e, w.hammerDmg); hit = true;
+            spawnParticles(e.x, e.y, '#78716c', 3);
+        }
+    }
+    if (hit) {
+        u.cd = w.cooldown; u.attacking = 12;
+        // 铁链横扫轨迹
+        for (let yy = u.y; yy > 0; yy -= cellSize * 0.15) {
+            G.particles.push({ x: u.x + (Math.random() - 0.5) * colW * 0.6, y: yy, vx: (Math.random() - 0.5) * 2, vy: -1, life: 14 + Math.random() * 10, color: '#a8a29e', size: 3 + Math.random() * 3 });
+        }
+    }
+}
+// 金乌神弓：射出3支追踪箭
+function goldenBowTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 14;
+    const chosen = new Set();
+    for (let i = 0; i < w.arrowCount; i++) {
+        let target = null;
+        for (const e of G.enemies) { if (!chosen.has(e)) { target = e; break; } }
+        if (!target) target = G.enemies[Math.floor(Math.random() * G.enemies.length)];
+        if (target) {
+            chosen.add(target);
+            G.projectiles.push({
+                kind: 'goldArrow', x: u.x, y: u.y - cellSize * 0.6,
+                vx: (Math.random() - 0.5) * 2, vy: -3, r: 10, free: true,
+                arrowDmg: w.arrowDmg, arrowSpeed: w.arrowSpeed, arrowLife: w.arrowLife,
+                target, color: '#fbbf24',
+            });
+        }
+    }
+}
+// EMP：全屏冻结所有敌人
+function empTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 22;
+    G.flash = Math.max(G.flash, 0.7); G.shake = Math.max(G.shake, 14);
+    for (const e of G.enemies) {
+        damageEnemy(e, w.empDmg);
+        if (!e.frozen) { e.frozen = true; e.frozenTimer = w.empFreeze; e.slowFactor = 0; e.slowTimer = 9999; }
+    }
+    // EMP冲击波环
+    G.particles.push({ x: W / 2, y: H / 2, vx: 0, vy: 0, life: 26, max: 26, color: '#3b82f6', size: W, ring: true });
+    G.particles.push({ x: W / 2, y: H / 2, vx: 0, vy: 0, life: 36, max: 36, color: '#60a5fa', size: W * 1.1, ring: true });
+    for (let i = 0; i < 40; i++) {
+        const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * 8;
+        G.particles.push({ x: W / 2, y: H / 2, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 20 + Math.random() * 20, color: '#93c5fd', size: 2 + Math.random() * 4 });
+    }
+}
+// 量子黑洞：制造引力奇点吸入敌人
+function blackHoleTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    u.cd = w.cooldown; u.attacking = 18;
+    G.clouds.push({ x: u.x, y: u.y - cellSize * 1.5, r: w.holeRadius, dmg: w.holeDmg, life: w.holeLife, tick: 0, gravity: true, pullForce: w.pullForce });
+    G.particles.push({ x: u.x, y: u.y, vx: 0, vy: 0, life: 30, max: 30, color: '#a855f7', size: w.holeRadius, ring: true });
+}
+// 纳米蜂群：放出追踪纳米云
+function nanoSwarmTick(u, w) {
+    if (u.cd > 0) { u.cd--; return; }
+    if (!G.enemies.length) return;
+    u.cd = w.cooldown; u.attacking = 12;
+    G.projectiles.push({
+        kind: 'nano', x: u.x, y: u.y - cellSize * 0.5,
+        vx: (Math.random() - 0.5) * 3, vy: -3, r: 10, free: true,
+        nanoDmg: w.nanoDmg, nanoInterval: w.nanoInterval, nanoLife: w.nanoLife, nanoRadius: w.nanoRadius,
+        nanoTick: 0, target: null, color: '#06b6d4',
+    });
+}
 // 查找本通道中位于炮台下方的最近敌人（用于双头炮反向）
 function findTargetBelowInLane(lane, aboveY) {
     let best = null, bestY = Infinity;
@@ -1940,6 +2536,9 @@ function updateEnemies() {
                 e.slowFactor = 1; e.slowTimer = 0;
             }
         }
+        if (e.frozen) { e.frozenTimer--; if (e.frozenTimer <= 0) { e.frozen = false; e.slowFactor = 1; e.slowTimer = 0; } continue; }
+        if (e.cursed) { e.curseTimer--; if (e.curseTimer <= 0) { e.cursed = false; e.curseMult = 1; } }
+        if (e.dartTimer) { e.dartTimer--; if (--e.dartCd <= 0) { e.dartCd = e.dartInterval; damageEnemy(e, e.dartDmg); spawnParticles(e.x, e.y, '#84cc16', 2); } if (e.dartTimer <= 0) e.dartTimer = 0; }
         if (e.slowTimer > 0) e.slowTimer--; else e.slowFactor = 1;
 
         const blocker = findBlocker(e, wSize);
@@ -2000,15 +2599,105 @@ function fireProjectile(u, target, laneOverride) {
         spikeCount: w.spikeCount || 0, spikeDmg: w.spikeDmg || 0, spikeRange: w.spikeRange || 0,
         acidDmg: w.acidDmg || 0, acidInterval: w.acidInterval || 0, acidDuration: w.acidDuration || 0,
         acidSlow: w.acidSlow || 0, trailDmg: w.trailDmg || 0, trailLife: w.trailLife || 0, trailRadius: w.trailRadius || 0,
+        freezeTime: w.freezeTime || 0, thunderDmg: w.thunderDmg || 0,
+        curseMult: w.curseMult || 0, curseTime: w.curseTime || 0,
+        dartDmg: w.dartDmg || 0, dartInterval: w.dartInterval || 0, dartDuration: w.dartDuration || 0,
     };
     if (w.proj === 'bounce') { p.free = true; p.vx = (Math.random() * 2 - 1) * sp * 0.7; p.hitSet = new Set(); }
     if (w.proj === 'boomerang') { p.hitSet = new Set(); p.startY = y0; p.maxUp = H * 0.55; p.returning = false; }
+    if (w.proj === 'pierce') { p.free = true; p.hitSet = new Set(); }
     G.projectiles.push(p);
 }
 function updateProjectiles() {
     for (let i = G.projectiles.length - 1; i >= 0; i--) {
         const p = G.projectiles[i];
         p.x += p.vx; p.y += p.vy;
+        // 全局弹道拖尾粒子（所有类型弹道都有）
+        if (G.frame % 3 === 0 && p.kind !== 'ring') {
+            const tailColor = p.color || '#fff';
+            G.particles.push({ x: p.x, y: p.y, vx: -p.vx * 0.15, vy: -p.vy * 0.15, life: 10 + Math.random() * 6, color: tailColor, size: 2 + Math.random() * 2 });
+        }
+        if (p.kind === 'needle') {
+            p.traveled += Math.hypot(p.vx, p.vy);
+            if (p.traveled >= (p.range || 200)) { G.projectiles.splice(i, 1); continue; }
+            for (const e of G.enemies) {
+                if (p.hitSet.has(e)) continue;
+                if (Math.hypot(e.x - p.x, e.y - p.y) < e.size * 0.4 + p.r) { damageEnemy(e, p.dmg); p.hitSet.add(e); spawnParticles(p.x, p.y, '#94a3b8', 2); }
+            }
+            continue;
+        }
+        if (p.kind === 'missile') {
+            p.missileLife--;
+            if (p.missileLife <= 0 || !p.target || p.target._dead) { G.projectiles.splice(i, 1); continue; }
+            const dx = p.target.x - p.x, dy = p.target.y - p.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            p.vx += (dx / dist) * 0.5; p.vy += (dy / dist) * 0.5;
+            const s = Math.hypot(p.vx, p.vy);
+            const ms = p.missileSpeed || 6;
+            if (s > ms) { p.vx = p.vx / s * ms; p.vy = p.vy / s * ms; }
+            if (dist < p.r + p.target.size * 0.4) {
+                damageEnemy(p.target, p.missileDmg);
+                spawnParticles(p.x, p.y, '#c084fc', 10);
+                G.projectiles.splice(i, 1);
+            }
+            continue;
+        }
+        if (p.kind === 'nano') {
+            p.nanoLife--;
+            if (p.nanoLife <= 0) { G.projectiles.splice(i, 1); continue; }
+            if (!p.target || p.target._dead) {
+                let best = null, bestD = Infinity;
+                for (const e of G.enemies) { const d = Math.hypot(e.x - p.x, e.y - p.y); if (d < bestD) { bestD = d; best = e; } }
+                if (best) p.target = best; else { p.nanoTick++; if (p.nanoTick > 60) { G.projectiles.splice(i, 1); } continue; }
+            }
+            const dx = p.target.x - p.x, dy = p.target.y - p.y, dist = Math.hypot(dx, dy) || 1;
+            p.vx += (dx / dist) * 0.35; p.vy += (dy / dist) * 0.35;
+            const s = Math.hypot(p.vx, p.vy), ms = 5; if (s > ms) { p.vx = p.vx / s * ms; p.vy = p.vy / s * ms; }
+            if (dist < p.r + p.target.size * 0.4) {
+                // 附着在敌人身上，形成纳米云
+                G.clouds.push({ x: p.target.x, y: p.target.y, r: p.nanoRadius, dmg: p.nanoDmg, life: p.nanoLife, tick: 0, nano: true });
+                G.projectiles.splice(i, 1);
+            }
+            continue;
+        }
+        if (p.kind === 'goldArrow') {
+            p.arrowLife--;
+            if (p.arrowLife <= 0 || !p.target || p.target._dead) { G.projectiles.splice(i, 1); continue; }
+            const dx = p.target.x - p.x, dy = p.target.y - p.y, dist = Math.hypot(dx, dy) || 1;
+            p.vx += (dx / dist) * 0.45; p.vy += (dy / dist) * 0.45;
+            const s = Math.hypot(p.vx, p.vy), ms = p.arrowSpeed || 8;
+            if (s > ms) { p.vx = p.vx / s * ms; p.vy = p.vy / s * ms; }
+            if (dist < p.r + p.target.size * 0.4) {
+                damageEnemy(p.target, p.arrowDmg); spawnParticles(p.x, p.y, '#fbbf24', 12);
+                G.projectiles.splice(i, 1);
+            }
+            continue;
+        }
+        if (p.kind === 'ghost') {
+            p.ghostLife--;
+            if (p.ghostLife <= 0) { G.projectiles.splice(i, 1); continue; }
+            if (!p.target || p.target._dead) {
+                let best = null, bestD = Infinity;
+                for (const e of G.enemies) {
+                    const d = Math.hypot(e.x - p.x, e.y - p.y);
+                    if (d < bestD) { bestD = d; best = e; }
+                }
+                if (best) p.target = best; else { p.vy -= 0.5; continue; }
+            }
+            const dx = p.target.x - p.x, dy = p.target.y - p.y;
+            const dist = Math.hypot(dx, dy) || 1;
+            const speed = p.ghostSpeed || 5;
+            p.vx += (dx / dist) * 0.3; p.vy += (dy / dist) * 0.3;
+            const s = Math.hypot(p.vx, p.vy);
+            if (s > speed) { p.vx = p.vx / s * speed; p.vy = p.vy / s * speed; }
+            if (dist < p.r + p.target.size * 0.4) {
+                p.target.slowFactor = 0.5; p.target.slowTimer = 40;
+                // 鬼魂附体 → 伤害 + 减速
+                aoeDamage(p.x, p.y, 40, p.ghostDmg, '#a855f7');
+                G.projectiles.splice(i, 1);
+            }
+            continue;
+        }
         if (p.kind === 'spike') {
             p.traveled += Math.hypot(p.vx, p.vy);
             if (p.traveled >= (p.range || 140) || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
@@ -2089,6 +2778,33 @@ function updateProjectiles() {
 function handleHit(p, e) {
     // 返回 true 表示移除该子弹
     switch (p.kind) {
+        case 'pierce':
+            damageEnemy(e, p.dmg); spawnParticles(p.x, p.y, '#38bdf8', 8);
+            p.hitSet = p.hitSet || new Set(); p.hitSet.add(e);
+            return false; // 不消失，贯穿继续
+        case 'talisman':
+            damageEnemy(e, p.dmg);
+            if (!e.frozen) { e.frozen = true; e.frozenTimer = p.freezeTime || 150; e.slowFactor = 0; e.slowTimer = 9999; }
+            spawnParticles(e.x, e.y, '#fbbf24', 10);
+            return true;
+        case 'ghost':
+            aoeDamage(p.x, p.y, 40, p.ghostDmg || 120, '#a855f7');
+            return true;
+        case 'shadow':
+            damageEnemy(e, p.dmg);
+            if (!e.cursed) { e.cursed = true; e.curseMult = p.curseMult || 1.5; e.curseTimer = p.curseTime || 300; }
+            spawnParticles(e.x, e.y, '#7c3aed', 12);
+            return true;
+        case 'dart':
+            damageEnemy(e, p.dmg);
+            if (!e.dartTimer) {
+                e.dartTimer = p.dartDuration || 400;
+                e.dartDmg = p.dartDmg || 12;
+                e.dartInterval = p.dartInterval || 8;
+                e.dartCd = 0;
+            }
+            spawnParticles(e.x, e.y, '#84cc16', 6);
+            return true;
         case 'splash':
             bigExplosion(p.x, p.y, p.splash, p.color);
             for (const o of G.enemies) { const d = Math.hypot(o.x - p.x, o.y - p.y); if (d < p.splash) damageEnemy(o, p.dmg * (o === e ? 1 : 0.75)); }
@@ -2197,18 +2913,29 @@ function chainHit(origin, p) {
         }
         if (!best) break;
         G.arcs.push({ x1: last.x, y1: last.y, x2: best.x, y2: best.y, life: 10 });
+        // 电弧火花粒子
+        for (let s = 0; s < 5; s++) {
+            const t = s / 4;
+            const sx = last.x + (best.x - last.x) * t + (Math.random() - 0.5) * 20;
+            const sy = last.y + (best.y - last.y) * t + (Math.random() - 0.5) * 20;
+            G.particles.push({ x: sx, y: sy, vx: (Math.random() - 0.5) * 2, vy: -2 - Math.random() * 2, life: 12 + Math.random() * 10, color: '#e9d5ff', size: 2 + Math.random() * 3 });
+        }
         damageEnemy(best, dmg); hitSet.add(best);
         last = best; dmg *= 0.85;
     }
 }
 function damageEnemy(e, dmg) {
     if (e._dead) return;
-    e.hp -= dmg; e.hitFlash = 5;
+    e.hp -= Math.floor(dmg * (e.cursed && e.curseMult ? e.curseMult : 1)); e.hitFlash = 6;
     if (e.hp <= 0) {
         e._dead = true;
         const idx = G.enemies.indexOf(e); if (idx >= 0) G.enemies.splice(idx, 1);
         G.killed++;
-        spawnParticles(e.x, e.y, '#fbbf24', e.def.isBoss ? 30 : 10);
+        const pc = e.def.isBoss ? 50 : 18;
+        spawnParticles(e.x, e.y, '#fbbf24', pc);
+        // 小型死亡冲击波
+        G.particles.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 16, max: 16, color: '#fef08a', size: e.size * 0.6, ring: true });
+        G.particles.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 22, max: 22, color: '#f59e0b', size: e.size * 0.9, ring: true });
         updateHud();
     }
 }
@@ -2227,19 +2954,31 @@ function bigExplosion(x, y, r, color) {
     G.particles.push({ x, y, vx: 0, vy: 0, life: 22, max: 22, color: '#fff7ed', size: r * 0.9, fireball: true });
     G.particles.push({ x, y, vx: 0, vy: 0, life: 26, max: 26, color: color || '#f97316', size: r, ring: true });
     G.particles.push({ x, y, vx: 0, vy: 0, life: 34, max: 34, color: '#fb923c', size: r * 1.3, ring: true });
-    for (let i = 0; i < 36; i++) {
-        const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 6;
-        G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 24 + Math.random() * 20, color: i % 2 ? '#f97316' : '#fbbf24', size: 3 + Math.random() * 4 });
+    G.particles.push({ x, y, vx: 0, vy: 0, life: 42, max: 42, color: color || '#f97316', size: r * 1.6, ring: true });
+    for (let i = 0; i < 50; i++) {
+        const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 7;
+        G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 24 + Math.random() * 24, color: i % 3 === 0 ? '#fff' : (i % 3 === 1 ? '#f97316' : '#fbbf24'), size: 3 + Math.random() * 6 });
     }
-    G.shake = Math.max(G.shake, 16);
+    // 碎片
+    for (let i = 0; i < 12; i++) {
+        const a = Math.random() * Math.PI * 2, s = 3 + Math.random() * 5;
+        G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2, life: 30 + Math.random() * 25, color: '#475569', size: 4 + Math.random() * 3, debris: true });
+    }
+    G.shake = Math.max(G.shake, 20);
 }
 // 冰冻爆发：扩散蓝环 + 雪花 + 浅蓝闪
 function freezeBurst(x, y, r) {
     G.particles.push({ x, y, vx: 0, vy: 0, life: 28, max: 28, color: '#7dd3fc', size: r, ring: true });
     G.particles.push({ x, y, vx: 0, vy: 0, life: 20, max: 20, color: 'rgba(186,230,253,0.6)', size: r * 0.8, fireball: true });
-    for (let i = 0; i < 18; i++) {
-        const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 3;
-        G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 20, max: 50, color: '#e0f2fe', size: 3 + Math.random() * 4, snow: true });
+    G.particles.push({ x, y, vx: 0, vy: 0, life: 36, max: 36, color: '#38bdf8', size: r * 1.2, ring: true });
+    for (let i = 0; i < 28; i++) {
+        const a = Math.random() * Math.PI * 2, s = 1 + Math.random() * 4;
+        G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 25, max: 55, color: '#e0f2fe', size: 3 + Math.random() * 5, snow: true });
+    }
+    // 冰晶碎片
+    for (let i = 0; i < 8; i++) {
+        const a = Math.random() * Math.PI * 2, s = 2 + Math.random() * 4;
+        G.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1, life: 34 + Math.random() * 20, color: '#bae6fd', size: 5 + Math.random() * 4, crystal: true });
     }
 }
 function updateParticles() {
@@ -2272,7 +3011,24 @@ function drawClouds() {
     for (const cl of G.clouds) {
         const a = Math.min(0.45, cl.life / 260 + 0.1);
         const g = ctx.createRadialGradient(cl.x, cl.y, 2, cl.x, cl.y, cl.r);
-        if (cl.acid) {
+        if (cl.gravity) {
+            // 黑洞引力场
+            g.addColorStop(0, `rgba(30,10,50,${a * 0.7})`); g.addColorStop(0.5, `rgba(139,92,246,${a * 0.3})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r, 0, 7); ctx.fill();
+            ctx.strokeStyle = `rgba(168,85,247,${a * 0.8})`; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r * 0.7, 0, Math.PI * 2); ctx.stroke();
+            ctx.strokeStyle = `rgba(192,132,252,${a * 0.5})`; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r * 0.5, 0, Math.PI * 2); ctx.stroke();
+        } else if (cl.nano) {
+            // 纳米蜂群云
+            g.addColorStop(0, `rgba(6,182,212,${a * 0.8})`); g.addColorStop(1, 'rgba(8,145,178,0)');
+            ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r, 0, 7); ctx.fill();
+            for (let k = 0; k < 12; k++) {
+                const ang = (G.frame * 0.08 + k * 0.52), rr = cl.r * (0.2 + 0.6 * ((k * 3 + G.frame * 2) % 10) / 10);
+                ctx.fillStyle = `rgba(103,232,249,${a * 0.9})`;
+                ctx.beginPath(); ctx.arc(cl.x + Math.cos(ang) * rr, cl.y + Math.sin(ang) * rr, 1.8, 0, 7); ctx.fill();
+            }
+        } else if (cl.acid) {
             // 酸液云
             g.addColorStop(0, `rgba(250,204,21,${a * 1.1})`); g.addColorStop(0.6, `rgba(161,98,7,${a * 0.6})`); g.addColorStop(1, 'rgba(113,63,18,0)');
             ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cl.x, cl.y, cl.r, 0, 7); ctx.fill();
@@ -2412,6 +3168,31 @@ function drawEnemies() {
                 drawSprite(img, e.x, e.y, e.size); ctx.restore();
             }
         } else { drawEnemyArt(ctx, e.def.render, e.x, e.y, e.size, e.frame, e.hitFlash); }
+        // 暗影诅咒视觉
+        if (e.cursed) {
+            ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = '#7c3aed';
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.48, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.5, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+            ctx.restore();
+        }
+        // 定身符冻结视觉
+        if (e.frozen) {
+            ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#fbbf24';
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.5, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]);
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.52, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+            // 定字
+            ctx.globalAlpha = 0.8; ctx.fillStyle = '#dc2626'; ctx.font = `bold ${e.size * 0.25}px serif`; ctx.textAlign = 'center';
+            ctx.fillText('定', e.x, e.y - e.size * 0.25);
+            ctx.restore();
+        }
+        // 飞镖毒视觉
+        if (e.dartTimer) {
+            ctx.save(); ctx.globalAlpha = 0.15 + 0.1 * Math.sin(G.frame * 0.2);
+            ctx.fillStyle = '#84cc16'; ctx.beginPath(); ctx.arc(e.x, e.y, e.size * 0.42, 0, 7); ctx.fill();
+            ctx.restore();
+        }
         // 柠檬酸液腐蚀视觉
         if (e.acidTimer) {
             ctx.save(); ctx.globalAlpha = 0.2 + 0.1 * Math.sin(G.frame * 0.15);
@@ -2498,11 +3279,74 @@ function drawProjectiles() {
             ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 0.9, p.r * 0.35, spin, 0, Math.PI * 2); ctx.stroke();
         } else if (p.kind === 'spike') {
             ctx.shadowBlur = 6; ctx.shadowColor = '#94a3b8';
-            ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
-            const tailX = p.x - p.vx * 1.5, tailY = p.y - p.vy * 1.5;
+        } else if (p.kind === 'pierce') {
+            ctx.shadowBlur = 18; ctx.shadowColor = '#38bdf8';
+            const tailX = p.x - p.vx * 3, tailY = p.y - p.vy * 3;
+            ctx.strokeStyle = '#7dd3fc'; ctx.lineWidth = 3; ctx.lineCap = 'round';
             ctx.beginPath(); ctx.moveTo(tailX, tailY); ctx.lineTo(p.x, p.y); ctx.stroke();
-            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.6, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#e0f2fe'; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.moveTo(tailX - p.vx * 0.5, tailY - p.vy * 0.5); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, 7); ctx.fill();
             ctx.lineCap = 'butt';
+        } else if (p.kind === 'talisman') {
+            ctx.shadowBlur = 12; ctx.shadowColor = '#fbbf24';
+            ctx.fillStyle = '#fef3c7'; roundRectPath(ctx, p.x - p.r * 0.5, p.y - p.r * 0.7, p.r, p.r * 1.4, 3); ctx.fill();
+            ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.fillStyle = '#dc2626'; ctx.font = 'bold 10px serif'; ctx.textAlign = 'center';
+            ctx.fillText('定', p.x, p.y + 3);
+        } else if (p.kind === 'ghost') {
+            ctx.shadowBlur = 14; ctx.shadowColor = '#a855f7';
+            const pulse = 0.7 + 0.3 * Math.sin((Date.now() || 0) * 0.02);
+            ctx.globalAlpha = pulse;
+            ctx.fillStyle = '#c084fc'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.7, 0, 7); ctx.fill();
+            ctx.fillStyle = '#e9d5ff'; ctx.beginPath(); ctx.arc(p.x - p.r * 0.2, p.y - p.r * 0.25, p.r * 0.3, 0, 7); ctx.fill();
+            ctx.fillStyle = '#e9d5ff'; ctx.beginPath(); ctx.arc(p.x + p.r * 0.2, p.y - p.r * 0.25, p.r * 0.3, 0, 7); ctx.fill();
+            ctx.fillStyle = '#4c1d95'; ctx.beginPath(); ctx.arc(p.x, p.y + p.r * 0.1, p.r * 0.3, 0, Math.PI); ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (p.kind === 'missile') {
+            ctx.shadowBlur = 12; ctx.shadowColor = '#a855f7';
+            ctx.fillStyle = '#c084fc'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.6, 0, 7); ctx.fill();
+            ctx.fillStyle = '#e9d5ff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.35, 0, 7); ctx.fill();
+            // 尾迹
+            ctx.globalAlpha = 0.4; ctx.fillStyle = '#a855f7';
+            ctx.beginPath(); ctx.arc(p.x - p.vx * 0.5, p.y - p.vy * 0.5, p.r * 0.4, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        } else if (p.kind === 'shadow') {
+            ctx.shadowBlur = 14; ctx.shadowColor = '#7c3aed';
+            ctx.fillStyle = '#4c1d95'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.8, 0, 7); ctx.fill();
+            ctx.fillStyle = '#8b5cf6'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, 7); ctx.fill();
+            const w = (Date.now() || 0) * 0.01;
+            ctx.globalAlpha = 0.25 + 0.2 * Math.sin(w); ctx.fillStyle = '#a855f7';
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.3, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+        } else if (p.kind === 'needle') {
+            ctx.shadowBlur = 4; ctx.shadowColor = '#94a3b8';
+            ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+            const tx = p.x - p.vx * 2, ty = p.y - p.vy * 2;
+            ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, 7); ctx.fill(); ctx.lineCap = 'butt';
+        } else if (p.kind === 'nano') {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#06b6d4';
+            const w = (Date.now() || 0) * 0.01;
+            ctx.fillStyle = '#67e8f9'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, 7); ctx.fill();
+            ctx.fillStyle = '#06b6d4'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.8, 0, 7); ctx.fill();
+            ctx.globalAlpha = 0.3 + 0.2 * Math.sin(w * 3);
+            ctx.fillStyle = '#22d3ee'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.1, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+            for (let k = 0; k < 4; k++) { const a = w * 2 + k * 1.6; ctx.fillStyle = 'rgba(103,232,249,0.7)'; ctx.beginPath(); ctx.arc(p.x + Math.cos(a) * p.r * 0.5, p.y + Math.sin(a) * p.r * 0.5, 1.5, 0, 7); ctx.fill(); }
+        } else if (p.kind === 'goldArrow') {
+            ctx.shadowBlur = 10; ctx.shadowColor = '#f59e0b';
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+            const tx = p.x - p.vx * 1.5, ty = p.y - p.vy * 1.5;
+            ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, 7); ctx.fill();
+            ctx.strokeStyle = '#fde047'; ctx.lineWidth = 1; ctx.beginPath();
+            ctx.moveTo(p.x + p.vx * 0.3 - p.vy * 0.2, p.y + p.vy * 0.3 + p.vx * 0.2);
+            ctx.lineTo(p.x + p.vx * 0.6, p.y + p.vy * 0.6);
+            ctx.lineTo(p.x + p.vx * 0.3 + p.vy * 0.2, p.y + p.vy * 0.3 - p.vx * 0.2);
+            ctx.fillStyle = '#fef08a'; ctx.fill(); ctx.lineCap = 'butt';
+        } else if (p.kind === 'dart') {
+            ctx.shadowBlur = 6; ctx.shadowColor = '#84cc16';
+            ctx.strokeStyle = '#a3e635'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+            ctx.beginPath(); ctx.moveTo(p.x - p.vx * 1, p.y - p.vy * 1); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.fillStyle = '#84cc16'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 0.5, 0, 7); ctx.fill(); ctx.lineCap = 'butt';
         } else if (p.kind === 'lemon') {
             ctx.shadowBlur = 12; ctx.shadowColor = '#eab308';
             const w = (Date.now() || 0) * 0.01;
@@ -2585,6 +3429,17 @@ function drawParticles() {
             ctx.globalAlpha = Math.max(0, p.life / max); ctx.fillStyle = p.color;
             ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.life * 0.2);
             ctx.fillRect(-p.size / 2, -p.size / 6, p.size, p.size / 3); ctx.fillRect(-p.size / 6, -p.size / 2, p.size / 3, p.size);
+            ctx.restore(); ctx.globalAlpha = 1;
+        } else if (p.crystal) {
+            ctx.globalAlpha = Math.max(0, p.life / 35); ctx.fillStyle = p.color;
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.life * 0.3);
+            // 菱形冰晶
+            ctx.beginPath(); ctx.moveTo(0, -p.size); ctx.lineTo(p.size * 0.5, 0); ctx.lineTo(0, p.size); ctx.lineTo(-p.size * 0.5, 0); ctx.closePath(); ctx.fill();
+            ctx.restore(); ctx.globalAlpha = 1;
+        } else if (p.debris) {
+            ctx.globalAlpha = Math.max(0, p.life / 35); ctx.fillStyle = p.color;
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.life * 0.5);
+            ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.6);
             ctx.restore(); ctx.globalAlpha = 1;
         } else {
             ctx.globalAlpha = Math.max(0, p.life / 35); ctx.fillStyle = p.color;
